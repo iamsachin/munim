@@ -1,6 +1,8 @@
-import { Navigate, Route, Routes } from 'react-router';
+import { Navigate, Route, Routes, useSearchParams } from 'react-router';
 import { AiSettings } from './account/AiSettings';
+import { AuthCard } from './account/AuthCard';
 import { Connections } from './account/Connections';
+import { useSession } from './account/session';
 import { Settings } from './account/Settings';
 import { Setup } from './account/Setup';
 import { SignIn } from './account/SignIn';
@@ -15,8 +17,37 @@ import { Stream } from './reader/Stream';
 import { Today } from './reader/Today';
 import { Watches } from './reader/Watches';
 import { Shell } from './shell/Shell';
+import { ErrorState } from './ui/States';
+
+/**
+ * Where the admin sends a browser that is not signed in. By the time this renders the session is
+ * open, so go on to the page that was asked for, which is only ever the admin.
+ */
+function AfterSignIn() {
+  const next = useSearchParams()[0].get('next') ?? '';
+  if (next.startsWith('/admin/')) {
+    // The admin is served by Django, not this app, so it needs a real page load.
+    window.location.replace(next);
+    return null;
+  }
+  return <Navigate to="/today" replace />;
+}
 
 export function App() {
+  const session = useSession();
+
+  // Until the server says the session is open, there is nothing else to show at any address.
+  if (session.state === 'loading') return null;
+  if (session.state === 'unreachable') {
+    return (
+      <AuthCard heading="Munim is not answering" documentTitle="Not answering">
+        <ErrorState what="Munim" detail="The server did not answer." onRetry={session.refresh} />
+      </AuthCard>
+    );
+  }
+  if (session.state === 'setup') return <Setup />;
+  if (session.state === 'signed_out') return <SignIn />;
+
   return (
     <Routes>
       <Route element={<Shell />}>
@@ -33,8 +64,7 @@ export function App() {
         <Route path="ai" element={<AiSettings />} />
         <Route path="settings" element={<Settings />} />
       </Route>
-      <Route path="setup" element={<Setup />} />
-      <Route path="sign-in" element={<SignIn />} />
+      <Route path="sign-in" element={<AfterSignIn />} />
       {/* The design-system reference; not linked from the app. */}
       <Route path="gallery" element={<Gallery />} />
       <Route path="*" element={<Navigate to="/today" replace />} />

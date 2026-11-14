@@ -25,6 +25,16 @@ SECRET_KEY = env("SECRET_KEY", "dev-only-not-secret" if DEBUG else None)  # noqa
 
 ALLOWED_HOSTS = [h.strip() for h in env("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")]
 
+# Origins, other than the server's own, whose pages may call the API: the address people type
+# when Munim sits behind a reverse proxy, e.g. "https://munim.example.com". In development the
+# web app is served by Vite on its own port and proxies the API here.
+_DEV_ORIGINS = "http://localhost:5173,http://localhost:4173"
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in env("TRUSTED_ORIGINS", _DEV_ORIGINS if DEBUG else "").split(",")
+    if origin.strip()
+]
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -32,6 +42,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "ninja",  # for its export_openapi_schema command
     "account",
 ]
 

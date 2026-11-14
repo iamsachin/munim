@@ -80,10 +80,11 @@ A piece of work is done only when all of these pass, and the result has been loo
 
 ## Commands
 
-- `pnpm dev`: the web app at http://localhost:5173. The design-system gallery is at `/gallery`.
-- `pnpm db`: start the development Postgres (Docker, port 5433) and wait until it is healthy. Server tests need it.
-- `pnpm dev:server`: the Django server at http://localhost:8000, in development mode. API docs at `/api/docs`, the OpenAPI document at `/api/openapi.json`, the admin at `/admin/`.
-- `pnpm check`: for the web app, types, lint, format, unit tests, then a production build with Playwright visual regression and axe; for the server, mypy, ruff and pytest against the development database.
+- `pnpm db`: start the development Postgres (Docker, port 5433) and wait until it is healthy. Everything below needs it.
+- `pnpm dev`: the web app at http://localhost:5173 and the Django server at http://localhost:8000, together. The web app proxies `/api` and `/admin` to the server and shows "Munim is not answering" without it. The design-system gallery is at `/gallery`; API docs at `/api/docs`.
+- `pnpm dev:web`, `pnpm dev:server`: either one on its own.
+- `pnpm gen:api`: regenerate `apps/server/openapi.json` and the web app's types (`apps/web/src/api/schema.d.ts`) from the server's code. Run it after changing any endpoint or schema; `pnpm check` fails if they are stale.
+- `pnpm check`: for the web app, types, lint, format, unit tests, then a production build with Playwright visual regression and axe; for the server, mypy, ruff and pytest; and that the generated API types are current. Playwright also starts the real server on its own database (`munim_e2e`) for `real-server.spec.ts`.
 - `pnpm format`: apply Prettier.
 - `pnpm --filter web exec playwright test --update-snapshots`: re-record baselines. Only for a change the owner has approved; look at every changed image first.
 
@@ -102,9 +103,13 @@ Baselines are recorded on macOS Chromium and are platform-specific; other platfo
 - Never hard-code model names or lists. Read them from the provider's models endpoint. Consult the `claude-api` skill before writing any Anthropic code.
 - Secrets never reach the browser, logs, error messages or test fixtures.
 - Every migration must be safe to run on a stranger's existing data.
+- An install reached through a reverse proxy must list its public address in `MUNIM_TRUSTED_ORIGINS`, or Django refuses its calls as cross-site.
 - Everything an install can change is a `MUNIM_*` environment variable read through `env()` in `munim/settings.py`. A secret has no default outside development mode (`MUNIM_DEBUG=1`): the server must fail to start rather than run on a guessable value.
 - Server tests treat warnings as errors. Fix a deprecation when it appears.
 - The passphrase is compared in exactly one place: `_check` in `account/api.py`, which runs it under `attempt()` from `account/throttle.py`. Any new endpoint that asks for the passphrase calls `_check`; never call `check_password` anywhere else. The admin has no sign-in form of its own for the same reason.
+- The web app talks to the server only through `api` in `apps/web/src/api/client.ts`, typed from the generated schema. A call that needs an open session passes its error to `session.refused()`, which follows the server to the lock or sign-in screen.
+- Statuses mean one thing each: 401 not signed in (or a wrong passphrase at sign-in), 403 a wrong passphrase from a signed-in session, 423 locked, 429 wait.
+- Browser tests of screens use the stand-in server in `apps/web/e2e/fake-server.ts`, so they stay fast and parallel; keep it in step with the real API. Anything that crosses the browser-server boundary for real (cookies, CSRF, the proxy) is tested in `real-server.spec.ts`.
 - API endpoints declare who may call them: `Open()` (signed in and unlocked) by default, `SignedIn()` only for what a locked session must still reach, `Csrf()` only for what happens before sign-in.
 - Validate at trust boundaries with Pydantic on the server: HTTP input, source API responses, feed XML, AI output that drives UI. The browser validates what it reads from its own storage.
 - Respect each source's rate limits and terms. Cache and poll conservatively.

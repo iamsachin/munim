@@ -1,0 +1,376 @@
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Munim", "version": "0.1.0", "description": "" },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "operationId": "munim_api_health",
+        "summary": "Is the server able to work?",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Health" } }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Health" } }
+            }
+          }
+        },
+        "description": "Reports ok only if the database answers, so an install's health check means something."
+      }
+    },
+    "/api/session": {
+      "get": {
+        "operationId": "account_api_session",
+        "summary": "Where this browser stands",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/SessionOut" } }
+            }
+          }
+        },
+        "description": "Also sets the CSRF cookie, so call it before anything else.",
+        "tags": ["account"]
+      }
+    },
+    "/api/setup": {
+      "post": {
+        "operationId": "account_api_setup",
+        "summary": "Setup",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/SessionOut" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          }
+        },
+        "description": "First run: sets the passphrase and signs in. Works once.",
+        "tags": ["account"],
+        "requestBody": {
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/PassphraseIn" } }
+          },
+          "required": true
+        },
+        "security": [{ "Csrf": [] }]
+      }
+    },
+    "/api/sign-in": {
+      "post": {
+        "operationId": "account_api_sign_in",
+        "summary": "Sign In",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/SessionOut" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Wait" } } }
+          }
+        },
+        "tags": ["account"],
+        "requestBody": {
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/PassphraseIn" } }
+          },
+          "required": true
+        },
+        "security": [{ "Csrf": [] }]
+      }
+    },
+    "/api/sign-out": {
+      "post": {
+        "operationId": "account_api_sign_out",
+        "summary": "Sign Out",
+        "parameters": [],
+        "responses": { "204": { "description": "No Content" } },
+        "tags": ["account"],
+        "security": [{ "SignedIn": [] }]
+      }
+    },
+    "/api/lock": {
+      "post": {
+        "operationId": "account_api_lock",
+        "summary": "Lock",
+        "parameters": [],
+        "responses": { "204": { "description": "No Content" } },
+        "tags": ["account"],
+        "security": [{ "SignedIn": [] }]
+      }
+    },
+    "/api/unlock": {
+      "post": {
+        "operationId": "account_api_unlock",
+        "summary": "Unlock",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/SessionOut" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Wait" } } }
+          }
+        },
+        "tags": ["account"],
+        "requestBody": {
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/PassphraseIn" } }
+          },
+          "required": true
+        },
+        "security": [{ "SignedIn": [] }]
+      }
+    },
+    "/api/passphrase": {
+      "post": {
+        "operationId": "account_api_change_passphrase",
+        "summary": "Change Passphrase",
+        "parameters": [],
+        "responses": {
+          "204": { "description": "No Content" },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Wait" } } }
+          }
+        },
+        "description": "Changes the passphrase and signs every other device out.",
+        "tags": ["account"],
+        "requestBody": {
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/ChangeIn" } }
+          },
+          "required": true
+        },
+        "security": [{ "Open": [] }]
+      }
+    },
+    "/api/active": {
+      "post": {
+        "operationId": "account_api_active",
+        "summary": "The owner is using the app",
+        "parameters": [],
+        "responses": { "204": { "description": "No Content" } },
+        "description": "Keeps the idle lock away while the owner works without making other calls. Passing the\n`Open` check is what records the activity; the app calls this at most once a minute.",
+        "tags": ["account"],
+        "security": [{ "Open": [] }]
+      }
+    },
+    "/api/devices": {
+      "get": {
+        "operationId": "account_api_list_devices",
+        "summary": "List Devices",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/DeviceOut" },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["account"],
+        "security": [{ "Open": [] }]
+      }
+    },
+    "/api/devices/{device_id}": {
+      "delete": {
+        "operationId": "account_api_revoke_device",
+        "summary": "Revoke Device",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "device_id",
+            "schema": { "title": "Device Id", "type": "integer" },
+            "required": true
+          }
+        ],
+        "responses": { "204": { "description": "No Content" } },
+        "description": "Signs a device out. Revoking the current one signs this browser out.",
+        "tags": ["account"],
+        "security": [{ "Open": [] }]
+      }
+    },
+    "/api/lock-settings": {
+      "get": {
+        "operationId": "account_api_get_lock_settings",
+        "summary": "Get Lock Settings",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/LockSettings" } }
+            }
+          }
+        },
+        "tags": ["account"],
+        "security": [{ "Open": [] }]
+      },
+      "put": {
+        "operationId": "account_api_put_lock_settings",
+        "summary": "Put Lock Settings",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/LockSettings" } }
+            }
+          }
+        },
+        "tags": ["account"],
+        "requestBody": {
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/LockSettings" } }
+          },
+          "required": true
+        },
+        "security": [{ "Open": [] }]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Health": {
+        "properties": {
+          "status": { "enum": ["ok", "unavailable"], "title": "Status", "type": "string" }
+        },
+        "required": ["status"],
+        "title": "Health",
+        "type": "object"
+      },
+      "SessionOut": {
+        "properties": {
+          "state": {
+            "enum": ["setup", "signed_out", "locked", "open"],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": ["state"],
+        "title": "SessionOut",
+        "type": "object"
+      },
+      "Error": {
+        "properties": { "detail": { "title": "Detail", "type": "string" } },
+        "required": ["detail"],
+        "title": "Error",
+        "type": "object"
+      },
+      "PassphraseIn": {
+        "properties": {
+          "passphrase": { "maxLength": 1024, "title": "Passphrase", "type": "string" }
+        },
+        "required": ["passphrase"],
+        "title": "PassphraseIn",
+        "type": "object"
+      },
+      "Wait": {
+        "properties": {
+          "detail": { "title": "Detail", "type": "string" },
+          "wait_seconds": { "title": "Wait Seconds", "type": "integer" }
+        },
+        "required": ["detail", "wait_seconds"],
+        "title": "Wait",
+        "type": "object"
+      },
+      "ChangeIn": {
+        "properties": {
+          "current": { "maxLength": 1024, "title": "Current", "type": "string" },
+          "new": { "maxLength": 1024, "title": "New", "type": "string" }
+        },
+        "required": ["current", "new"],
+        "title": "ChangeIn",
+        "type": "object"
+      },
+      "DeviceOut": {
+        "properties": {
+          "id": { "title": "Id", "type": "integer" },
+          "name": { "title": "Name", "type": "string" },
+          "last_seen": { "format": "date-time", "title": "Last Seen", "type": "string" },
+          "current": { "title": "Current", "type": "boolean" }
+        },
+        "required": ["id", "name", "last_seen", "current"],
+        "title": "DeviceOut",
+        "type": "object"
+      },
+      "LockSettings": {
+        "properties": {
+          "minutes": {
+            "anyOf": [{ "enum": [5, 15, 60], "type": "integer" }, { "type": "null" }],
+            "title": "Minutes"
+          }
+        },
+        "required": ["minutes"],
+        "title": "LockSettings",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "Csrf": { "type": "apiKey", "in": "cookie", "name": "csrftoken" },
+      "SignedIn": { "type": "apiKey", "in": "cookie", "name": "sessionid" },
+      "Open": { "type": "apiKey", "in": "cookie", "name": "sessionid" }
+    }
+  },
+  "servers": []
+}

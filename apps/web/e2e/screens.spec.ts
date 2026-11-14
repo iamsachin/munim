@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { fakeServer, GOOD, type State } from './fake-server';
 
 const SCREENS = [
   ['today', '/today'],
@@ -15,8 +16,6 @@ const SCREENS = [
   ['connections', '/connections'],
   ['ai', '/ai'],
   ['settings', '/settings'],
-  ['setup', '/setup'],
-  ['sign-in', '/sign-in'],
 ] as const;
 
 // Both themes, every density, and the narrowest supported width. `axe` marks the two runs that
@@ -29,7 +28,15 @@ const VARIANTS = [
   { name: 'dark-920', theme: 'Dark', density: 'Comfortable', width: 920, axe: false },
 ] as const;
 
-async function open(page: Page, path: string, theme = 'Dark', density = 'Comfortable') {
+/** Opens the app at `path` with a stand-in server in the given state. Returns the stand-in. */
+async function open(
+  page: Page,
+  path: string,
+  theme = 'Dark',
+  density = 'Comfortable',
+  state: State = 'open',
+) {
+  const server = await fakeServer(page, state);
   await page.addInitScript(
     (saved) => {
       localStorage.setItem('munim.theme', saved);
@@ -37,7 +44,10 @@ async function open(page: Page, path: string, theme = 'Dark', density = 'Comfort
     JSON.stringify({ theme, accent: 'Amber', density }),
   );
   await page.goto(path);
+  // The app draws nothing until the server has said where this browser stands.
+  await page.locator('#root > *').first().waitFor();
   await page.evaluate(() => document.fonts.ready);
+  return server;
 }
 
 async function axeFailures(page: Page) {
@@ -52,6 +62,21 @@ for (const [name, path] of SCREENS) {
     test(`${name}: ${v.name}`, async ({ page }) => {
       await page.setViewportSize({ width: v.width, height: 800 });
       await open(page, path, v.theme, v.density);
+      await expect(page).toHaveScreenshot(`${name}-${v.name}.png`);
+      if (v.axe) expect(await axeFailures(page)).toEqual([]);
+    });
+  }
+}
+
+// What is shown before the app is open depends on the server, not the address.
+for (const [name, state] of [
+  ['setup', 'setup'],
+  ['sign-in', 'signed_out'],
+] as const) {
+  for (const v of VARIANTS) {
+    test(`${name}: ${v.name}`, async ({ page }) => {
+      await page.setViewportSize({ width: v.width, height: 800 });
+      await open(page, '/', v.theme, v.density, state);
       await expect(page).toHaveScreenshot(`${name}-${v.name}.png`);
       if (v.axe) expect(await axeFailures(page)).toEqual([]);
     });
@@ -377,6 +402,7 @@ test('connections: disconnect and reconnect', async ({ page }) => {
 
 test('settings: appearance applies at once and survives a reload', async ({ page }) => {
   // Not open(): its init script would reset the saved theme on reload.
+  await fakeServer(page);
   await page.goto('/settings');
   await page.getByRole('button', { name: 'Light' }).click();
   await page.getByRole('button', { name: 'Blue' }).click();
@@ -389,17 +415,15 @@ test('settings: appearance applies at once and survives a reload', async ({ page
   await expect(page.getByRole('button', { name: 'Roomy' })).toHaveAttribute('aria-pressed', 'true');
 });
 
-const GOOD = 'four unrelated words';
-
 test('first run: the passphrase must be long enough and repeated exactly', async ({ page }) => {
-  await open(page, '/setup');
+  await open(page, '/', 'Dark', 'Comfortable', 'setup');
   const first = page.getByLabel('Passphrase', { exact: true });
   await expect(first).toBeFocused();
   await first.fill('short');
   await page.getByLabel('Repeat passphrase').fill('short');
   await page.getByRole('button', { name: 'Create and open Munim' }).click();
   await expect(page.getByRole('alert')).toHaveText('Use at least 12 characters.');
-  await expect(page).toHaveURL(/\/setup$/);
+  await expect(page.getByRole('heading', { name: 'Set a passphrase' })).toBeVisible();
 
   await first.fill(GOOD);
   await page.getByLabel('Repeat passphrase').fill('four unrelated wordz');
@@ -411,12 +435,13 @@ test('first run: the passphrase must be long enough and repeated exactly', async
   await page.getByLabel('Repeat passphrase').fill(GOOD);
   await page.getByRole('button', { name: 'Create and open Munim' }).click();
   await expect(page).toHaveURL(/\/today$/);
+  await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible();
 });
 
-test('sign-in: a wrong passphrase is refused, three in a row must wait, the right one opens Today', async ({
+test('sign-in: a wrong passphrase is refused, the right one opens the page that was asked for', async ({
   page,
 }) => {
-  await open(page, '/sign-in');
+  await open(page, '/saved', 'Dark', 'Comfortable', 'signed_out');
   const field = page.getByLabel('Passphrase');
   await field.fill('wrong');
   await field.press('Enter');
@@ -427,30 +452,70 @@ test('sign-in: a wrong passphrase is refused, three in a row must wait, the righ
 
   await field.fill(GOOD);
   await field.press('Enter');
-  await expect(page).toHaveURL(/\/today$/);
-
-  await page.goto('/sign-in');
-  for (let i = 0; i < 3; i++) {
-    await page.getByLabel('Passphrase').fill('wrong');
-    await page.getByRole('button', { name: 'Sign in' }).click();
-  }
-  await expect(page.getByRole('alert')).toHaveText('Too many attempts. Try again in 30 seconds.');
-  await expect(page.getByRole('button', { name: 'Sign in' })).toBeDisabled();
-  await expect(page.getByLabel('Passphrase')).toBeDisabled();
-  await expect(page).toHaveScreenshot('sign-in-waiting-dark.png');
+  await expect(page.getByRole('heading', { name: 'Saved' })).toBeVisible();
+  await expect(page).toHaveURL(/\/saved$/);
 });
 
-test('sign-in: the wait ends after thirty seconds', async ({ page }) => {
+test('sign-in: after three wrong passphrases the server makes even the right one wait', async ({
+  page,
+}) => {
   await page.clock.install();
-  await open(page, '/sign-in');
+  const server = await open(page, '/', 'Dark', 'Comfortable', 'signed_out');
+  const field = page.getByLabel('Passphrase');
+  const button = page.getByRole('button', { name: 'Sign in' });
   for (let i = 0; i < 3; i++) {
-    await page.getByLabel('Passphrase').fill('wrong');
-    await page.getByRole('button', { name: 'Sign in' }).click();
+    await field.fill('wrong');
+    await button.click();
+    // The field empties when the answer arrives; a click before that would be ignored.
+    await expect(field).toHaveValue('');
+    await expect(page.getByRole('alert')).toHaveText('That passphrase is not right.');
   }
-  await expect(page.getByRole('button', { name: 'Sign in' })).toBeDisabled();
-  await page.clock.fastForward(30_000);
-  await expect(page.getByRole('button', { name: 'Sign in' })).toBeEnabled();
+  // Stop the clock, so the countdown stays at 30 for the screenshot.
+  await page.clock.pauseAt(new Date());
+  await field.fill(GOOD);
+  await button.click();
+  await expect(page.getByRole('alert')).toHaveText('Too many attempts. Try again in 30 seconds.');
+  await expect(button).toBeDisabled();
+  await expect(field).toBeDisabled();
+  await expect(page).toHaveScreenshot('sign-in-waiting-dark.png');
+
+  await page.clock.fastForward(12_000);
+  await expect(page.getByRole('alert')).toHaveText('Too many attempts. Try again in 18 seconds.');
+
+  server.waitIsOver();
+  await page.clock.fastForward(18_000);
+  await expect(button).toBeEnabled();
   await expect(page.getByRole('alert')).toBeHidden();
+  await field.fill(GOOD);
+  await button.click();
+  await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible();
+});
+
+test('if the server cannot be reached the app says so, and Try again asks it again', async ({
+  page,
+}) => {
+  await page.route('**/api/**', (route) => route.abort());
+  await page.goto('/today');
+  await expect(page.getByRole('alert')).toContainText('Could not load Munim.');
+  await expect(page).toHaveScreenshot('unreachable-dark.png');
+  expect(await axeFailures(page)).toEqual([]);
+
+  await page.unroute('**/api/**');
+  await fakeServer(page);
+  await page.getByRole('button', { name: 'Try again' }).click();
+  await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible();
+});
+
+test('a session that the server has locked or ended is followed by the app', async ({ page }) => {
+  await open(page, '/settings');
+  await expect(page.getByText('Safari on iPhone')).toBeVisible();
+  // The server locks the session behind the app's back, as its own idle clock would.
+  await page.evaluate(() => fetch('/api/lock', { method: 'POST' }));
+  await page
+    .getByRole('group', { name: 'Lock after' })
+    .getByRole('button', { name: '1 hour' })
+    .click();
+  await expect(page.getByRole('heading', { name: 'Locked' })).toBeVisible();
 });
 
 for (const theme of ['Dark', 'Light']) {
@@ -487,8 +552,12 @@ for (const theme of ['Dark', 'Light']) {
 test('lock: signing out from the lock screen leaves the app', async ({ page }) => {
   await open(page, '/settings');
   await page.getByRole('button', { name: 'Lock', exact: true }).click();
-  await page.getByRole('button', { name: 'Sign out' }).click();
-  await expect(page).toHaveURL(/\/sign-in$/);
+  // The settings screen underneath has a Sign out of its own; this is the lock screen's.
+  await page
+    .locator('section', { has: page.getByRole('heading', { name: 'Locked' }) })
+    .getByRole('button', { name: 'Sign out' })
+    .click();
+  await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
 });
 
 test('settings: idle lock can be retimed or switched off', async ({ page }) => {
@@ -508,55 +577,52 @@ test('settings: changing the passphrase checks the current one and the new one',
   page,
 }) => {
   await open(page, '/settings');
+  const NEW = 'a brand new phrase';
+  await expect(page.getByText('Safari on iPhone')).toBeVisible();
   await page.getByRole('button', { name: 'Change' }).click();
   await page.getByLabel('Current passphrase').fill('nope');
-  await page.getByLabel('New passphrase', { exact: true }).fill(GOOD);
-  await page.getByLabel('Repeat new passphrase').fill(GOOD);
+  await page.getByLabel('New passphrase', { exact: true }).fill(NEW);
+  await page.getByLabel('Repeat new passphrase').fill(NEW);
   await page.getByRole('button', { name: 'Save passphrase' }).click();
   await expect(page.getByRole('alert')).toHaveText('The current passphrase is not right.');
+  await expect(page).toHaveScreenshot('settings-forms-open-dark.png');
+  expect(await axeFailures(page)).toEqual([]);
 
-  await page.getByLabel('Current passphrase').fill('the old passphrase');
+  await page.getByLabel('Current passphrase').fill(GOOD);
   await page.getByLabel('Repeat new passphrase').fill('something else here');
   await page.getByRole('button', { name: 'Save passphrase' }).click();
   await expect(page.getByRole('alert')).toHaveText('The two entries do not match.');
 
-  await page.getByLabel('Repeat new passphrase').fill(GOOD);
+  await page.getByLabel('New passphrase', { exact: true }).fill('short');
+  await page.getByLabel('Repeat new passphrase').fill('short');
   await page.getByRole('button', { name: 'Save passphrase' }).click();
-  await expect(page.getByRole('status')).toHaveText(/this build runs on sample data/);
+  await expect(page.getByRole('alert')).toHaveText('Use at least 12 characters.');
+
+  await page.getByLabel('New passphrase', { exact: true }).fill(NEW);
+  await page.getByLabel('Repeat new passphrase').fill(NEW);
+  await page.getByRole('button', { name: 'Save passphrase' }).click();
+  await expect(page.getByRole('status')).toHaveText(/Passphrase changed/);
   await expect(page.getByLabel('Current passphrase')).toHaveCount(0);
 });
 
 test('settings: revoking a device removes it; signing out leaves the app', async ({ page }) => {
   await open(page, '/settings');
+  await expect(page.getByText('This device · Active now')).toBeVisible();
+  await expect(page.getByText('2 hours ago')).toBeVisible();
   await page.getByRole('button', { name: 'Revoke Safari on iPhone' }).click();
   await expect(page.getByText('Safari on iPhone')).toHaveCount(0);
   await expect(page.getByText('Firefox on Linux')).toBeVisible();
-  await page.getByRole('link', { name: 'Sign out' }).click();
-  await expect(page).toHaveURL(/\/sign-in$/);
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
 });
 
-test('settings: deleting everything needs the passphrase, and the mock says it did nothing', async ({
-  page,
-}) => {
+test('settings: export and delete say they are not available yet', async ({ page }) => {
   await open(page, '/settings');
-  await page.getByRole('button', { name: 'Change' }).click();
-  await page.getByRole('button', { name: 'Delete all data' }).click();
-  const confirm = page.getByLabel('Passphrase to confirm deleting');
-  await expect(confirm).toBeFocused();
-  await expect(page).toHaveScreenshot('settings-forms-open-dark.png');
-  expect(await axeFailures(page)).toEqual([]);
-
-  await confirm.fill('nope');
-  await page.getByRole('button', { name: 'Delete everything' }).click();
-  await expect(page.getByText('That passphrase is not right.')).toBeVisible();
-  await confirm.fill(GOOD);
-  await page.getByRole('button', { name: 'Delete everything' }).click();
-  await expect(confirm).toHaveCount(0);
-  await expect(page.getByText(/Nothing happened: this build runs on sample data/)).toBeVisible();
-
-  await page.getByRole('button', { name: 'Delete all data' }).click();
-  await page.getByRole('button', { name: 'Cancel' }).last().click();
-  await expect(page.getByLabel('Passphrase to confirm deleting')).toHaveCount(0);
+  for (const name of ['Export everything', 'Delete all data']) {
+    const button = page.getByRole('button', { name });
+    await expect(button).toBeDisabled();
+    await expect(button).toHaveAttribute('title', /Available when Munim stores your data/);
+  }
 });
 
 const threadHeading = (page: Page) =>
