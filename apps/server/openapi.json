@@ -458,6 +458,45 @@
         "security": [{ "Open": [] }]
       }
     },
+    "/api/sources/hacker-news": {
+      "get": {
+        "operationId": "reader_api_hacker_news",
+        "summary": "Hacker News",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ConnectionOut" } }
+            }
+          }
+        },
+        "tags": ["reader"],
+        "security": [{ "Open": [] }]
+      },
+      "put": {
+        "operationId": "reader_api_set_hacker_news",
+        "summary": "Set Hacker News",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ConnectionOut" } }
+            }
+          }
+        },
+        "description": "Switches Hacker News on or off. Off stops the fetching; what was fetched stays.",
+        "tags": ["reader"],
+        "requestBody": {
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/ConnectionIn" } }
+          },
+          "required": true
+        },
+        "security": [{ "Open": [] }]
+      }
+    },
     "/api/counts": {
       "get": {
         "operationId": "reader_api_counts",
@@ -630,10 +669,34 @@
         "properties": {
           "who": { "title": "Who", "type": "string" },
           "meta": { "title": "Meta", "type": "string" },
-          "text": { "title": "Text", "type": "string" },
-          "depth": { "title": "Depth", "type": "integer" }
+          "depth": { "title": "Depth", "type": "integer" },
+          "blocks": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "code": "#/components/schemas/Code",
+                  "heading": "#/components/schemas/Heading",
+                  "image": "#/components/schemas/Image",
+                  "list": "#/components/schemas/ListBlock",
+                  "paragraph": "#/components/schemas/Paragraph",
+                  "quote": "#/components/schemas/Quote"
+                },
+                "propertyName": "type"
+              },
+              "oneOf": [
+                { "$ref": "#/components/schemas/Paragraph" },
+                { "$ref": "#/components/schemas/Heading" },
+                { "$ref": "#/components/schemas/Quote" },
+                { "$ref": "#/components/schemas/ListBlock" },
+                { "$ref": "#/components/schemas/Code" },
+                { "$ref": "#/components/schemas/Image" }
+              ]
+            },
+            "title": "Blocks",
+            "type": "array"
+          }
         },
-        "required": ["who", "meta", "text", "depth"],
+        "required": ["who", "meta", "depth", "blocks"],
         "title": "Comment",
         "type": "object"
       },
@@ -805,6 +868,26 @@
           "later": { "anyOf": [{ "type": "boolean" }, { "type": "null" }], "title": "Later" }
         },
         "title": "ItemPatch",
+        "type": "object"
+      },
+      "ConnectionOut": {
+        "description": "A source that is switched on as a whole.",
+        "properties": {
+          "enabled": { "title": "Enabled", "type": "boolean" },
+          "synced_at": {
+            "anyOf": [{ "format": "date-time", "type": "string" }, { "type": "null" }],
+            "title": "Synced At"
+          },
+          "problem": { "title": "Problem", "type": "string" }
+        },
+        "required": ["enabled", "synced_at", "problem"],
+        "title": "ConnectionOut",
+        "type": "object"
+      },
+      "ConnectionIn": {
+        "properties": { "enabled": { "title": "Enabled", "type": "boolean" } },
+        "required": ["enabled"],
+        "title": "ConnectionIn",
         "type": "object"
       },
       "Counts": {

@@ -81,6 +81,11 @@ def check_address(url: str) -> None:
             raise FeedProblem("That address is on a private network, which is not allowed.")
 
 
+def new_client() -> httpx.Client:
+    """A connection for several downloads in a row. Redirects are never followed for us."""
+    return httpx.Client(timeout=TIMEOUT_SECONDS, follow_redirects=False)
+
+
 def download(
     url: str,
     etag: str = "",
@@ -103,7 +108,7 @@ def download(
         headers["If-Modified-Since"] = last_modified
 
     own = client is None
-    client = client or httpx.Client(timeout=TIMEOUT_SECONDS, follow_redirects=False)
+    client = client or new_client()
     try:
         for _ in range(MAX_REDIRECTS + 1):
             check_address(url)

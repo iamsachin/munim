@@ -81,3 +81,18 @@ export function heldOf(item: Pick<Item, 'source' | 'media' | 'replies'>): string
   const comments = `${String(item.replies)} ${item.replies === 1 ? 'comment' : 'comments'}`;
   return item.replies ? comments : 'Text';
 }
+
+/** Whether Hacker News is switched on, and how its last fetch went. */
+export const useHackerNews = () =>
+  useQuery({ queryKey: ['hacker-news'], queryFn: api.hackerNews, refetchInterval: ASK_AGAIN_MS });
+
+/** Switches Hacker News on or off. Its stories arrive once the worker has fetched them. */
+export function useSetHackerNews() {
+  const queries = useQueryClient();
+  return useMutation({
+    mutationFn: api.setHackerNews,
+    onSuccess: (now) => {
+      queries.setQueryData(['hacker-news'], now);
+    },
+  });
+}

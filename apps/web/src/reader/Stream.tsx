@@ -13,7 +13,6 @@ import { Cell, RowButton, Table, TableBody, TableHeader, TableRow, Th } from '..
 import { AskCard } from './AskCard';
 import { Blocks } from './Blocks';
 import { EMPTY } from './copy';
-import { highlightable, Marked } from './Marked';
 import { NO_REPLY } from './marks';
 import { MediaPreview } from './MediaPreview';
 import { age, useChangeItem, useItem, useItems } from './queries';
@@ -298,10 +297,12 @@ function Thread({ id, now }: { id: number; now: number }) {
           >
             <span className="font-semibold">{c.who}</span>{' '}
             <span className="font-mono text-code text-mute">{c.meta}</span>
-            <br />
-            <span {...highlightable({ src: it.source, title: it.title, from: it.origin })}>
-              <Marked text={c.text} quotes={quotes} />
-            </span>
+            <Blocks
+              compact
+              blocks={c.blocks}
+              item={{ src: it.source, title: it.title, from: it.origin }}
+              quotes={quotes}
+            />
           </div>
         ))}
         {/* A feed article has no replies to wait for, so it does not say "none yet". */}

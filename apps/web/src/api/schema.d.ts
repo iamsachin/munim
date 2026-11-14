@@ -290,6 +290,27 @@ export interface paths {
     patch: operations['reader_api_change_item'];
     trace?: never;
   };
+  '/api/sources/hacker-news': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Hacker News */
+    get: operations['reader_api_hacker_news'];
+    /**
+     * Set Hacker News
+     * @description Switches Hacker News on or off. Off stops the fetching; what was fetched stays.
+     */
+    put: operations['reader_api_set_hacker_news'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/counts': {
     parameters: {
       query?: never;
@@ -443,10 +464,17 @@ export interface components {
       who: string;
       /** Meta */
       meta: string;
-      /** Text */
-      text: string;
       /** Depth */
       depth: number;
+      /** Blocks */
+      blocks: (
+        | components['schemas']['Paragraph']
+        | components['schemas']['Heading']
+        | components['schemas']['Quote']
+        | components['schemas']['ListBlock']
+        | components['schemas']['Code']
+        | components['schemas']['Image']
+      )[];
     };
     /** Heading */
     Heading: {
@@ -582,6 +610,23 @@ export interface components {
       saved?: boolean | null;
       /** Later */
       later?: boolean | null;
+    };
+    /**
+     * ConnectionOut
+     * @description A source that is switched on as a whole.
+     */
+    ConnectionOut: {
+      /** Enabled */
+      enabled: boolean;
+      /** Synced At */
+      synced_at: string | null;
+      /** Problem */
+      problem: string;
+    };
+    /** ConnectionIn */
+    ConnectionIn: {
+      /** Enabled */
+      enabled: boolean;
     };
     /** Counts */
     Counts: {
@@ -1098,6 +1143,50 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['ItemOut'];
+        };
+      };
+    };
+  };
+  reader_api_hacker_news: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ConnectionOut'];
+        };
+      };
+    };
+  };
+  reader_api_set_hacker_news: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ConnectionIn'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ConnectionOut'];
         };
       };
     };

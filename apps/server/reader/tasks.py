@@ -2,7 +2,7 @@
 
 from procrastinate.contrib.django import app
 
-from reader import feeds
+from reader import feeds, hackernews
 
 POLL_EVERY = "*/15 * * * *"
 
@@ -14,3 +14,10 @@ POLL_EVERY = "*/15 * * * *"
 def poll_feeds(timestamp: int) -> None:
     """Every fifteen minutes: fetch every feed again."""
     feeds.refresh_all()
+
+
+@app.periodic(cron=POLL_EVERY)
+@app.task(queueing_lock="poll_hacker_news", lock="poll_hacker_news")
+def poll_hacker_news(timestamp: int) -> None:
+    """Every fifteen minutes, and when it is switched on: fetch the Hacker News front page."""
+    hackernews.refresh()

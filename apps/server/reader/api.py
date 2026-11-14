@@ -3,15 +3,17 @@
 from datetime import datetime
 from typing import Annotated, Any, Literal
 
+from django.db import transaction
 from django.db.models import Count, Q
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from ninja import Field, Router, Schema, Status
+from procrastinate.exceptions import AlreadyEnqueued
 
 from account.auth import Open
-from reader import feeds, images
-from reader.models import Feed, Item, Source
+from reader import feeds, images, tasks
+from reader.models import Connection, Feed, Item, Source
 
 router = Router(tags=["reader"], auth=Open())
 
@@ -54,14 +56,6 @@ class ItemOut(Schema):
     saved_at: datetime | None
     later_at: datetime | None
     media: Literal["Video", "Image"] | None
-
-
-class Comment(Schema):
-    who: str
-    meta: str
-    text: str
-    # Nesting level, 0 for a top-level reply.
-    depth: int
 
 
 class Span(Schema):
@@ -111,6 +105,15 @@ Block = Annotated[
 ]
 
 
+class Comment(Schema):
+    who: str
+    # A secondary line such as its age: "3h".
+    meta: str
+    # Nesting level, 0 for a top-level reply.
+    depth: int
+    blocks: list[Block]
+
+
 class ItemDetail(ItemOut):
     """An item opened: its own page's address, its text as blocks, and its replies."""
 
@@ -128,6 +131,20 @@ class ItemPatch(Schema):
     later: bool | None = None
 
 
+class ConnectionOut(Schema):
+    """A source that is switched on as a whole."""
+
+    enabled: bool
+    # When it was last fetched; null if it never has been.
+    synced_at: datetime | None
+    # Why the last fetch failed, or empty.
+    problem: str
+
+
+class ConnectionIn(Schema):
+    enabled: bool
+
+
 class Counts(Schema):
     stream: int
     later: int
@@ -137,14 +154,14 @@ class Counts(Schema):
 
 
 def _row(item: Item) -> dict[str, Any]:
-    # Feed articles are the only items so far, so the fields other sources will fill are fixed.
     return {
         "id": item.pk,
         "source": item.source,
         "title": item.title,
-        "origin": item.feed.title,
+        # A feed article follows its feed's title, so a renamed feed renames its articles.
+        "origin": item.feed.title if item.feed else item.origin,
         "sub": "",
-        "replies": 0,
+        "replies": item.replies,
         "published_at": item.published_at,
         "minutes": feeds.minutes(item.body),
         "unread": item.read_at is None,
@@ -219,8 +236,32 @@ def get_item(request: HttpRequest, item_id: int) -> ItemDetail:
     # Validated on the way out: what is stored was written by our own converter, and this
     # checks that it still has the shape the app expects.
     return ItemDetail.model_validate(
-        {**_row(item), "url": item.url, "blocks": _shown(item), "comments": []}
+        {**_row(item), "url": item.url, "blocks": _shown(item), "comments": _comments(item)}
     )
+
+
+def _age(at: datetime, now: datetime) -> str:
+    """ "45m", "3h", "2d": the same short ages the app shows on its rows."""
+    minutes = max(0, int((now - at).total_seconds() // 60))
+    if minutes < 60:
+        return f"{minutes}m"
+    if minutes < 60 * 24:
+        return f"{minutes // 60}h"
+    return f"{minutes // (60 * 24)}d"
+
+
+def _comments(item: Item) -> list[dict[str, Any]]:
+    now = timezone.now()
+    return [
+        {
+            "who": comment["who"],
+            "meta": _age(datetime.fromisoformat(comment["at"]), now),
+            "depth": comment["depth"],
+            # Images reach the browser only through this server, and replies have none.
+            "blocks": [block for block in comment["blocks"] if block["type"] != "image"],
+        }
+        for comment in item.comments
+    ]
 
 
 def _shown(item: Item) -> list[dict[str, Any]]:
@@ -267,6 +308,38 @@ def change_item(request: HttpRequest, item_id: int, body: ItemPatch) -> ItemOut:
             setattr(item, field, now if wanted else None)
     item.save()
     return ItemOut(**_row(item))
+
+
+def _connection(connection: Connection | None) -> ConnectionOut:
+    if connection is None:
+        return ConnectionOut(enabled=False, synced_at=None, problem="")
+    return ConnectionOut(
+        enabled=connection.enabled, synced_at=connection.synced_at, problem=connection.problem
+    )
+
+
+@router.get("/sources/hacker-news", response=ConnectionOut)
+def hacker_news(request: HttpRequest) -> ConnectionOut:
+    return _connection(Connection.objects.filter(source=Source.HACKER_NEWS).first())
+
+
+@router.put("/sources/hacker-news", response=ConnectionOut)
+def set_hacker_news(request: HttpRequest, body: ConnectionIn) -> ConnectionOut:
+    """Switches Hacker News on or off. Off stops the fetching; what was fetched stays."""
+    connection, _ = Connection.objects.update_or_create(
+        source=Source.HACKER_NEWS, defaults={"enabled": body.enabled}
+    )
+    if body.enabled:
+        # Fetched now by the worker, not on its next quarter hour and not inside this request.
+        # In a transaction of its own: if a fetch is already queued the insert fails, and that
+        # must not spoil the request's.
+        try:
+            with transaction.atomic():
+                # The periodic decorator hides the task's arguments from the type checker.
+                tasks.poll_hacker_news.defer(timestamp=0)  # type: ignore[call-arg]
+        except AlreadyEnqueued:
+            pass
+    return _connection(connection)
 
 
 @router.get("/counts", response=Counts)

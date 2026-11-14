@@ -8,9 +8,11 @@ Last updated: 2026-11-14
 
 Milestone 3 in progress. Merged: the Django scaffold (#6), the account API (#8), the web app signing in against the server (#9), RSS (#10), background polling (#11), the Stream on real items (#12), and feed articles readable in the thread pane (#13). Open for the owner's approval: rich text as blocks, with images fetched through the server.
 
-Still on sample data in the browser: highlights, watches, digest, Ask, connections, AI settings.
+Open: Hacker News (stacked on the rich text pull request).
 
-Next: Hacker News as the second source (needs no account), which brings real comments into the thread pane.
+Still on sample data in the browser: highlights, watches, digest, Ask, AI settings, and every Connections row except Hacker News.
+
+Next: YouTube, once the owner has chosen between an API key and OAuth.
 
 ## 0. Preparation
 
@@ -90,7 +92,7 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [ ] RSS: remove a feed from the app (only possible in the admin now; needs a design)
 - [x] RSS articles in the Stream, with unread state
 - [x] Rich text: every source's text becomes blocks on the server (headings, lists, quotes, code, links, bold and italic), with images fetched through the server and kept in the data folder
-- [ ] Hacker News
+- [x] Hacker News: the front page and each story's discussion, switched on and off in Connections
 - [ ] YouTube
 - [ ] Reddit (official OAuth)
 - [x] Saving an item (full text of feed articles)

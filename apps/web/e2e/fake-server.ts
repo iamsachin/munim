@@ -66,6 +66,7 @@ export async function fakeServer(page: Page, start: State = 'open') {
   let wrong = 0;
   let minutes: number | null = 15;
   const ago = (ms: number) => new Date(NOW - ms).toISOString();
+  let hackerNews = { enabled: true, synced_at: ago(2 * 60_000), problem: '' };
   let devices = [
     { id: 1, name: 'Chrome on macOS', last_seen: ago(0), current: true },
     { id: 2, name: 'Safari on iPhone', last_seen: ago(2 * HOUR), current: false },
@@ -177,6 +178,11 @@ export async function fakeServer(page: Page, start: State = 'open') {
       minutes = body.minutes as number | null;
       return reply(200, { minutes });
     }
+    if (call === 'GET sources/hacker-news') return reply(200, hackerNews);
+    if (call === 'PUT sources/hacker-news') {
+      hackerNews = { ...hackerNews, enabled: Boolean(body.enabled) };
+      return reply(200, hackerNews);
+    }
     if (call === 'GET feeds') return reply(200, listed());
     if (call === 'POST feeds') {
       const url = String(body.url);
@@ -265,7 +271,10 @@ export async function fakeServer(page: Page, start: State = 'open') {
         ...row(item),
         url: `https://example.com/items/${String(item.id)}`,
         blocks: item.title === RICH_TITLE ? richBlocks(item.id) : item.paragraphs.map(paragraph),
-        comments: item.comments,
+        comments: item.comments.map(({ text: said, ...comment }) => ({
+          ...comment,
+          blocks: [paragraph(said)],
+        })),
       });
     }
     if (call === 'POST passphrase') {
