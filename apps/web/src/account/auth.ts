@@ -59,3 +59,15 @@ export function idleStep(
   if (lastActivity > lastReport && now - lastReport >= REPORT_EVERY_MS) return 'report';
   return 'wait';
 }
+
+/**
+ * How what travels between this browser and the server is protected, read from the address the
+ * app was opened at. `plain` is true when anyone on the network could read it.
+ */
+export function connection(protocol: string, host: string) {
+  if (protocol === 'https:') return { says: 'Encrypted (https)', plain: false };
+  const here = host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
+  return here
+    ? { says: 'Not encrypted, and it never leaves this machine', plain: false }
+    : { says: 'Not encrypted (http): others on the network can read it', plain: true };
+}

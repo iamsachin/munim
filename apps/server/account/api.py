@@ -18,6 +18,8 @@ from account import devices
 from account.auth import OWNER, Csrf, Open, SignedIn, is_locked, mark_active, owner
 from account.models import Device, Preferences
 from account.throttle import TooManyAttempts, address, attempt
+from ai.models import ProviderKey
+from munim import vault
 
 router = Router(tags=["account"])
 
@@ -52,6 +54,16 @@ class DeviceOut(Schema):
     name: str
     last_seen: datetime
     current: bool
+
+
+class SecurityOut(Schema):
+    """What the Security screen says about encryption. Facts, read from this install."""
+
+    # Where the master key that seals secrets comes from: MUNIM_MASTER_KEY, or a file in the
+    # data folder made on first use.
+    master_key: Literal["environment", "file"]
+    # How many secrets are sealed with it now (API keys so far).
+    sealed: int
 
 
 class LockSettings(Schema):
@@ -228,3 +240,10 @@ def put_lock_settings(request: HttpRequest, body: LockSettings) -> LockSettings:
     preferences.lock_after_minutes = body.minutes
     preferences.save()
     return body
+
+
+@router.get("/security", auth=Open(), response=SecurityOut)
+def security(request: HttpRequest) -> SecurityOut:
+    return SecurityOut.model_validate(
+        {"master_key": vault.kept_in(), "sealed": ProviderKey.objects.count()}
+    )

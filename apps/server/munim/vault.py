@@ -41,6 +41,11 @@ def _key() -> bytes:
     return path.read_bytes().strip()
 
 
+def kept_in() -> str:
+    """Where the master key comes from: the install's own setting, or the file made here."""
+    return "environment" if settings.MASTER_KEY else "file"
+
+
 def seal(secret: str) -> str:
     return Fernet(_key()).encrypt(secret.encode()).decode()
 

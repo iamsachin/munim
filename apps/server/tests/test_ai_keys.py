@@ -149,3 +149,23 @@ def test_keys_need_an_open_session(client: Client, db: None, provider: Any) -> N
     assert put(client, "openai", OPENAI_KEY).status_code == 401
     assert client.delete("/api/ai/keys/openai").status_code == 401
     assert provider.seen == []
+
+
+def test_the_security_screen_is_told_facts_not_secrets(
+    owner_client: Client, provider: Any, settings: Any
+) -> None:
+    assert owner_client.get("/api/security").json() == {"master_key": "file", "sealed": 0}
+    put(owner_client, "openai", OPENAI_KEY)
+    told = owner_client.get("/api/security")
+    assert told.json() == {"master_key": "file", "sealed": 1}
+    assert OPENAI_KEY not in told.content.decode()
+
+    from cryptography.fernet import Fernet
+
+    settings.MASTER_KEY = Fernet.generate_key().decode()
+    assert owner_client.get("/api/security").json()["master_key"] == "environment"
+    assert settings.MASTER_KEY not in owner_client.get("/api/security").content.decode()
+
+
+def test_security_facts_need_an_open_session(client: Client, db: None) -> None:
+    assert client.get("/api/security").status_code == 401

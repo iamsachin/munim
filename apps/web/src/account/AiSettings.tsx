@@ -92,6 +92,9 @@ export function AiSettings() {
       <SectionLabel as="h2" className={HEADING}>
         Providers
       </SectionLabel>
+      <p className="px-16 pb-6 text-note text-mute">
+        A key is sealed before it is stored. Only its last four characters come back to this screen.
+      </p>
       <Table label="Providers">
         <TableHeader className={KEY_COLS}>
           <Th>

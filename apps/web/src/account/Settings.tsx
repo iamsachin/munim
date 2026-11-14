@@ -10,13 +10,13 @@ import { Button } from '../ui/Button';
 import { Chip } from '../ui/Chip';
 import { Swatch } from '../ui/Swatch';
 import { Toggle } from '../ui/Toggle';
-import { DataCard, DevicesCard, Row, SignInCard } from './SecurityCards';
+import { DataCard, DevicesCard, EncryptionCard, Row, SignInCard } from './SecurityCards';
 
 const keys = <T extends object>(o: T) => Object.keys(o) as (keyof T)[];
 
 /*
- * The handoff's Encryption card is not here: it makes security claims, and those wait until the
- * server makes them true. Touch ID and notification previews are dropped (a web app has neither).
+ * The Encryption card says what this install does, not what the handoff's card claimed. Touch ID
+ * and notification previews are dropped (a web app has neither).
  */
 export function Settings() {
   const { theme, setTheme } = useTheme();
@@ -26,6 +26,7 @@ export function Settings() {
     <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
       <ScreenHeader title="Security and settings" />
       <div className="grid max-w-980 grid-cols-2 items-start gap-12 p-16">
+        <EncryptionCard />
         <SignInCard />
         <DevicesCard />
         <Card className="gap-10">

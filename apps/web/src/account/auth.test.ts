@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { idleStep, lastSeen, lockNote, passphraseProblem, waitMessage } from './auth';
+import { connection, idleStep, lastSeen, lockNote, passphraseProblem, waitMessage } from './auth';
 
 test('a new passphrase needs twelve characters and a matching repeat', () => {
   expect(passphraseProblem('short', 'short')).toBe('Use at least 12 characters.');
@@ -47,4 +47,22 @@ test('activity is reported at most once a minute, and only if there was any', ()
   expect(idleStep(start + 60_000, start + 10_000, start, 15)).toBe('report');
   // Nothing touched since the last report: nothing to say.
   expect(idleStep(start + 120_000, start - 5_000, start, 15)).toBe('wait');
+});
+
+test('the connection is described by the address the app was opened at', () => {
+  expect(connection('https:', 'munim.example.com')).toEqual({
+    says: 'Encrypted (https)',
+    plain: false,
+  });
+  for (const host of ['localhost', '127.0.0.1', '[::1]']) {
+    expect(connection('http:', host)).toEqual({
+      says: 'Not encrypted, and it never leaves this machine',
+      plain: false,
+    });
+  }
+  // Over plain http from another machine, anyone in between can read it: that is said in red.
+  expect(connection('http:', '192.168.1.20')).toEqual({
+    says: 'Not encrypted (http): others on the network can read it',
+    plain: true,
+  });
 });
