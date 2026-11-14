@@ -36,6 +36,7 @@ const COLORS = [
   ['panel', 'bg-panel'],
   ['card', 'bg-card'],
   ['line', 'bg-line'],
+  ['dim', 'bg-dim'],
   ['mute', 'bg-mute'],
   ['ink', 'bg-ink'],
   ['accent', 'bg-accent'],

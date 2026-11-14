@@ -97,7 +97,7 @@ export function SaveDot({ saved, onToggle }: { saved: boolean; onToggle: () => v
       <span
         className={cx(
           'size-8 rounded-pill border',
-          saved ? 'border-accent bg-accent' : 'border-line',
+          saved ? 'border-accent bg-accent' : 'border-dim',
         )}
       />
     </button>

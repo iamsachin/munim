@@ -6,13 +6,7 @@ Last updated: 2026-11-14
 
 ## Now
 
-Milestone 1 is built and all gates pass. Waiting on the owner to review the gallery (`pnpm dev`) and decide:
-
-1. Approve the dark design system as a faithful port of the handoff.
-2. Approve or change the proposed light theme (values in `apps/web/src/styles.css`).
-3. Unsaved save-dot: the design draws it in the `line` colour, about 1.4:1 against the ground, below the 3:1 needed for interface marks. Keep as designed, or lighten it.
-
-Milestone 2 does not start until 1 is approved.
+Milestone 1 approved by the owner on 2026-11-14, including the light theme. Next: milestone 2, starting with the typed data layer and the app shell.
 
 ## 0. Preparation
 
@@ -30,9 +24,11 @@ Milestone 2 does not start until 1 is approved.
 - [x] Shared components on a gallery page: AI badge, AI card, section label, buttons (ghost, primary, accent outline), filter chip, On/Off toggle, accent swatch, nav row, table (header, row, row button), source code tag, text input, status dot, highlight mark, save dot, citation row, media thumb, section card
 - [x] Accent and density switching
 - [x] Themed focus ring; every control is a native, keyboard-operable element
-- [x] Light theme proposed (design gap, not yet approved)
+- [x] Light theme (design gap, approved)
 - [x] Visual baselines recorded: both themes at every density and every accent (macOS Chromium)
-- [ ] **Approved by owner**
+- [x] Unsaved save-dot ring lightened to 3:1 (`dim` token, owner's decision)
+- [x] duhview review on pull requests (`.duhview/`, GitHub Action)
+- [x] **Approved by owner**
 
 Not built yet because only one screen uses each: ask bar, suggestion chip, chat bubble, media preview overlay. They come with their screens in milestone 2.
 

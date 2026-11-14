@@ -25,7 +25,7 @@ The owner chose "I design, you approve". Nothing undesigned is built on until th
 
 ## Light theme
 
-Keep hue 255 and the low chroma; invert the lightness ladder so the same five steps (bg, panel, card, line, ink/mute) keep their roles and their relative spacing. Accents and source colours need darker steps to hold contrast on a light ground: check body-size text at 4.5:1 and interface marks at 3:1 for every accent. The AI card and highlight tints are `color-mix` percentages and may need different percentages on light; propose them, do not assume.
+Approved. Every new design must be checked in both themes and every accent: body-size text at 4.5:1, interface marks at 3:1. In light, `accent` is the owner's accent at lightness 0.45, so it works as text, border and fill (with `text-bg` on top).
 
 ## Copy
 

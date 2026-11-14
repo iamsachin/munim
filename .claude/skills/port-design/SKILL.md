@@ -35,6 +35,9 @@ Defined once in the Tailwind `@theme` block. Components use only these.
 | a4 | `oklch(0.78 0.1 305)` | YouTube |
 | ok | `oklch(0.8 0.1 155)` | connected, healthy |
 | scrim | `oklch(0.1 0.008 255 / 0.82)` | media preview backdrop |
+| dim | `oklch(0.54 0.008 255)` | not in the handoff: faint interface marks that must still reach 3:1, such as the unsaved save-dot ring (owner's decision) |
+
+The approved light theme overrides these in `styles.css`: bg 0.975, panel 0.955, card 0.925, line 0.87, dim 0.6, mute 0.46, ink 0.2, and the accent and source colours at lightness 0.45.
 
 Accents: Amber `oklch(0.82 0.13 75)`, Blue `oklch(0.76 0.12 250)`, Green `oklch(0.82 0.13 155)`, Coral `oklch(0.76 0.13 25)`, Gray `oklch(0.9 0.008 255)`.
 

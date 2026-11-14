@@ -22,7 +22,7 @@ The quality bar is the point of this project. Prefer a smaller thing finished pr
 | Platform | Web app, desktop width (min 920px). No phone layout yet. |
 | Stack | TypeScript everywhere. React + Vite front end, Node server, Postgres. |
 | Styling | Tailwind v4. Design tokens live in one `@theme` block; no raw colour, font or size values in components. |
-| Themes | Dark as designed, plus a light theme (a design gap). Five accents, three densities, as designed. |
+| Themes | Dark as designed, plus the approved light theme. Five accents, three densities, as designed. |
 | Input | Keyboard-first: j/k row navigation, single-key actions, command palette, on top of standard accessibility. |
 | Scope | Hub. Code is organised by module from day one; the reader is the first module. Calendar, Mail and Budget stay as the disabled placeholders in the design until each is designed. |
 | Sources | RSS, Hacker News and YouTube first. Reddit next through its official OAuth API. X and Instagram are shown as "Not available yet". Official APIs only: no scraping, no bridges. |
@@ -46,7 +46,7 @@ Version pins with a reason: TypeScript stays on 6.0 until typescript-eslint supp
 
 ## Design gaps (need a design before code)
 
-AI settings (keys, per-feature model, usage); first-run setup and sign-in; lock screen; loading, error and empty states for every screen; light theme; honest security screen; command palette and shortcut help; disabled-reply state.
+AI settings (keys, per-feature model, usage); first-run setup and sign-in; lock screen; loading, error and empty states for every screen; honest security screen; command palette and shortcut help; disabled-reply state.
 
 ## Build order
 
@@ -83,6 +83,7 @@ Baselines are recorded on macOS Chromium and are platform-specific; other platfo
 
 - Work on a feature branch. Commit each finished piece yourself once the gates pass. Small conventional commits.
 - Never merge to `main` or push unless asked.
+- Pull requests are reviewed by duhview (`.github/workflows/duhview.yml`, settings in `.duhview/`). It reads its settings from the base branch. Fix or answer its findings before asking for a merge.
 
 ## Engineering rules
 
