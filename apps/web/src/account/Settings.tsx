@@ -5,13 +5,13 @@ import { SectionLabel } from '../ui/atoms';
 import { Card } from '../ui/Card';
 import { Chip } from '../ui/Chip';
 import { Swatch } from '../ui/Swatch';
+import { DataCard, DevicesCard, SignInCard } from './SecurityCards';
 
 const keys = <T extends object>(o: T) => Object.keys(o) as (keyof T)[];
 
 /*
- * Only Appearance for now. The handoff's Encryption, Sign-in and lock, Devices and Your data cards
- * describe things that are not built and make security claims that are not true for this
- * architecture; they arrive with their own approved designs.
+ * The handoff's Encryption card is not here: it makes security claims, and those wait until the
+ * server makes them true. Touch ID and notification previews are dropped (a web app has neither).
  */
 export function Settings() {
   const { theme, setTheme } = useTheme();
@@ -19,7 +19,9 @@ export function Settings() {
   return (
     <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
       <ScreenHeader title="Security and settings" />
-      <div className="grid max-w-980 grid-cols-2 gap-12 p-16">
+      <div className="grid max-w-980 grid-cols-2 items-start gap-12 p-16">
+        <SignInCard />
+        <DevicesCard />
         <Card className="gap-10">
           <SectionLabel as="h2">Appearance</SectionLabel>
           <div className="flex items-center gap-12">
@@ -77,6 +79,7 @@ export function Settings() {
             </div>
           </div>
         </Card>
+        <DataCard />
       </div>
     </main>
   );

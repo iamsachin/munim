@@ -9,6 +9,7 @@ import {
 } from '../reader/store';
 import { SectionLabel, SOURCES, type Source } from '../ui/atoms';
 import { NavRow } from '../ui/NavRow';
+import { Brand } from './Brand';
 import type { ReactNode } from 'react';
 
 const SOURCE_ROWS: Source[] = ['RD', 'X', 'IG', 'HN', 'YT'];
@@ -28,9 +29,8 @@ export function Sidebar() {
   const { state } = useReader();
   return (
     <aside className="flex min-h-0 flex-col gap-16 overflow-y-auto border-r border-line bg-panel px-8 py-14">
-      <div className="flex items-center gap-8 px-8">
-        <span className="size-16 rounded-4 bg-accent" />
-        <span className="text-brand font-semibold">Munim</span>
+      <div className="px-8">
+        <Brand />
       </div>
       <Group label="Views">
         <NavRow name="Today" to="/today" />

@@ -29,3 +29,8 @@ export function Input({
     />
   );
 }
+
+/** Pass as `ref` to focus a field when it appears. Stable, so it runs once per mount. */
+export const focusOnMount = (el: HTMLInputElement | null) => {
+  el?.focus();
+};

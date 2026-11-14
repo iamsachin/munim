@@ -6,9 +6,17 @@ Last updated: 2026-11-14
 
 ## Now
 
-On branch `milestone-2-gaps` (pull request open, not merged). Approved by the owner on 2026-11-14: the AI screen and on-demand summaries.
+On branch `milestone-2-gaps` (pull request #2, not merged).
 
-In progress: sign-in, first-run and lock screens together with the Sign-in, Devices and Your data cards. Then loading, error and empty states; then keyboard navigation.
+Approved by the owner on 2026-11-14: the AI screen and on-demand summaries.
+
+Built, passing all gates, **waiting for the owner's approval** (`pnpm dev`):
+
+1. First run at `/setup` and sign-in at `/sign-in`.
+2. The lock screen: "Lock" under Security and settings.
+3. Three new cards on `/settings`: Sign-in and lock, Devices, Your data.
+
+Then: loading, error and empty states; keyboard navigation and command palette; disabled-reply state; highlighting by selecting text.
 
 ## 0. Preparation
 
@@ -51,10 +59,10 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] Connections
 - [x] Appearance settings (theme, accent, density), remembered in the browser
 - [ ] **Designed screens approved by owner**
-- [ ] Security and settings: honest Encryption, Sign-in and lock, Devices, Your data (design gap)
+- [ ] Security and settings: Sign-in and lock, Devices, Your data (design gap; built, awaiting approval)
 - [x] AI settings: keys, per-feature model, monthly limit, usage (design gap, approved)
 - [x] On-demand summaries in place of automatic ones (approved)
-- [ ] First-run setup, sign-in, lock screen (design gap)
+- [ ] First-run setup, sign-in, lock screen (design gap; built, awaiting approval)
 - [ ] Loading, error and empty states for every screen (design gap)
 - [ ] Keyboard navigation, command palette, shortcut help (design gap)
 - [ ] Disabled-reply state for sources without an official write API (design gap)
@@ -70,6 +78,9 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [ ] Docker Compose: one app container serving web, API and jobs, plus Postgres
 - [ ] Master key file, generated on first run
 - [ ] Passphrase sign-in, sessions, device list with Revoke, idle lock (Django auth and sessions)
+- [ ] Idle timer in the browser, with the server refusing requests while locked and after too many wrong passphrases
+- [ ] Encryption card on Security and settings, designed once the claims are true
+- [ ] Change passphrase, export and delete-all wired to the server (the mock says it did nothing)
 - [ ] Encrypted storage for source tokens and AI keys; then restore the sidebar status button and the Connections note with truthful wording
 - [ ] RSS
 - [ ] Hacker News
