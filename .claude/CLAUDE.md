@@ -20,7 +20,13 @@ The quality bar is the point of this project. Prefer a smaller thing finished pr
 | --- | --- |
 | Audience | Open-source self-host. One owner account per install. |
 | Platform | Web app, desktop width (min 920px). No phone layout yet. |
-| Stack | TypeScript everywhere. React + Vite front end, Node server, Postgres. |
+| Stack | React + Vite + TypeScript front end. Python backend. Postgres. |
+| Backend | FastAPI. One app process serves the built web app, the API and runs background jobs, next to Postgres. |
+| API | REST with JSON, validated by Pydantic, with a published OpenAPI document. The front end's types and client are generated from that document, never written by hand. |
+| Database | SQLAlchemy 2 (async) with Alembic migrations. |
+| Jobs | Queued and scheduled in Postgres (polling, transcripts, summaries, digests). No Redis. Jobs survive restarts and run with nobody signed in. |
+| AI clients | The official `openai` and `anthropic` Python SDKs behind one small interface of our own. No LiteLLM, no agent framework. |
+| Search | Postgres full-text search first. The schema leaves room for pgvector embeddings later; none are computed yet. |
 | Styling | Tailwind v4. Design tokens live in one `@theme` block; no raw colour, font or size values in components. |
 | Themes | Dark as designed, plus the approved light theme. Five accents, three densities, as designed. |
 | Input | Keyboard-first: j/k row navigation, single-key actions, command palette, on top of standard accessibility. |
@@ -29,12 +35,12 @@ The quality bar is the point of this project. Prefer a smaller thing finished pr
 | Writing back | Replies, comments and votes only where the source's official API allows it (Reddit first). Elsewhere the control is disabled with a one-line reason and a link to the original. |
 | Saving | Full text, whole comment thread, video transcript and chapters, image thumbnails. Never download video files. |
 | AI | OpenAI and Anthropic, each with an owner-supplied key set in the UI. Each AI feature (summary, digest, Ask, and any new one) has its own provider and model setting. Settings show usage per provider, model and feature. |
-| Encryption | Source tokens and AI keys are encrypted by the app with a master key. Content is plain in Postgres so search and Ask work. Disk encryption is the self-hoster's job. |
+| Encryption | Source tokens and AI keys are encrypted by the app with a master key. The key is a file generated on first run in the data folder, or supplied as an environment variable; it is not derived from the passphrase. Content is plain in Postgres so search and Ask work. Disk encryption is the self-hoster's job. |
 | Sign-in | One passphrase, server-side sessions. The device list is the session list, with working Revoke and idle lock. Passkeys and two-step come later. |
 | Distribution | Docker Compose: app container plus Postgres. `docker compose up` is the whole install. |
 | Licence | AGPL-3.0. |
 
-Chosen by Claude, not yet confirmed by the owner (change freely if told otherwise): pnpm workspace with `apps/web` (exists), `apps/server` and `packages/shared` (created when first needed); Hono for the server; Drizzle with checked-in SQL migrations; Zod at every trust boundary; Vitest; Playwright.
+Chosen by Claude, not yet confirmed by the owner (change freely if told otherwise): pnpm workspace with `apps/web` (exists) and `apps/server` (the Python project, created in milestone 3); uv for Python dependencies; ruff, mypy in strict mode and pytest, matching the owner's duhview project; Procrastinate as the Postgres job queue (check it still fits before adopting it); `openapi-typescript` to generate the front end's types; the page polls for new items at first, server-sent events later if polling proves too slow; Vitest and Playwright on the front end.
 
 Version pins with a reason: TypeScript stays on 6.0 until typescript-eslint supports 7. ESLint is 10 with a peer allowance for eslint-plugin-jsx-a11y in `pnpm-workspace.yaml`.
 
@@ -65,7 +71,8 @@ Do not start a step until the previous one is approved.
 A piece of work is done only when all of these pass, and the result has been looked at running in a browser:
 
 - `tsc` strict, ESLint and Prettier clean.
-- Vitest: unit tests for logic, parsers and the data layer; integration tests for source connectors and server routes.
+- Front end: Vitest unit tests for logic and the data layer.
+- Server (from milestone 3): ruff, mypy strict, and pytest with unit tests for parsers and logic and integration tests for routes, source connectors and jobs against a real Postgres.
 - Playwright visual regression against approved baselines for every component and screen touched. A changed baseline needs the owner's approval, never a silent update.
 - Accessibility: real buttons, links and inputs; full keyboard operation; visible themed focus; axe checks pass; contrast holds in both themes and every accent.
 
@@ -93,12 +100,10 @@ Baselines are recorded on macOS Chromium and are platform-specific; other platfo
 - Never hard-code model names or lists. Read them from the provider's models endpoint. Consult the `claude-api` skill before writing any Anthropic code.
 - Secrets never reach the browser, logs, error messages or test fixtures.
 - Every migration must be safe to run on a stranger's existing data.
-- Validate at trust boundaries: HTTP input, source API responses, feed XML, AI output that drives UI.
+- Validate at trust boundaries with Pydantic on the server: HTTP input, source API responses, feed XML, AI output that drives UI. The browser validates what it reads from its own storage.
 - Respect each source's rate limits and terms. Cache and poll conservatively.
 
 ## Open decisions (ask before building the part that depends on them)
 
-- Retrieval for Ask: Postgres full-text only, or embeddings as well (Anthropic has no embeddings API, so this would need OpenAI or a local model).
-- Where the master encryption key comes from: environment variable, or derived from the passphrase at unlock.
 - YouTube: API key for public channels, or OAuth for the owner's subscriptions.
-- Digest schedule and whether digests run without the app open.
+- Digest schedule: fixed at 7:00 daily and Sunday weekly as designed, or configurable. (They run on the server either way.)

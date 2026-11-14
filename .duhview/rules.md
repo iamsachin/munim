@@ -7,7 +7,8 @@ The project's full standards are in `.claude/CLAUDE.md` and `.claude/skills/port
 - No control may look functional when it is not. No copy may claim security properties the app does not have (for example end-to-end encryption).
 - Model names and model lists are never hard-coded.
 - Secrets (source tokens, AI keys, the passphrase) must not reach the browser, logs, error messages or test fixtures.
-- Input is validated at trust boundaries: HTTP input, source API responses, feed XML, AI output that drives UI.
+- Input is validated at trust boundaries (Pydantic on the server): HTTP input, source API responses, feed XML, AI output that drives UI.
+- The front end's API types are generated from the server's OpenAPI document. Hand-written copies of server types are a finding.
 - Database migrations must be safe on existing data.
 - Prefer less code. An abstraction, option or dependency that nothing uses yet is a finding.
 - A changed screenshot baseline must be explained by a change in the same pull request.
