@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    :root { --bg: oklch(0.16 0.008 255); --panel: oklch(0.185 0.008 255); --card: oklch(0.225 0.008 255); --line: oklch(0.285 0.008 255); --ink: oklch(0.93 0.008 255); --mute: oklch(0.71 0.008 255); --accent: oklch(0.82 0.13 75); --a2: oklch(0.78 0.09 240); --a3: oklch(0.76 0.1 20); --ok: oklch(0.8 0.1 155); --a4: oklch(0.78 0.1 305); --fm: "IBM Plex Mono", monospace; --dn: 1.7; }
+    html, body { margin: 0; height: 100%; background: var(--bg); }
+    a { color: var(--accent); } a:hover { color: var(--ink); }
+    ::placeholder { color: var(--mute); }
+  </style>
+</helmet>
+<div style="min-width: 920px; height: 100vh; box-sizing: border-box; display: grid; grid-template-columns: 200px minmax(0, 1fr); background: var(--bg); color: var(--ink); font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 13.5px; line-height: 1.45; overflow: hidden;">
+
+  <aside style="background: var(--panel); border-right: 1px solid var(--line); padding: 14px 8px; display: flex; flex-direction: column; gap: 16px; min-height: 0; overflow-y: auto;">
+    <div style="display: flex; align-items: center; gap: 8px; padding: 0 8px;">
+      <span style="width: 16px; height: 16px; border-radius: 4px; background: var(--accent);"></span>
+      <span style="font-weight: 600; font-size: 15.5px;">Atrium</span>
+    </div>
+    <sc-for list="{{ groups }}" as="g" hint-placeholder-count="3">
+      <div style="display: flex; flex-direction: column;">
+        <div style="font-family: var(--fm); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute); padding: 0 8px 4px;">{{ g.label }}</div>
+        <sc-for list="{{ g.rows }}" as="n" hint-placeholder-count="4">
+          <button onClick="{{ n.go }}" disabled="{{ n.off }}" style="display: flex; justify-content: space-between; align-items: center; gap: 6px; padding: calc(3px * var(--dn)) 8px; border: none; border-radius: 5px; background: {{ n.bg }}; color: {{ n.fg }}; opacity: {{ n.op }}; font: inherit; text-align: left; cursor: pointer;" style-hover="background: var(--card);"><span style="display: flex; align-items: center; gap: 8px;"><span style="width: 6px; height: 6px; border-radius: 99px; background: {{ n.dot }};"></span>{{ n.name }}</span><span style="font-family: var(--fm); font-size: 11.5px; color: var(--mute);">{{ n.count }}</span></button>
+        </sc-for>
+      </div>
+    </sc-for>
+    <button onClick="{{ goSec }}" style="margin-top: auto; flex: none; display: flex; align-items: center; gap: 8px; padding: 7px 8px; background: transparent; border: 1px solid var(--line); border-radius: 5px; font-family: var(--fm); font-size: 11px; color: var(--mute); cursor: pointer; text-align: left;" style-hover="border-color: var(--accent);"><span style="width: 6px; height: 6px; border-radius: 99px; background: var(--ok);"></span>Encrypted · keys on device</button>
+  </aside>
+
+  <div style="min-width: 0; min-height: 0; display: flex; flex-direction: column;">
+    <div data-screen-label="Ask bar" style="display: flex; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel);">
+      <div style="flex: 1; max-width: 820px; display: flex; align-items: center; gap: 10px; padding: 4px 4px 4px 10px; background: color-mix(in oklch, var(--accent) 10%, var(--bg)); border: 1px solid var(--accent); border-radius: 8px; box-shadow: 0 0 0 3px color-mix(in oklch, var(--accent) 16%, transparent);">
+        <span style="padding: 1px 6px; border-radius: 4px; background: var(--accent); color: var(--bg); font-family: var(--fm); font-size: 10.5px; font-weight: 500; letter-spacing: 0.08em;">AI</span>
+        <input value="{{ askDraft }}" onChange="{{ onAskDraft }}" onKeyDown="{{ onAskKey }}" placeholder="Ask across your feeds, saved items and threads" style="flex: 1; min-width: 0; padding: 6px 0; background: transparent; border: none; color: var(--ink); font: inherit; font-size: 14px; outline: none;">
+        <span style="font-family: var(--fm); font-size: 11px; color: var(--mute); white-space: nowrap;">{{ scopeLabel }}</span>
+        <button onClick="{{ sendAsk }}" style="padding: 6px 16px; background: var(--accent); border: none; border-radius: 5px; color: var(--bg); font: 600 13px 'IBM Plex Sans'; cursor: pointer;" style-hover="filter: brightness(1.08);">Ask</button>
+      </div>
+    </div>
+
+    <sc-if value="{{ isToday }}" hint-placeholder-val="{{ true }}">
+      <main data-screen-label="Today" style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column;">
+        <div style="display: flex; align-items: center; gap: 6px; padding: 12px 16px; border-bottom: 1px solid var(--line);"><h1 style="margin: 0 8px 0 0; font-size: 17px; font-weight: 600;">Today</h1><span style="font-family: var(--fm); font-size: 11.5px; color: var(--mute);">Saturday 14 November</span></div>
+        <div style="display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 12px; padding: 16px; max-width: 1120px; align-items: start;">
+          <div style="display: flex; flex-direction: column; gap: 12px; min-width: 0;">
+            <section style="background: color-mix(in oklch, var(--accent) 9%, var(--card)); border: 1px solid color-mix(in oklch, var(--accent) 45%, transparent); border-radius: 6px; padding: 14px; display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; align-items: center; gap: 8px;"><span style="padding: 1px 6px; border-radius: 4px; background: var(--accent); color: var(--bg); font-family: var(--fm); font-size: 10.5px; font-weight: 500; letter-spacing: 0.08em;">AI</span><span style="font-weight: 600;">This morning's digest</span><button onClick="{{ goDigest }}" style="margin-left: auto; padding: 3px 10px; background: transparent; border: 1px solid var(--line); border-radius: 5px; color: var(--ink); font: 500 12px 'IBM Plex Sans'; cursor: pointer;" style-hover="border-color: var(--accent);">Open digest</button></div>
+              <div style="font-size: 14.5px; line-height: 1.6; text-wrap: pretty;">{{ todayDigest }}</div>
+            </section>
+            <section style="background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px; display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+              <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 4px;"><span style="font-family: var(--fm); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute);">New since yesterday</span><button onClick="{{ goStream }}" style="padding: 3px 10px; background: transparent; border: 1px solid var(--line); border-radius: 5px; color: var(--ink); font: 500 12px 'IBM Plex Sans'; cursor: pointer;" style-hover="border-color: var(--accent);">Open stream</button></div>
+              <sc-for list="{{ todaySources }}" as="s" hint-placeholder-count="6">
+                <div onClick="{{ s.go }}" style="display: grid; grid-template-columns: 30px 96px 24px minmax(0, 1fr); gap: 0 10px; align-items: baseline; padding: calc(3px * var(--dn)) 6px; border-radius: 5px; cursor: pointer;" style-hover="background: var(--card);">
+                  <span style="font-family: var(--fm); font-size: 11px; font-weight: 500; color: {{ s.c }};">{{ s.src }}</span><span style="font-weight: 500;">{{ s.name }}</span><span style="font-family: var(--fm); font-size: 11.5px; color: var(--mute); text-align: right;">{{ s.count }}</span><span style="color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ s.top }}</span>
+                </div>
+              </sc-for>
+            </section>
+            <section style="background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px; display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+              <div style="font-family: var(--fm); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute); padding-bottom: 4px;">Replies to you</div>
+              <sc-for list="{{ todayReplies }}" as="r" hint-placeholder-count="2">
+                <div onClick="{{ r.go }}" style="padding: calc(3px * var(--dn)) 6px; border-radius: 5px; cursor: pointer;" style-hover="background: var(--card);"><span style="font-weight: 600;">{{ r.who }}</span> <span style="font-family: var(--fm); font-size: 11px; color: var(--mute);">{{ r.where }}</span><br>{{ r.text }}</div>
+              </sc-for>
+            </section>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 12px; min-width: 0;">
+            <section style="background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px; display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+              <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 4px;"><span style="font-family: var(--fm); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute);">Watches</span><button onClick="{{ goWatches }}" style="padding: 3px 10px; background: transparent; border: 1px solid var(--line); border-radius: 5px; color: var(--ink); font: 500 12px 'IBM Plex Sans'; cursor: pointer;" style-hover="border-color: var(--accent);">All watches</button></div>
+              <sc-for list="{{ todayWatches }}" as="w" hint-placeholder-count="3">
+                <div style="display: flex; align-items: baseline; gap: 10px; padding: calc(3px * var(--dn)) 6px;"><span style="font-weight: 500;">{{ w.name }}</span><span style="font-family: var(--fm); font-size: 11.5px; color: var(--accent);">{{ w.n }} new</span><span style="margin-left: auto; font-family: var(--fm); font-size: 11.5px; color: var(--mute);">{{ w.last }}</span></div>
+              </sc-for>
+            </section>
+            <section style="background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px; display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+              <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 4px;"><span style="font-family: var(--fm); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute);">Read later</span><button onClick="{{ goLater }}" style="padding: 3px 10px; background: transparent; border: 1px solid var(--line); border-radius: 5px; color: var(--ink); font: 500 12px 'IBM Plex Sans'; cursor: pointer;" style-hover="border-color: var(--accent);">Open queue</button></div>
+              <sc-for list="{{ todayLater }}" as="l" hint-placeholder-count="3">
+                <div style="display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 0 10px; align-items: baseline; padding: calc(3px * var(--dn)) 6px;"><span style="font-family: var(--fm); font-size: 11px; font-weight: 500; color: {{ l.c }};">{{ l.src }}</span><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ l.title }}</span><span style="font-family: var(--fm); font-size: 11.5px; color: var(--mute);">{{ l.mins }}</span></div>
+              </sc-for>
+            </section>
+            <section style="background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px; display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+              <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 4px;"><span style="font-family: var(--fm); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute);">Recent highlights</span><button onClick="{{ goHl }}" style="padding: 3px 10px; background: transparent; border: 1px solid var(--line); border-radius: 5px; color: var(--ink); font: 500 12px 'IBM Plex Sans'; cursor: pointer;" style-hover="border-color: var(--accent);">All highlights</button></div>
+              <sc-for list="{{ todayHl }}" as="h" hint-placeholder-count="2">
+                <div style="padding: 6px;"><span style="background: color-mix(in oklch, var(--accent) 22%, transparent); padding: 1px 2px; border-radius: 2px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">{{ h.quote }}</span><div style="font-family: var(--fm); font-size: 11px; color: var(--mute); padding-top: 3px;">{{ h.from }}</div></div>
+              </sc-for>
+            </section>
+          </div>
+        </div>
+      </main>
+    </sc-if>
+
+
+    <sc-if value="{{ isStream }}" hint-placeholder-val="{{ true }}">
+      <div data-screen-label="Stream" style="flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.8fr);">
+        <main style="display: flex; flex-direction: column; min-width: 0; min-height: 0;">
+          <div style="display: flex; align-items: center; gap: 6px; padding: 12px 16px; border-bottom: 1px solid var(--line);">
+            <h1 style="margin: 0 8px 0 0; font-size: 17px; font-weight: 600;">{{ streamTitle }}</h1>
+            <sc-for list="{{ streamChips }}" as="ch" hint-placeholder-count="4">
+              <button onClick="{{ ch.go }}" style="padding: 2px 10px; border-radius: 99px; border: 1px solid {{ ch.bd }}; background: {{ ch.bg }}; color: {{ ch.fg }}; font: inherit; font-size: 12px; font-weight: {{ ch.w }}; cursor: pointer;">{{ ch.label }}</button>
+            </sc-for>
+            <input value="{{ query }}" onChange="{{ onQuery }}" placeholder="Search the stream" style="margin-left: auto; flex: 1 1 100px; min-width: 0; max-width: 220px; box-sizing: border-box; padding: 5px 9px; background: var(--card); border: 1px solid var(--line); border-radius: 5px; color: var(--ink); font: inherit; font-size: 12.5px; outline: none;" style-focus="border-color: var(--accent);">
+          </div>
+          <div style="display: grid; grid-template-columns: 34px minmax(0, 1fr) 40px 30px 16px; gap: 0 12px; padding: 5px 16px; font-family: var(--fm); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute); border-bottom: 1px solid var(--line);">
+            <span>Src</span><span>Item</span><span style="text-align: right;">Repl</span><span style="text-align: right;">Age</span><span></span>
+          </div>
+          <div style="flex: 1; min-height: 0; overflow-y: auto;">
+            <sc-for list="{{ rows }}" as="it" hint-placeholder-count="14">
+              <div onClick="{{ it.pick }}" style="display: grid; grid-template-columns: 34px minmax(0, 1fr) 40px 30px 16px; gap: 0 12px; align-items: center; min-height: 44px; box-sizing: border-box; padding: calc(5px * var(--dn)) 16px; border-bottom: 1px solid color-mix(in oklch, var(--line) 55%, transparent); background: {{ it.bg }}; box-shadow: inset 2px 0 0 {{ it.bar }}; cursor: pointer;" style-hover="background: var(--card);">
+                <span style="font-family: var(--fm); font-size: 11px; font-weight: 500; color: {{ it.c }};">{{ it.src }}</span>
+                <div style="display: flex; align-items: center; gap: 10px; min-width: 0;"><button onClick="{{ it.zoom }}" title="{{ it.tt }}" style="flex: none; width: 40px; height: 28px; padding: 0; display: {{ it.td }}; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: 4px; background: repeating-linear-gradient(135deg, var(--card) 0 5px, var(--line) 5px 6px); cursor: zoom-in;" style-hover="border-color: var(--accent);"><span style="padding: 0 3px; border-radius: 2px; background: var(--bg); color: var(--mute); font-family: var(--fm); font-size: 9px;">{{ it.tl }}</span></button>
+                <span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: {{ it.w }};">{{ it.title }} <span style="color: var(--mute); font-weight: 400; font-family: var(--fm); font-size: 11.5px; padding-left: 6px;">{{ it.sub }}</span></span></div>
+                <span style="font-family: var(--fm); font-size: 11.5px; color: var(--mute); text-align: right;">{{ it.n }}</span>
+                <span style="font-family: var(--fm); font-size: 11.5px; color: var(--mute); text-align: right;">{{ it.age }}</span>
+                <span onClick="{{ it.toggle }}" title="Save" style="font-size: 10px; color: {{ it.sc }};">{{ it.mark }}</span>
+              </div>
+            </sc-for>
+            <sc-if value="{{ noRows }}" hint-placeholder-val="{{ false }}"><div style="padding: 24px 16px; color: var(--mute);">Nothing matches this filter.</div></sc-if>
+          </div>
+        </main>
+        <section style="background: var(--panel); border-left: 1px solid var(--line); padding: 14px; display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0;">
+          <div style="display: flex; align-items: center; gap: 8px; font-family: var(--fm); font-size: 11.5px; color: var(--mute);">
+            <span style="font-weight: 500; color: {{ cur.c }};">{{ cur.src }}</span><span>{{ cur.meta }}</span>
+            <button onClick="{{ cur.toggle }}" style="margin-left: auto; padding: 3px 10px; background: transparent; border: 1px solid var(--line); border-radius: 5px; color: var(--ink); font: 500 12px 'IBM Plex Sans'; cursor: pointer;" style-hover="border-color: var(--accent);">{{ cur.saveLabel }}</button>
+            <button onClick="{{ cur.later }}" style="padding: 3px 10px; background: transparent; border: 1px solid var(--line); border-radius: 5px; color: var(--ink); font: 500 12px 'IBM Plex Sans'; cursor: pointer;" style-hover="border-color: var(--accent);">{{ cur.laterLabel }}</button>
+          </div>
+          <div style="font-weight: 600; font-size: 17px; line-height: 1.3; text-wrap: pretty;">{{ cur.title }}</div>
+          <div style="background: color-mix(in oklch, var(--accent) 9%, var(--card)); border: 1px solid color-mix(in oklch, var(--accent) 45%, transparent); border-radius: 6px; padding: 12px; display: flex; flex-direction: column; gap: 7px;">
+            <div style="display: flex; align-items: center; gap: 8px; font-family: var(--fm); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent);"><span style="padding: 1px 6px; border-radius: 4px; background: var(--accent); color: var(--bg); font-family: var(--fm); font-size: 10.5px; font-weight: 500; letter-spacing: 0.08em;">AI</span>Summary</div>
+            <div style="text-wrap: pretty;">{{ cur.summary }}</div>
+            <div style="display: flex; gap: 6px;">
+              <input value="{{ threadAsk }}" onChange="{{ onThreadAsk }}" onKeyDown="{{ onThreadAskKey }}" placeholder="Ask about this thread" style="flex: 1; min-width: 0; padding: 6px 9px; background: var(--bg); border: 1px solid color-mix(in oklch, var(--accent) 45%, transparent); border-radius: 5px; color: var(--ink); font: inherit; font-size: 12.5px; outline: none;" style-focus="border-color: var(--accent);">
+              <button onClick="{{ goAsk }}" style="padding: 0 12px; background: transparent; border: 1px solid var(--accent); border-radius: 5px; color: var(--accent); font: 600 12.5px 'IBM Plex Sans'; cursor: pointer;" style-hover="background: color-mix(in oklch, var(--accent) 14%, transparent);">Ask</button>
+            </div>
+          </div>
+          <div style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column;">
+            <sc-for list="{{ cur.comments }}" as="c" hint-placeholder-count="5">
+              <div style="margin-left: {{ c.indent }}; padding: calc(4px * var(--dn)) 0 calc(4px * var(--dn)) 10px; border-left: 1px solid {{ c.rule }}; border-bottom: 1px solid color-mix(in oklch, var(--line) 55%, transparent);">
+                <span style="font-weight: 600;">{{ c.who }}</span> <span style="font-family: var(--fm); font-size: 11px; color: var(--mute);">{{ c.meta }}</span><br>{{ c.text }}
+              </div>
+            </sc-for>
+            <sc-if value="{{ cur.empty }}" hint-placeholder-val="{{ false }}"><div style="padding: 12px 0; color: var(--mute);">No replies yet.</div></sc-if>
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <input value="{{ draft }}" onChange="{{ onDraft }}" onKeyDown="{{ onDraftKey }}" placeholder="{{ cur.replyAs }}" style="flex: 1; min-width: 0; padding: 8px 10px; background: var(--card); border: 1px solid var(--line); border-radius: 5px; color: var(--ink); font: inherit; outline: none;" style-focus="border-color: var(--accent);">
+            <button onClick="{{ sendReply }}" style="padding: 0 16px; background: var(--accent); border: none; border-radius: 5px; color: var(--bg); font: 600 13px 'IBM Plex Sans'; cursor: pointer;" style-hover="filter: brightness(1.08);">Reply</button>
+          </div>
+        </section>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isSaved }}" hint-placeholder-val="{{ false }}">
+      <main data-screen-label="Saved" style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
+        <div style="display: flex; align-items: center; gap: 6px; padding: 12px 16px; border-bottom: 1px solid var(--line);">
+          <h1 style="margin: 0 8px 0 0; font-size: 17px; font-weight: 600;">Saved</h1>
+          <sc-for list="{{ savedChips }}" as="ch" hint-placeholder-count="5">
+            <button onClick="{{ ch.go }}" style="padding: 2px 10px; border-radius: 99px; border: 1px solid {{ ch.bd }}; background: {{ ch.bg }}; color: {{ ch.fg }}; font: inherit; font-size: 12px; font-weight: {{ ch.w }}; cursor: pointer;">{{ ch.label }}</button>
+          </sc-for>
+          <span style="margin-left: auto; font-family: var(--fm); font-size: 11.5px; color: var(--mute);">Stored encrypted · 2.1 GB</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 56px 34px minmax(0, 1fr) 120px 160px 64px; gap: 0 12px; padding: 5px 16px; font-family: var(--fm); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute); border-bottom: 1px solid var(--line);">
+          <span>Kind</span><span>Src</span><span>Item</span><span>From</span><span>Parsed</span><span style="text-align: right;">Saved</span>
+        </div>
+        <div style="flex: 1; min-height: 0; overflow-y: auto;">
+          <sc-for list="{{ savedRows }}" as="s" hint-placeholder-count="10">
+            <div style="display: grid; grid-template-columns: 56px 34px minmax(0, 1fr) 120px 160px 64px; gap: 0 12px; align-items: baseline; padding: calc(5px * var(--dn)) 16px; border-bottom: 1px solid color-mix(in oklch, var(--line) 55%, transparent);" style-hover="background: var(--card);">
+              <span style="font-size: 12px; color: var(--mute);">{{ s.kind }}</span>
+              <span style="font-family: var(--fm); font-size: 11px; font-weight: 500; color: {{ s.c }};">{{ s.src }}</span>
+              <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500;">{{ s.title }}</span>
+              <span style="font-family: var(--fm); font-size: 11.5px; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ s.from }}</span>
+              <span style="font-size: 12px; color: var(--mute);">{{ s.parsed }}</span>
+              <span style="font-family: var(--fm); font-size: 11.5px; color: var(--mute); text-align: right;">{{ s.when }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </main>
+    </sc-if>
+
+    <sc-if value="{{ isRss }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="RSS" style="flex: 1; min-height: 0; display: grid; grid-template-columns: 220px minmax(0, 1fr) minmax(0, 1.2fr);">
+        <div style="border-right: 1px solid var(--line); padding: 12px 8px; display: flex; flex-direction: column; gap: 2px; min-height: 0;">
+          <h1 style="margin: 0 0 8px; padding: 0 8px; font-size: 17px; font-weight: 600;">RSS</h1>
+          <sc-for list="{{ feeds }}" as="f" hint-placeholder-count="5">
+            <button onClick="{{ f.go }}" style="display: flex; justify-content: space-between; gap: 6px; padding: calc(3px * var(--dn)) 8px; border: none; border-radius: 5px; background: {{ f.bg }}; color: {{ f.fg }}; font: inherit; text-align: left; cursor: pointer;" style-hover="background: var(--card);"><span>{{ f.name }}</span><span style="font-family: var(--fm); font-size: 11.5px; color: var(--mute);">{{ f.count }}</span></button>
+          </sc-for>
+          <div style="margin-top: auto; display: flex; gap: 6px; padding: 0 2px;">
+            <input value="{{ feedUrl }}" onChange="{{ onFeedUrl }}" placeholder="Feed URL" style="flex: 1; min-width: 0; padding: 6px 9px; background: var(--card); border: 1px solid var(--line); border-radius: 5px; color: var(--ink); font: inherit; font-size: 12.5px; outline: none;" style-focus="border-color: var(--accent);">
+            <button onClick="{{ addFeed }}" style="padding: 0 10px; background: transparent; border: 1px solid var(--line); border-radius: 5px; color: var(--ink); font: 600 12.5px 'IBM Plex Sans'; cursor: pointer;" style-hover="border-color: var(--accent);">Add</button>
+          </div>
+        </div>
+        <div style="border-right: 1px solid var(--line); min-height: 0; overflow-y: auto;">
+          <sc-for list="{{ articles }}" as="a" hint-placeholder-count="6">
+            <div onClick="{{ a.go }}" style="padding: calc(6px * var(--dn)) 16px; border-bottom: 1px solid color-mix(in oklch, var(--line) 55%, transparent); background: {{ a.bg }}; box-shadow: inset 2px 0 0 {{ a.bar }}; cursor: pointer;" style-hover="background: var(--card);">
+              <div style="font-family: var(--fm); font-size: 11px; color: var(--mute);">{{ a.meta }}</div>
+              <div style="font-weight: {{ a.w }};">{{ a.title }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <article style="background: var(--panel); padding: 20px 24px; display: flex; flex-direction: column; gap: 12px; min-height: 0; overflow-y: auto;">
+          <div style="display: flex; align-items: center; gap: 8px; font-family: var(--fm); font-size: 11.5px; color: var(--mute);">
+            <span style="color: var(--a2); font-weight: 500;">RSS</span><span>{{ art.meta }}</span>
+            <button style="margin-left: auto; padding: 3px 10px; background: transparent; border: 1px solid var(--line); border-radius: 5px; color: var(--ink); font: 500 12px 'IBM Plex Sans'; cursor: pointer;" style-hover="border-color: var(--accent);">Save</button>
+            <button style="padding: 3px 10px; background: transparent; border: 1px solid var(--line); border-radius: 5px; color: var(--ink); font: 500 12px 'IBM Plex Sans'; cursor: pointer;" style-hover="border-color: var(--accent);">Open original</button>
+          </div>
+          <h2 style="margin: 0; font-size: 22px; font-weight: 600; line-height: 1.25; text-wrap: pretty;">{{ art.title }}</h2>
+          <div style="background: color-mix(in oklch, var(--accent) 9%, var(--card)); border: 1px solid color-mix(in oklch, var(--accent) 45%, transparent); border-radius: 6px; padding: 12px; display: flex; flex-direction: column; gap: 5px;">
+            <div style="display: flex; align-items: center; gap: 8px; font-family: var(--fm); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent);"><span style="padding: 1px 6px; border-radius: 4px; background: var(--accent); color: var(--bg); font-family: var(--fm); font-size: 10.5px; font-weight: 500; letter-spacing: 0.08em;">AI</span>Summary</div>
+            <div style="text-wrap: pretty;">{{ art.summary }}</div>
+          </div>
+          <p style="margin: 0; max-width: 62ch; font-size: 15px; line-height: 1.65; text-wrap: pretty;">{{ art.body }}</p>
+        </article>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isAsk }}" hint-placeholder-val="{{ false }}">
+      <main data-screen-label="Ask" style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
+        <div style="display: flex; align-items: center; gap: 6px; padding: 12px 16px; border-bottom: 1px solid var(--line);"><span style="padding: 1px 6px; border-radius: 4px; background: var(--accent); color: var(--bg); font-family: var(--fm); font-size: 10.5px; font-weight: 500; letter-spacing: 0.08em;">AI</span><h1 style="margin: 0 8px 0 0; font-size: 17px; font-weight: 600;">Ask</h1><span style="font-size: 12px; color: var(--mute); margin-right: 4px;">Search in</span><sc-for list="{{ askChips }}" as="ch" hint-placeholder-count="3"><button onClick="{{ ch.go }}" style="padding: 2px 10px; border-radius: 99px; border: 1px solid {{ ch.bd }}; background: {{ ch.bg }}; color: {{ ch.fg }}; font: inherit; font-size: 12px; font-weight: {{ ch.w }}; cursor: pointer;">{{ ch.label }}</button></sc-for></div>
+        <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 20px 16px; display: flex; flex-direction: column; gap: 14px; max-width: 820px;">
+          <sc-for list="{{ askLog }}" as="m" hint-placeholder-count="1">
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div style="align-self: flex-end; max-width: 80%; padding: 8px 12px; background: var(--card); border-radius: 8px; font-size: 14.5px;">{{ m.q }}</div>
+              <div style="background: color-mix(in oklch, var(--accent) 9%, var(--card)); border: 1px solid color-mix(in oklch, var(--accent) 45%, transparent); border-radius: 6px; padding: 14px; display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px;"><span style="padding: 1px 6px; border-radius: 4px; background: var(--accent); color: var(--bg); font-family: var(--fm); font-size: 10.5px; font-weight: 500; letter-spacing: 0.08em;">AI</span><span style="font-family: var(--fm); font-size: 11px; color: var(--mute);">{{ m.scope }}</span></div>
+                <div style="font-size: 14.5px; line-height: 1.6; text-wrap: pretty;">{{ m.a }}</div>
+                <sc-for list="{{ m.cites }}" as="ci" hint-placeholder-count="3">
+                  <div style="display: grid; grid-template-columns: 20px 34px minmax(0, 1fr) auto; gap: 0 10px; align-items: baseline; padding: 6px 10px; background: var(--bg); border-radius: 5px;">
+                    <span style="font-family: var(--fm); font-size: 11px; color: var(--accent);">{{ ci.i }}</span><span style="font-family: var(--fm); font-size: 11px; font-weight: 500; color: {{ ci.c }};">{{ ci.src }}</span><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ ci.title }}</span><span style="font-family: var(--fm); font-size: 11.5px; color: var(--mute);">{{ ci.from }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center;"><span style="font-family: var(--fm); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute);">Try</span>
+            <sc-for list="{{ askTry }}" as="t" hint-placeholder-count="3"><button onClick="{{ t.go }}" style="padding: 4px 12px; border-radius: 99px; background: transparent; border: 1px solid color-mix(in oklch, var(--accent) 45%, transparent); color: var(--ink); font: inherit; font-size: 12.5px; cursor: pointer;" style-hover="background: color-mix(in oklch, var(--accent) 12%, transparent);">{{ t.label }}</button></sc-for>
+          </div>
+        </div>
+      </main>
+    </sc-if>
+
+    <sc-if value="{{ isLater }}" hint-placeholder-val="{{ false }}">
+      <main data-screen-label="Read later" style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
+        <div style="display: flex; align-items: center; gap: 6px; padding: 12px 16px; border-bottom: 1px solid var(--line);"><h1 style="margin: 0 8px 0 0; font-size: 17px; font-weight: 600;">Read later</h1><span style="font-family: var(--fm); font-size: 11.5px; color: var(--mute);">{{ laterTotal }}</span></div>
+        <div style="display: grid; grid-template-columns: 40px minmax(0, 1fr) 160px 70px 90px 70px; gap: 0 12px; padding: 5px 16px; font-family: var(--fm); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute); border-bottom: 1px solid var(--line);"><span>Src</span><span>Item</span><span>From</span><span style="text-align: right;">Time</span><span>Added</span><span></span></div>
+        <div style="flex: 1; min-height: 0; overflow-y: auto;">
+          <sc-for list="{{ laterRows }}" as="l" hint-placeholder-count="8">
+            <div style="display: grid; grid-template-columns: 40px minmax(0, 1fr) 160px 70px 90px 70px; gap: 0 12px; align-items: center; padding: calc(5px * var(--dn)) 16px; border-bottom: 1px solid color-mix(in oklch, var(--line) 55%, transparent);" style-hover="background: var(--card);">
+              <span style="font-family: var(--fm); font-size: 11px; font-weight: 500; color: {{ l.c }};">{{ l.src }}</span><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500;">{{ l.title }}</span><span style="font-family: var(--fm); font-size: 11.5px; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ l.from }}</span><span style="font-family: var(--fm); font-size: 11.5px; color: var(--mute); text-align: right;">{{ l.mins }}</span><span style="font-family: var(--fm); font-size: 11.5px; color: var(--mute);">{{ l.added }}</span><button onClick="{{ l.done }}" style="justify-self: end; padding: 3px 10px; background: transparent; border: 1px solid var(--line); border-radius: 5px; color: var(--ink); font: 500 12px 'IBM Plex Sans'; cursor: pointer;" style-hover="border-color: var(--accent);">Done</button>
+            </div>
+          </sc-for>
+          <sc-if value="{{ laterEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding: 24px 16px; color: var(--mute);">The queue is empty.</div></sc-if>
+        </div>
+      </main>
+    </sc-if>
+
+    <sc-if value="{{ isHl }}" hint-placeholder-val="{{ false }}">
+      <main data-screen-label="Highlights" style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
+        <div style="display: flex; align-items: center; gap: 6px; padding: 12px 16px; border-bottom: 1px solid var(--line);"><h1 style="margin: 0 8px 0 0; font-size: 17px; font-weight: 600;">Highlights</h1><span style="font-size: 12.5px; color: var(--mute);">Select text in any article, post or comment to highlight it.</span></div>
+        <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+          <sc-for list="{{ hlRows }}" as="h" hint-placeholder-count="5">
+            <section style="background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px; display: flex; flex-direction: column; gap: 4px; min-width: 0; max-width: 820px; gap: 8px;">
+              <div style="font-size: 15px; line-height: 1.6; text-wrap: pretty;"><span style="background: color-mix(in oklch, var(--accent) 22%, transparent); padding: 1px 2px; border-radius: 2px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">{{ h.quote }}</span></div>
+              <sc-if value="{{ h.hasNote }}" hint-placeholder-val="{{ true }}"><div style="color: var(--mute);">Note: {{ h.note }}</div></sc-if>
+              <div style="display: flex; align-items: baseline; gap: 10px; font-family: var(--fm); font-size: 11.5px; color: var(--mute);"><span style="font-family: var(--fm); font-size: 11px; font-weight: 500; color: {{ h.c }};">{{ h.src }}</span><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ h.title }} · {{ h.from }}</span><span style="margin-left: auto;">{{ h.when }}</span></div>
+            </section>
+          </sc-for>
+        </div>
+      </main>
+    </sc-if>
+
+    <sc-if value="{{ isDigest }}" hint-placeholder-val="{{ false }}">
+      <main data-screen-label="Digest" style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
+        <div style="display: flex; align-items: center; gap: 6px; padding: 12px 16px; border-bottom: 1px solid var(--line);"><h1 style="margin: 0 8px 0 0; font-size: 17px; font-weight: 600;">Digest</h1><sc-for list="{{ digestChips }}" as="ch" hint-placeholder-count="3"><button onClick="{{ ch.go }}" style="padding: 2px 10px; border-radius: 99px; border: 1px solid {{ ch.bd }}; background: {{ ch.bg }}; color: {{ ch.fg }}; font: inherit; font-size: 12px; font-weight: {{ ch.w }}; cursor: pointer;">{{ ch.label }}</button></sc-for><span style="margin-left: auto; font-family: var(--fm); font-size: 11.5px; color: var(--mute);">Daily at 7:00 · Weekly on Sunday</span></div>
+        <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 20px 16px; display: flex; flex-direction: column; gap: 18px; max-width: 760px;">
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px;"><span style="padding: 1px 6px; border-radius: 4px; background: var(--accent); color: var(--bg); font-family: var(--fm); font-size: 10.5px; font-weight: 500; letter-spacing: 0.08em;">AI</span><span style="font-family: var(--fm); font-size: 11.5px; color: var(--mute);">Written from your stream</span></div>
+            <h2 style="margin: 0; font-size: 22px; font-weight: 600; line-height: 1.25;">{{ digest.title }}</h2>
+            <div style="font-size: 15px; line-height: 1.6; text-wrap: pretty;">{{ digest.lead }}</div>
+          </div>
+          <sc-for list="{{ digestSections }}" as="d" hint-placeholder-count="4">
+            <section style="display: flex; flex-direction: column; gap: 6px;">
+              <div style="font-family: var(--fm); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute);">{{ d.head }}</div>
+              <div style="font-size: 14.5px; line-height: 1.6; text-wrap: pretty;">{{ d.text }}</div>
+              <sc-for list="{{ d.items }}" as="ci" hint-placeholder-count="2">
+                <div style="display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 0 10px; align-items: baseline; padding: 6px 10px; background: var(--card); border-radius: 5px;"><span style="font-family: var(--fm); font-size: 11px; font-weight: 500; color: {{ ci.c }};">{{ ci.src }}</span><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ ci.title }}</span></div>
+              </sc-for>
+            </section>
+          </sc-for>
+        </div>
+      </main>
+    </sc-if>
+
+    <sc-if value="{{ isWatches }}" hint-placeholder-val="{{ false }}">
+      <main data-screen-label="Watches" style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column;">
+        <div style="display: flex; align-items: center; gap: 6px; padding: 12px 16px; border-bottom: 1px solid var(--line);"><h1 style="margin: 0 8px 0 0; font-size: 17px; font-weight: 600;">Watches</h1>
+          <input value="{{ watchDraft }}" onChange="{{ onWatchDraft }}" onKeyDown="{{ onWatchKey }}" placeholder="Keyword, person or topic" style="margin-left: auto; width: 240px; box-sizing: border-box; padding: 5px 9px; background: var(--card); border: 1px solid var(--line); border-radius: 5px; color: var(--ink); font: inherit; font-size: 12.5px; outline: none;" style-focus="border-color: var(--accent);">
+          <button onClick="{{ addWatch }}" style="padding: 3px 10px; background: transparent; border: 1px solid var(--line); border-radius: 5px; color: var(--ink); font: 500 12px 'IBM Plex Sans'; cursor: pointer; padding: 5px 12px;" style-hover="border-color: var(--accent);">Add watch</button>
+        </div>
+        <div style="display: grid; grid-template-columns: minmax(0, 1fr) 90px 170px 80px 100px 60px; gap: 0 12px; padding: 5px 16px; font-family: var(--fm); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute); border-bottom: 1px solid var(--line);"><span>Watch</span><span>Kind</span><span>In</span><span style="text-align: right;">This week</span><span>Last match</span><span></span></div>
+        <sc-for list="{{ watchRows }}" as="w" hint-placeholder-count="5">
+          <div style="display: grid; grid-template-columns: minmax(0, 1fr) 90px 170px 80px 100px 60px; gap: 0 12px; align-items: center; padding: calc(5px * var(--dn)) 16px; border-bottom: 1px solid color-mix(in oklch, var(--line) 55%, transparent); opacity: {{ w.op }};">
+            <span style="font-weight: 600;">{{ w.name }}</span><span style="font-size: 12.5px; color: var(--mute);">{{ w.kind }}</span><span style="font-size: 12.5px; color: var(--mute);">{{ w.where }}</span><span style="font-family: var(--fm); font-size: 11.5px; color: var(--mute); text-align: right;">{{ w.n }}</span><span style="font-family: var(--fm); font-size: 11.5px; color: var(--mute);">{{ w.last }}</span>
+            <button onClick="{{ w.flip }}" style="justify-self: end; width: 52px; padding: 4px 0; background: {{ w.bg }}; border: 1px solid {{ w.bd }}; border-radius: 99px; color: {{ w.fg }}; font: 600 12px 'IBM Plex Sans'; cursor: pointer;">{{ w.label }}</button>
+          </div>
+        </sc-for>
+        <div style="padding: 16px 16px 6px; font-family: var(--fm); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute);">Latest matches</div>
+        <sc-for list="{{ matchRows }}" as="m" hint-placeholder-count="5">
+          <div style="display: grid; grid-template-columns: 150px 34px minmax(0, 1fr) 40px; gap: 0 12px; align-items: baseline; padding: calc(4px * var(--dn)) 16px; border-bottom: 1px solid color-mix(in oklch, var(--line) 55%, transparent);">
+            <span style="font-size: 12px; color: var(--accent);">{{ m.watch }}</span><span style="font-family: var(--fm); font-size: 11px; font-weight: 500; color: {{ m.c }};">{{ m.src }}</span><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ m.title }}</span><span style="font-family: var(--fm); font-size: 11.5px; color: var(--mute); text-align: right;">{{ m.age }}</span>
+          </div>
+        </sc-for>
+      </main>
+    </sc-if>
+
+    <sc-if value="{{ isConn }}" hint-placeholder-val="{{ false }}">
+      <main data-screen-label="Connections" style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
+        <div style="display: flex; align-items: baseline; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line);">
+          <h1 style="margin: 0; font-size: 17px; font-weight: 600;">Connections</h1>
+          <span style="font-size: 12.5px; color: var(--mute);">Access tokens are stored encrypted on the server and never leave it.</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 34px 110px minmax(80px, 1fr) minmax(0, 150px) 90px 110px 100px; gap: 0 12px; padding: 5px 16px; font-family: var(--fm); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute); border-bottom: 1px solid var(--line);">
+          <span></span><span>Source</span><span>Account</span><span>Access</span><span>Last sync</span><span>Status</span><span></span>
+        </div>
+        <sc-for list="{{ conns }}" as="k" hint-placeholder-count="7">
+          <div style="display: grid; grid-template-columns: 34px 110px minmax(80px, 1fr) minmax(0, 150px) 90px 110px 100px; gap: 0 12px; align-items: center; padding: calc(6px * var(--dn)) 16px; border-bottom: 1px solid color-mix(in oklch, var(--line) 55%, transparent); opacity: {{ k.op }};">
+            <span style="font-family: var(--fm); font-size: 11px; font-weight: 500; color: {{ k.c }};">{{ k.code }}</span>
+            <span style="font-weight: 600;">{{ k.name }}</span>
+            <span style="font-family: var(--fm); font-size: 12px; color: var(--mute);">{{ k.account }}</span>
+            <span style="font-size: 12.5px; color: var(--mute);">{{ k.access }}</span>
+            <span style="font-family: var(--fm); font-size: 11.5px; color: var(--mute);">{{ k.sync }}</span>
+            <span style="display: flex; align-items: center; gap: 6px; font-size: 12.5px;"><span style="width: 6px; height: 6px; border-radius: 99px; background: {{ k.sc }};"></span>{{ k.status }}</span>
+            <button onClick="{{ k.act }}" disabled="{{ k.off }}" style="justify-self: end; padding: 4px 10px; background: transparent; border: 1px solid var(--line); border-radius: 5px; color: var(--ink); font: 500 12px 'IBM Plex Sans'; cursor: pointer;" style-hover="border-color: var(--accent);">{{ k.action }}</button>
+          </div>
+        </sc-for>
+      </main>
+    </sc-if>
+
+    <sc-if value="{{ isSec }}" hint-placeholder-val="{{ false }}">
+      <main data-screen-label="Security and settings" style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column;">
+        <div style="padding: 12px 16px; border-bottom: 1px solid var(--line);"><h1 style="margin: 0; font-size: 17px; font-weight: 600;">Security and settings</h1></div>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 16px; max-width: 980px;">
+          <section style="background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px; display: flex; flex-direction: column; gap: 8px;">
+            <div style="font-family: var(--fm); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute);">Encryption</div>
+            <div style="display: flex; align-items: center; gap: 8px; font-weight: 600;"><span style="width: 7px; height: 7px; border-radius: 99px; background: var(--ok);"></span>End-to-end encrypted</div>
+            <div style="color: var(--mute); text-wrap: pretty;">Content is encrypted before it is stored. Keys stay on your devices; the server cannot read your saved items or messages.</div>
+            <div style="display: grid; grid-template-columns: 120px 1fr; gap: 4px 12px; font-size: 12.5px;"><span style="color: var(--mute);">Key fingerprint</span><span style="font-family: var(--fm);">7F3A 91C2 0BD4 E6A8</span><span style="color: var(--mute);">Recovery key</span><span>Created, not shown</span></div>
+            <div style="display: flex; gap: 6px;"><button style="padding: 5px 10px; background: transparent; border: 1px solid var(--line); border-radius: 5px; color: var(--ink); font: 500 12px 'IBM Plex Sans'; cursor: pointer;" style-hover="border-color: var(--accent);">Show recovery key</button><button style="padding: 5px 10px; background: transparent; border: 1px solid var(--line); border-radius: 5px; color: var(--ink); font: 500 12px 'IBM Plex Sans'; cursor: pointer;" style-hover="border-color: var(--accent);">Rotate keys</button></div>
+          </section>
+          <section style="background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px; display: flex; flex-direction: column; gap: 4px;">
+            <div style="font-family: var(--fm); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute); padding-bottom: 4px;">Sign-in and lock</div>
+            <sc-for list="{{ locks }}" as="l" hint-placeholder-count="4">
+              <div style="display: flex; align-items: center; gap: 12px; padding: 6px 0; border-bottom: 1px solid color-mix(in oklch, var(--line) 55%, transparent);">
+                <div style="flex: 1;"><div style="font-weight: 500;">{{ l.name }}</div><div style="font-size: 12.5px; color: var(--mute);">{{ l.note }}</div></div>
+                <button onClick="{{ l.flip }}" style="width: 52px; padding: 4px 0; background: {{ l.bg }}; border: 1px solid {{ l.bd }}; border-radius: 99px; color: {{ l.fg }}; font: 600 12px 'IBM Plex Sans'; cursor: pointer;">{{ l.label }}</button>
+              </div>
+            </sc-for>
+          </section>
+          <section style="background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px; display: flex; flex-direction: column; gap: 4px;">
+            <div style="font-family: var(--fm); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute); padding-bottom: 4px;">Devices</div>
+            <sc-for list="{{ devices }}" as="dv" hint-placeholder-count="3">
+              <div style="display: flex; align-items: center; gap: 12px; padding: 6px 0; border-bottom: 1px solid color-mix(in oklch, var(--line) 55%, transparent);">
+                <div style="flex: 1;"><div style="font-weight: 500;">{{ dv.name }}</div><div style="font-family: var(--fm); font-size: 11.5px; color: var(--mute);">{{ dv.note }}</div></div>
+                <button onClick="{{ dv.revoke }}" disabled="{{ dv.self }}" style="padding: 4px 10px; background: transparent; border: 1px solid var(--line); border-radius: 5px; color: var(--ink); font: 500 12px 'IBM Plex Sans'; cursor: pointer; opacity: {{ dv.op }};" style-hover="border-color: var(--a3);">{{ dv.action }}</button>
+              </div>
+            </sc-for>
+          </section>
+          <section style="background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px; display: flex; flex-direction: column; gap: 10px;">
+            <div style="font-family: var(--fm); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute);">Appearance</div>
+            <div style="display: flex; align-items: center; gap: 12px;"><span style="width: 70px; color: var(--mute);">Accent</span>
+              <div style="display: flex; gap: 8px;">
+                <sc-for list="{{ accents }}" as="ac" hint-placeholder-count="5">
+                  <button onClick="{{ ac.pick }}" title="{{ ac.name }}" style="width: 24px; height: 24px; padding: 0; border-radius: 99px; background: {{ ac.color }}; border: 2px solid var(--panel); box-shadow: 0 0 0 2px {{ ac.ring }}; cursor: pointer;"></button>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;"><span style="width: 70px; color: var(--mute);">Density</span>
+              <div style="display: flex; gap: 6px;">
+                <sc-for list="{{ densities }}" as="ch" hint-placeholder-count="3">
+                  <button onClick="{{ ch.go }}" style="padding: 2px 10px; border-radius: 99px; border: 1px solid {{ ch.bd }}; background: {{ ch.bg }}; color: {{ ch.fg }}; font: inherit; font-size: 12px; font-weight: {{ ch.w }}; cursor: pointer;">{{ ch.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+            <div style="font-family: var(--fm); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute); padding-top: 6px;">Your data</div>
+            <div style="display: flex; gap: 6px;"><button style="padding: 5px 10px; background: transparent; border: 1px solid var(--line); border-radius: 5px; color: var(--ink); font: 500 12px 'IBM Plex Sans'; cursor: pointer;" style-hover="border-color: var(--accent);">Export everything</button><button style="padding: 5px 10px; background: transparent; border: 1px solid var(--line); border-radius: 5px; color: var(--a3); font: 500 12px 'IBM Plex Sans'; cursor: pointer;" style-hover="border-color: var(--a3);">Delete all data</button></div>
+          </section>
+        </div>
+      </main>
+    </sc-if>
+  </div>
+</div>
+
+<sc-if value="{{ isZoom }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Media preview" onClick="{{ closeZoom }}" style="position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; padding: 32px; background: oklch(0.1 0.008 255 / 0.82); color: var(--ink); font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 13.5px; cursor: zoom-out;">
+    <div onClick="{{ stop }}" style="width: min(880px, 100%); display: flex; flex-direction: column; gap: 10px; cursor: default;">
+      <div style="aspect-ratio: 16 / 10; max-height: 70vh; display: flex; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: 8px; background: repeating-linear-gradient(135deg, var(--card) 0 14px, var(--panel) 14px 28px);"><span style="padding: 4px 10px; border-radius: 4px; background: var(--bg); color: var(--mute); font-family: var(--fm); font-size: 12px;">{{ zoom.label }}</span></div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-family: var(--fm); font-size: 11px; font-weight: 500; color: {{ zoom.c }};">{{ zoom.src }}</span>
+        <span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600;">{{ zoom.title }}</span>
+        <span style="font-family: var(--fm); font-size: 11.5px; color: var(--mute);">{{ zoom.from }}</span>
+        <button onClick="{{ zoom.open }}" style="padding: 4px 12px; background: transparent; border: 1px solid var(--line); border-radius: 5px; color: var(--ink); font: 500 12px 'IBM Plex Sans'; cursor: pointer;" style-hover="border-color: var(--accent);">Open thread</button>
+        <button onClick="{{ closeZoom }}" style="padding: 4px 12px; background: var(--accent); border: none; border-radius: 5px; color: var(--bg); font: 600 12px 'IBM Plex Sans'; cursor: pointer;" style-hover="filter: brightness(1.08);">Close</button>
+      </div>
+    </div>
+  </div>
+</sc-if></x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;oklch(0.82 0.13 75)&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#e9b45a&quot;,&quot;#7fb0f0&quot;,&quot;#7fd49a&quot;,&quot;#f08a78&quot;]},&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;Comfortable&quot;,&quot;options&quot;:[&quot;Compact&quot;,&quot;Comfortable&quot;,&quot;Roomy&quot;],&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state = { view: 'today', source: null, chip: 'All', query: '', sel: 0, saved: { 0: 1, 2: 1, 5: 1, 10: 1 }, replies: {}, draft: '', savedKind: 'All', feed: 0, art: 0, extraFeeds: [], feedUrl: '', scope: 'Everything', asks: [], askDraft: '', threadAsk: '', locks: { lock: true, bio: true, twofa: true, hide: false }, revoked: {}, accent: null, density: null, off: {}, digest: 'Daily', laterAdded: [], laterDone: {}, watchOff: {}, watchNew: [], watchDraft: '', zoom: null };
+  MEDIA = { 3: 'Video', 5: 'Video', 6: 'Image', 9: 'Video', 13: 'Image', 15: 'Image', 16: 'Video', 17: 'Image' };
+  onKey = (e) => { if (e.key === 'Escape' && this.state.zoom !== null) this.setState({ zoom: null }); };
+  componentWillUnmount() { document.removeEventListener('keydown', this.onKey); }
+  C = { RD: 'var(--accent)', X: 'var(--ink)', IG: 'var(--a3)', RSS: 'var(--a2)', HN: 'var(--a2)', YT: 'var(--a4)' };
+  ITEMS = [
+    ['RD', 'What finally got you to move your feeds off five different apps?', 'I kept losing threads I meant to come back to', 'r/selfhosted', 214, '3h', 1, 'Most replies name saving and search as the reason to consolidate. A smaller group warns that API limits make replying from a third-party client unreliable.', [['marrow_fern', '2h · 86', 'Saving was the thing. Once everything landed in one archive I stopped opening the apps at all.', 0], ['tin_orchard', '1h · 21', 'Same, but replies still fail for me about one time in ten.', 1], ['quietpacket', '1h · 40', 'Search across all of it. I can finally find the comment I half remember.', 0], ['oldbarn', '58m · 17', 'What do you index, full text or just titles?', 1], ['nine_lathes', '44m · 28', 'API limits. I read here and still reply in the native apps.', 0]]],
+    ['X', 'Shipped offline sync this week. The hard part was deciding which device wins', '', '@lena_builds', 37, '4h', 1, 'A nine-post thread on conflict handling. They tried last-write-wins, then per-field merges, and settled on per-field merges with a visible history.', [['@ops_notes', '3h', 'Did you consider CRDTs or was that too heavy?', 0], ['@lena_builds', '3h', 'Tried one. Storage grew faster than we liked for notes this small.', 1]]],
+    ['HN', 'Show HN: A local-first archive for everything you read', '', '612 points', 388, '4h', 1, 'Discussion centers on storage format and search. Several commenters ask about import from existing read-later tools; the author says export came first.', [['pfk', '3h', 'Export as the first feature is the right call.', 0], ['dannyw', '2h', 'How large does the index get for 10k articles?', 0], ['author', '2h', 'About 400 MB with full text.', 1]]],
+    ['YT', 'Building a home server rack from scratch', 'video 18:24', 'Bench Hours', 142, '5h', 1, 'An 18-minute build video. Chapters cover the frame, cooling, cable runs and power. The transcript is saved and searchable.', [['railside', '4h · 31', 'The airflow section at 9:40 is the part most people skip.', 0], ['Bench Hours', '3h · 12', 'Agreed, I added a chapter marker for it.', 1]]],
+    ['RSS', 'A year of running my own feed reader', 'What broke and what I stopped reading', 'Low Tech Notes', '', '6h', 1, 'The author kept 40 of 130 feeds after a year and reads in one evening session. Polling less often fixed most reliability problems.', []],
+    ['IG', 'Glaze test 14. Same recipe, three firing schedules', 'video 0:42', '@studio.kiln', 12, '8h', 0, 'A 42-second video comparing three firing schedules on one glaze. Transcript and frames are saved.', [['@clay.daily', '7h', 'The slow cool one is the best by far.', 0]]],
+    ['RD', 'Backups: what is your restore test schedule?', '', 'r/homelab', 96, '8h', 1, 'Most people test restores quarterly or never. The top reply recommends restoring one random file every week.', []],
+    ['HN', 'SQLite as an application file format, ten years on', '', '431 points', 172, '9h', 0, 'Largely positive experience reports, with caveats about concurrent writers and network file systems.', []],
+    ['X', 'Reading list for the week, mostly about queues', 'thread 1/9', '@ops_notes', 8, '9h', 0, 'Nine links on queueing, three of which are already in your saved items.', []],
+    ['YT', 'Conflict-free sync explained in 12 minutes', 'video 12:07', 'Wire Talks', 64, '10h', 0, 'A short explainer on merge strategies for offline edits, with one worked example.', []],
+    ['RSS', 'Notes on end-to-end encryption for small apps', '', 'Plain Crypto', '', '10h', 0, 'A practical checklist: where keys live, how recovery works, and what the server can still see.', []],
+    ['RD', 'Is anyone still using RSS for release notes?', '', 'r/rss', 58, '11h', 0, 'Yes, widely. Most code hosts still publish release feeds and several people list the URL patterns.', []],
+    ['RSS', 'The case for boring sync protocols', '', 'Wire Notes', '', '12h', 0, 'Argues for periodic full sync with checksums over clever incremental schemes.', []],
+    ['IG', 'New studio shelving finally up', 'photo', '@studio.kiln', 4, '13h', 0, 'One photo, four comments.', []],
+    ['HN', 'Ask HN: How do you keep track of long discussions?', '', '208 points', 143, '14h', 0, 'Answers split between summaries, saved highlights and simply not trying.', []],
+    ['X', 'Rate limits changed again. Summary of what moved', '', '@api_watch', 61, '15h', 0, 'Read limits dropped for the free tier; posting limits are unchanged.', []],
+    ['YT', 'Kiln firing schedules, a full walkthrough', 'video 41:30', 'Studio Kiln', 23, '18h', 0, 'A 41-minute walkthrough of four firing schedules. Chapters and transcript are saved.', []],
+    ['RD', 'Summarizing 400-comment threads: what actually works', '', 'r/LocalLLaMA', 187, '22h', 0, 'Chunking by reply tree beats chunking by length. People recommend summarizing each top-level branch, then merging.', []]
+  ];
+  SAVED = [['Video', 'IG', 'Glaze test 14. Same recipe, three firing schedules', '@studio.kiln', 'Transcript · 12 frames', 'Today'], ['Thread', 'RD', 'What finally got you to move your feeds off five different apps?', 'r/selfhosted', 'Summary · 214 comments', 'Today'], ['Thread', 'HN', 'Show HN: A local-first archive for everything you read', '612 points', 'Summary · 388 comments', 'Today'], ['Article', 'RSS', 'Notes on end-to-end encryption for small apps', 'Plain Crypto', 'Full text', 'Today'], ['Video', 'YT', 'Conflict-free sync explained in 12 minutes', 'Wire Talks', 'Transcript · chapters', 'Yesterday'], ['Post', 'X', 'Small thing: export should be the first feature, not the last', '@lena_builds', 'Text', 'Yesterday'], ['Video', 'RD', 'Rack tour: 12U in a closet', 'r/homelab', 'Transcript · processing', 'Yesterday'], ['Thread', 'RD', 'Summarizing 400-comment threads: what actually works', 'r/LocalLLaMA', 'Summary · 187 comments', 'Mon'], ['Article', 'RSS', 'The case for boring sync protocols', 'Wire Notes', 'Full text', 'Mon'], ['Post', 'X', 'Rate limits changed again. Summary of what moved', '@api_watch', 'Text · 2 images', 'Sun'], ['Video', 'IG', 'Kiln opening, Saturday batch', '@studio.kiln', 'Transcript · 20 frames', 'Sat'], ['Article', 'RSS', 'Designing a calendar that does less', 'Field Notes', 'Full text', 'Fri'], ['Thread', 'HN', 'Passkeys in practice after a year', '290 points', 'Summary · 201 comments', 'Thu']];
+  FEEDS = [
+    ['Low Tech Notes', [['A year of running my own feed reader', '6h · 12 min', 'The author kept 40 of 130 feeds after a year and reads in one evening session.', 'I started the year with 130 feeds and a habit of opening the reader whenever I was bored. By March the unread count had become a second inbox. What fixed it was not a feature. I stopped polling every fifteen minutes, moved to twice a day, and deleted any feed I had skipped ten times in a row.'], ['Reading in the evening, a short essay', '1d · 5 min', 'A short case for reading once a day at a fixed time.', 'There is a particular quiet to reading things after they have stopped being new. Most of what felt urgent at noon has resolved itself by nine.']]],
+    ['Plain Crypto', [['Notes on end-to-end encryption for small apps', '10h · 9 min', 'A checklist: where keys live, how recovery works, and what the server can still see.', 'Before choosing a cipher, write down what the server is allowed to know. For most small apps the honest answer includes sizes, timestamps and who talks to whom. Decide whether that is acceptable, then design recovery, because recovery is where most schemes quietly give the server a copy of the key.']]],
+    ['Wire Notes', [['The case for boring sync protocols', '12h · 7 min', 'Argues for periodic full sync with checksums over clever incremental schemes.', 'Incremental sync is fast until it is wrong, and when it is wrong it is wrong silently. A periodic full comparison with checksums is slow, predictable, and tells you when something drifted.'], ['What a retry budget is', '2d · 4 min', 'Defines retry budgets and shows one worked example.', 'A retry budget caps the share of requests that may be retries. Ten percent is a common starting point.']]],
+    ['Field Notes', [['Designing a calendar that does less', '19h · 8 min', 'A calendar that shows only today and the next thing.', 'Most calendar views answer a question nobody asked: what does the whole month look like. The question people ask is what is next, and how long until it starts.']]],
+    ['Release notes', [['Reader 4.2: faster full-text search', '1d · 2 min', 'Search index rebuilt; queries are about three times faster.', 'This release rebuilds the search index. Existing libraries are migrated in the background on first launch.']]]
+  ];
+  HIGHLIGHTS = [
+    ['Recovery is where most schemes quietly give the server a copy of the key.', 'Check this against our own recovery flow.', 'RSS', 'Notes on end-to-end encryption for small apps', 'Plain Crypto', 'Today'],
+    ['Chunking by reply tree beats chunking by length.', '', 'RD', 'Summarizing 400-comment threads: what actually works', 'r/LocalLLaMA', 'Yesterday'],
+    ['Incremental sync is fast until it is wrong, and when it is wrong it is wrong silently.', 'Good argument for a weekly full check.', 'RSS', 'The case for boring sync protocols', 'Wire Notes', 'Mon'],
+    ['Export should be the first feature, not the last.', '', 'X', 'Small thing: export should be the first feature', '@lena_builds', 'Mon'],
+    ['The airflow section at 9:40 is the part most people skip.', 'Rewatch before ordering fans.', 'YT', 'Building a home server rack from scratch', 'Bench Hours', 'Sun']
+  ];
+  LATER = [['RSS', 'Notes on end-to-end encryption for small apps', 'Plain Crypto', 9, 'Today'], ['YT', 'Kiln firing schedules, a full walkthrough', 'Studio Kiln', 42, 'Today'], ['HN', 'SQLite as an application file format, ten years on', '431 points', 14, 'Yesterday'], ['RSS', 'Designing a calendar that does less', 'Field Notes', 8, 'Yesterday'], ['X', 'Reading list for the week, mostly about queues', '@ops_notes', 6, 'Mon'], ['RD', 'Backups: what is your restore test schedule?', 'r/homelab', 11, 'Mon']];
+  WATCHES = [['rate limits', 'Keyword', 'All sources', 7, '15h ago'], ['@lena_builds', 'Person', 'X', 3, '4h ago'], ['local-first', 'Topic', 'Hacker News, RSS', 5, '4h ago'], ['kiln', 'Keyword', 'Instagram, YouTube', 4, '8h ago'], ['Actual Budget', 'Keyword', 'Reddit', 0, 'No matches']];
+  MATCHES = [['local-first', 'HN', 'Show HN: A local-first archive for everything you read', '4h'], ['@lena_builds', 'X', 'Shipped offline sync this week. The hard part was deciding which device wins', '4h'], ['kiln', 'IG', 'Glaze test 14. Same recipe, three firing schedules', '8h'], ['rate limits', 'X', 'Rate limits changed again. Summary of what moved', '15h'], ['kiln', 'YT', 'Kiln firing schedules, a full walkthrough', '18h'], ['rate limits', 'RD', 'What finally got you to move your feeds off five different apps?', '3h']];
+  DIGEST = {
+    Daily: ['Saturday 14 November', 'Eighteen new items since yesterday evening. Two threads you replied to have new answers. The busiest discussion is the Hacker News thread on a local-first reading archive, and three of your watches matched.', [
+      ['Threads worth opening', 'The r/selfhosted thread on consolidating feeds reached 214 comments, and tin_orchard replied to you there. The Show HN thread has 388 comments, mostly about storage format and import.', [['RD', 'What finally got you to move your feeds off five different apps?'], ['HN', 'Show HN: A local-first archive for everything you read']]],
+      ['From your feeds', 'Low Tech Notes published a year-in-review of running a feed reader. Plain Crypto posted a checklist on end-to-end encryption that overlaps with two items you saved last week.', [['RSS', 'A year of running my own feed reader'], ['RSS', 'Notes on end-to-end encryption for small apps']]],
+      ['Video', 'Three new videos, about 72 minutes in total. Transcripts are ready for all three.', [['YT', 'Building a home server rack from scratch'], ['YT', 'Conflict-free sync explained in 12 minutes']]],
+      ['Watches', 'Matches for local-first, @lena_builds and kiln. Nothing new for Actual Budget.', []]
+    ]],
+    Weekly: ['Week of 9 November', 'You opened 96 items, saved 13 and replied 6 times this week. Sync and local-first storage came up in four separate sources. Six items are still in your read later queue.', [
+      ['Most discussed', 'The two largest threads were the Show HN archive post and the r/LocalLLaMA thread on summarizing long discussions.', [['HN', 'Show HN: A local-first archive for everything you read'], ['RD', 'Summarizing 400-comment threads: what actually works']]],
+      ['Recurring topics', 'Sync protocols appeared in Wire Notes, a thread from @lena_builds and a Wire Talks video. Rate limits appeared seven times, mostly on X.', [['RSS', 'The case for boring sync protocols'], ['X', 'Rate limits changed again. Summary of what moved']]],
+      ['What you saved', 'Thirteen items: four videos, four threads, three articles and two posts. You added five highlights.', []],
+      ['Feeds you skipped', 'You have not opened anything from Release notes in three weeks.', []]
+    ]]
+  };
+  ACCENTS = [['Amber', 'oklch(0.82 0.13 75)'], ['Blue', 'oklch(0.76 0.12 250)'], ['Green', 'oklch(0.82 0.13 155)'], ['Coral', 'oklch(0.76 0.13 25)'], ['Gray', 'oklch(0.9 0.008 255)']];
+  DN = { Compact: 1, Comfortable: 1.7, Roomy: 2.4 };
+  applyTheme() {
+    const s = document.documentElement.style;
+    s.setProperty('--accent', this.state.accent || this.props.accent || this.ACCENTS[0][1]);
+    s.setProperty('--dn', this.DN[this.state.density || this.props.density || 'Comfortable']);
+  }
+  componentDidMount() { this.applyTheme(); document.addEventListener('keydown', this.onKey); }
+  componentDidUpdate() { this.applyTheme(); }
+  chip(label, on, go) { return { label, go, bg: on ? 'var(--accent)' : 'transparent', fg: on ? 'var(--bg)' : 'var(--mute)', bd: on ? 'var(--accent)' : 'var(--line)', w: on ? 600 : 400 }; }
+  renderVals() {
+    const st = this.state, set = (o) => () => this.setState(o), C = this.C;
+    const names = { RD: 'Reddit', X: 'X', IG: 'Instagram', HN: 'Hacker News', YT: 'YouTube', RSS: 'RSS' };
+    const nav = (name, count, on, go, dot, off) => ({ name, count, go, off: !!off, dot: dot || 'transparent', bg: on ? 'var(--card)' : 'transparent', fg: on ? 'var(--ink)' : 'var(--mute)', op: off ? 0.55 : 1 });
+    const v = st.view, cnt = (s) => this.ITEMS.filter(i => i[0] === s).length;
+    const savedCount = Object.values(st.saved).filter(Boolean).length + this.SAVED.length - 4;
+    const send = (q, scope) => { const t = (q || '').trim(); if (!t) return; this.setState(s => ({ view: 'ask', askDraft: '', threadAsk: '', scope: scope || s.scope, asks: [...s.asks, { q: t, scope: scope || s.scope }] })); };
+
+    const laterBase = this.LATER.map((l, i) => ({ k: 'b' + i, src: l[0], title: l[1], from: l[2], m: l[3], added: l[4] })).filter(l => !st.laterDone[l.k]);
+    const laterNew = st.laterAdded.map(i => ({ k: 'i' + i, i, src: this.ITEMS[i][0], title: this.ITEMS[i][1], from: this.ITEMS[i][3], m: 0, added: 'Now' }));
+    const laterRows = laterNew.concat(laterBase).map(l => ({ src: l.src, c: C[l.src], title: l.title, from: l.from, mins: l.m ? l.m + ' min' : '', added: l.added, done: () => this.setState(s => l.i === undefined ? { laterDone: { ...s.laterDone, [l.k]: 1 } } : { laterAdded: s.laterAdded.filter(x => x !== l.i) }) }));
+    const tot = laterBase.reduce((a, l) => a + l.m, 0);
+    const laterTotal = laterRows.length + ' items · ' + (tot >= 60 ? Math.floor(tot / 60) + ' h ' + (tot % 60) + ' min' : tot + ' min');
+
+    const watchAll = this.WATCHES.concat(st.watchNew.map(n => [n, 'Keyword', 'All sources', 0, 'No matches']));
+    const watchRows = watchAll.map(w => { const on = !st.watchOff[w[0]]; return { name: w[0], kind: w[1], where: w[2], n: w[3], last: w[4], on, op: on ? 1 : 0.55, label: on ? 'On' : 'Off', bg: on ? 'var(--accent)' : 'transparent', bd: on ? 'var(--accent)' : 'var(--line)', fg: on ? 'var(--bg)' : 'var(--mute)', flip: () => this.setState(s => ({ watchOff: { ...s.watchOff, [w[0]]: !s.watchOff[w[0]] } })) }; });
+    const matchCount = watchRows.filter(w => w.on).reduce((a, w) => a + w.n, 0);
+    const addWatch = () => { const t = st.watchDraft.trim(); if (t) this.setState(s => ({ watchDraft: '', watchNew: [...s.watchNew, t] })); };
+
+    const groups = [
+      { label: 'Views', rows: [nav('Today', '', v === 'today', set({ view: 'today' })), nav('Stream', this.ITEMS.length, v === 'stream' && !st.source, set({ view: 'stream', source: null })), nav('Read later', laterRows.length, v === 'later', set({ view: 'later' })), nav('Saved', savedCount, v === 'saved', set({ view: 'saved' })), nav('Highlights', this.HIGHLIGHTS.length, v === 'hl', set({ view: 'hl' })), nav('RSS', 9, v === 'rss', set({ view: 'rss' })), nav('Digest', '', v === 'digest', set({ view: 'digest' })), nav('Watches', matchCount, v === 'watches', set({ view: 'watches' })), nav('Ask', '', v === 'ask', set({ view: 'ask' }), 'var(--accent)')] },
+      { label: 'Sources', rows: ['RD', 'X', 'IG', 'HN', 'YT'].map(s => nav(names[s], cnt(s), v === 'stream' && st.source === s, set({ view: 'stream', source: s }), C[s])) },
+      { label: 'Account', rows: [nav('Connections', '', v === 'conn', set({ view: 'conn' })), nav('Security and settings', '', v === 'sec', set({ view: 'sec' }))] },
+      { label: 'Planned', rows: [nav('Calendar', '', false, null, null, true), nav('Mail', '', false, null, null, true), nav('Budget', '', false, null, null, true)] }
+    ];
+    const q = st.query.trim().toLowerCase();
+    const toggle = (i) => (e) => { e && e.stopPropagation(); this.setState(s => ({ saved: { ...s.saved, [i]: !s.saved[i] } })); };
+    const rows = this.ITEMS.map((r, i) => ({ i, r })).filter(({ r, i }) => (!st.source || r[0] === st.source) && (st.chip === 'All' || (st.chip === 'Unread' && r[6]) || (st.chip === 'Saved' && st.saved[i]) || (st.chip === 'Video' && /video/.test(r[2]))) && (!q || (r[1] + r[3]).toLowerCase().includes(q)))
+      .map(({ r, i }) => ({ src: r[0], c: C[r[0]], title: r[1], sub: [r[3], r[2]].filter(Boolean).join(' · '), n: ((+r[4] || 0) + (st.replies[i] ? st.replies[i].length : 0)) || '', age: r[5], w: r[6] ? 600 : 400, bg: i === st.sel ? 'var(--card)' : 'transparent', bar: i === st.sel ? 'var(--accent)' : 'transparent', td: this.MEDIA[i] ? 'flex' : 'none', tl: this.MEDIA[i] === 'Video' ? 'VID' : 'IMG', tt: 'Preview ' + (this.MEDIA[i] || '').toLowerCase(), zoom: (e) => { e.stopPropagation(); this.setState({ zoom: i }); }, mark: st.saved[i] ? '●' : '○', sc: st.saved[i] ? 'var(--accent)' : 'var(--line)', pick: set({ sel: i, draft: '', threadAsk: '' }), toggle: toggle(i) }));
+    const r = this.ITEMS[st.sel];
+    const cm = ([who, meta, text, d]) => ({ who, meta, text, indent: (d * 16) + 'px', rule: who === 'you' ? 'var(--accent)' : 'var(--line)' });
+    const comments = r[8].map(cm).concat((st.replies[st.sel] || []).map(t => cm(['you', 'now', t, 0])));
+    const queued = st.laterAdded.includes(st.sel);
+    const cur = { src: r[0], c: C[r[0]], title: r[1], meta: r[3] + ' · ' + r[5], summary: r[7], comments, empty: !comments.length, saveLabel: st.saved[st.sel] ? 'Saved' : 'Save', toggle: toggle(st.sel), replyAs: 'Reply on ' + names[r[0]], laterLabel: queued ? 'Queued' : 'Read later', later: () => this.setState(s => ({ laterAdded: queued ? s.laterAdded.filter(x => x !== s.sel) : [s.sel, ...s.laterAdded] })) };
+    const sendReply = () => { const t = st.draft.trim(); if (!t) return; this.setState(s => ({ draft: '', replies: { ...s.replies, [s.sel]: [...(s.replies[s.sel] || []), t] } })); };
+    const feedsAll = this.FEEDS.concat(st.extraFeeds.map(u => [u, []]));
+    const feed = feedsAll[st.feed] || feedsAll[0];
+    const a = feed[1][st.art];
+    const askLog = [{ q: 'What did people say about API rate limits this week?', scope: 'From everything', a: 'Three threads touch on it. On r/selfhosted, several people say replies from third-party clients fail roughly one time in ten [1]. @api_watch reports that read limits dropped on the free tier of X while posting limits are unchanged [2]. On Hacker News the consensus is to cache aggressively and poll less often [3].', cites: [['RD', 'What finally got you to move your feeds off five different apps?', 'r/selfhosted'], ['X', 'Rate limits changed again. Summary of what moved', '@api_watch'], ['HN', 'Ask HN: How do you keep track of long discussions?', '208 points']].map((c, i) => ({ i: i + 1, src: c[0], c: C[c[0]], title: c[1], from: c[2] })) }]
+      .concat(st.asks.map(x => ({ q: x.q, scope: 'From ' + x.scope.toLowerCase(), a: 'Answers are not connected in this prototype. This question would be run over ' + x.scope.toLowerCase() + '.', cites: [] })));
+    const conn = (code, name, account, access, sync, later) => { const off = st.off[code]; return { code, c: C[code] || 'var(--mute)', name, account, access, sync: later || off ? '' : sync, status: later ? 'Not available yet' : off ? 'Disconnected' : 'Connected', sc: later ? 'var(--line)' : off ? 'var(--a3)' : 'var(--ok)', action: later ? 'Later' : off ? 'Connect' : 'Disconnect', off: !!later, op: later ? 0.55 : 1, act: () => this.setState(s => ({ off: { ...s.off, [code]: !s.off[code] } })) }; };
+    const lock = (k, name, note) => { const on = st.locks[k]; return { name, note, label: on ? 'On' : 'Off', bg: on ? 'var(--accent)' : 'transparent', bd: on ? 'var(--accent)' : 'var(--line)', fg: on ? 'var(--bg)' : 'var(--mute)', flip: () => this.setState(s => ({ locks: { ...s.locks, [k]: !s.locks[k] } })) }; };
+    const dev = (k, name, note, self) => ({ name, note, self: !!self, action: self ? 'This device' : 'Revoke', op: self ? 0.55 : 1, revoke: () => this.setState(s => ({ revoked: { ...s.revoked, [k]: 1 } })) });
+    const curAccent = st.accent || this.props.accent || this.ACCENTS[0][1], curDn = st.density || this.props.density || 'Comfortable';
+    const dg = this.DIGEST[st.digest];
+    return {
+      isToday: v === 'today', isStream: v === 'stream', isSaved: v === 'saved', isRss: v === 'rss', isAsk: v === 'ask', isConn: v === 'conn', isSec: v === 'sec', isLater: v === 'later', isHl: v === 'hl', isDigest: v === 'digest', isWatches: v === 'watches',
+      groups, goSec: set({ view: 'sec' }), goStream: set({ view: 'stream', source: null }), goDigest: set({ view: 'digest', digest: 'Daily' }), goWatches: set({ view: 'watches' }), goLater: set({ view: 'later' }), goHl: set({ view: 'hl' }),
+      goAsk: () => st.threadAsk.trim() ? send(st.threadAsk, 'Open thread') : this.setState({ view: 'ask', scope: 'Open thread' }),
+      threadAsk: st.threadAsk, onThreadAsk: (e) => this.setState({ threadAsk: e.target.value }), onThreadAskKey: (e) => { if (e.key === 'Enter') send(st.threadAsk, 'Open thread'); },
+      scopeLabel: 'in ' + st.scope.toLowerCase(),
+      todayDigest: this.DIGEST.Daily[1],
+      todaySources: ['RD', 'X', 'IG', 'HN', 'YT', 'RSS'].map(s => ({ src: s, c: C[s], name: names[s], count: cnt(s), top: (this.ITEMS.find(i => i[0] === s) || [])[1], go: set({ view: 'stream', source: s }) })),
+      todayReplies: [{ who: 'tin_orchard', where: 'r/selfhosted · 1h', text: 'Same, but replies still fail for me about one time in ten.', go: set({ view: 'stream', source: null, sel: 0 }) }, { who: '@ops_notes', where: 'X · 3h', text: 'Did you consider CRDTs or was that too heavy?', go: set({ view: 'stream', source: null, sel: 1 }) }],
+      todayWatches: watchRows.filter(w => w.on && w.n > 0).slice(0, 4),
+      todayLater: laterRows.slice(0, 3),
+      todayHl: this.HIGHLIGHTS.slice(0, 2).map(h => ({ quote: h[0], from: h[3] + ' · ' + h[4] })),
+      laterRows, laterTotal, laterEmpty: !laterRows.length,
+      hlRows: this.HIGHLIGHTS.map(h => ({ quote: h[0], note: h[1], hasNote: !!h[1], src: h[2], c: C[h[2]], title: h[3], from: h[4], when: h[5] })),
+      digestChips: ['Daily', 'Weekly'].map(l => this.chip(l, st.digest === l, set({ digest: l }))),
+      digest: { title: dg[0], lead: dg[1] },
+      digestSections: dg[2].map(d => ({ head: d[0], text: d[1], items: d[2].map(x => ({ src: x[0], c: C[x[0]], title: x[1] })) })),
+      watchRows, watchDraft: st.watchDraft, onWatchDraft: (e) => this.setState({ watchDraft: e.target.value }), onWatchKey: (e) => { if (e.key === 'Enter') addWatch(); }, addWatch,
+      matchRows: this.MATCHES.map(m => ({ watch: m[0], src: m[1], c: C[m[1]], title: m[2], age: m[3] })),
+      streamTitle: st.source ? names[st.source] : 'Stream',
+      streamChips: ['All', 'Unread', 'Saved', 'Video'].map(l => this.chip(l, st.chip === l, set({ chip: l }))),
+      query: st.query, onQuery: (e) => this.setState({ query: e.target.value }),
+      isZoom: st.zoom !== null, closeZoom: set({ zoom: null }), stop: (e) => e.stopPropagation(),
+      zoom: st.zoom === null ? {} : { label: this.MEDIA[st.zoom] + ' from ' + this.ITEMS[st.zoom][3], src: this.ITEMS[st.zoom][0], c: C[this.ITEMS[st.zoom][0]], title: this.ITEMS[st.zoom][1], from: this.ITEMS[st.zoom][3] + ' · ' + this.ITEMS[st.zoom][5], open: set({ sel: st.zoom, zoom: null, draft: '', threadAsk: '' }) },
+      rows, noRows: !rows.length, cur, draft: st.draft, onDraft: (e) => this.setState({ draft: e.target.value }), onDraftKey: (e) => { if (e.key === 'Enter') sendReply(); }, sendReply,
+      savedChips: ['All', 'Video', 'Thread', 'Post', 'Article'].map(l => this.chip(l === 'All' ? l : l + 's', st.savedKind === l, set({ savedKind: l }))),
+      savedRows: this.SAVED.filter(s => st.savedKind === 'All' || s[0] === st.savedKind).map(s => ({ kind: s[0], src: s[1], c: C[s[1]], title: s[2], from: s[3], parsed: s[4], when: s[5] })),
+      feeds: feedsAll.map((f, i) => ({ name: f[0], count: f[1].length || '', bg: i === st.feed ? 'var(--card)' : 'transparent', fg: i === st.feed ? 'var(--ink)' : 'var(--mute)', go: set({ feed: i, art: 0 }) })),
+      articles: feed[1].map((x, i) => ({ title: x[0], meta: x[1], w: i === 0 ? 600 : 400, bg: i === st.art ? 'var(--card)' : 'transparent', bar: i === st.art ? 'var(--accent)' : 'transparent', go: set({ art: i }) })),
+      art: a ? { title: a[0], meta: feed[0] + ' · ' + a[1], summary: a[2], body: a[3] } : { title: feed[0], meta: 'New feed', summary: 'No articles fetched yet.', body: '' },
+      feedUrl: st.feedUrl, onFeedUrl: (e) => this.setState({ feedUrl: e.target.value }), addFeed: () => { const u = st.feedUrl.trim(); if (u) this.setState(s => ({ feedUrl: '', extraFeeds: [...s.extraFeeds, u], feed: this.FEEDS.length + s.extraFeeds.length, art: 0 })); },
+      askChips: ['Everything', 'Saved', 'This week', 'Open thread'].map(l => this.chip(l, st.scope === l, set({ scope: l }))),
+      askLog, askDraft: st.askDraft, onAskDraft: (e) => this.setState({ askDraft: e.target.value }), onAskKey: (e) => { if (e.key === 'Enter') send(st.askDraft); }, sendAsk: () => send(st.askDraft),
+      askTry: ['Summarize what I saved this week', 'Which threads have replies to me?', 'What is new about sync protocols?'].map(l => ({ label: l, go: () => send(l) })),
+      conns: [conn('RD', 'Reddit', 'u/you', 'Read, reply, vote', '2 min ago'), conn('X', 'X', '@you', 'Read, reply', '5 min ago'), conn('IG', 'Instagram', '@you', 'Read, comment', '14 min ago'), conn('HN', 'Hacker News', 'you', 'Read, reply', '2 min ago'), conn('YT', 'YouTube', 'Your subscriptions', 'Read, comment', '9 min ago'), conn('RSS', 'RSS', '5 feeds', 'Read', '31 min ago'), conn('CAL', 'Calendar', '', '', '', 1), conn('ML', 'Mail', '', '', '', 1), conn('BUD', 'Budget', '', '', '', 1)],
+      locks: [lock('lock', 'Lock when idle', 'After 5 minutes'), lock('bio', 'Unlock with Touch ID or Face ID', 'On devices that support it'), lock('twofa', 'Two-step sign-in', 'Passkey, with one-time codes as backup'), lock('hide', 'Hide previews in notifications', 'Show only the source name')],
+      devices: [dev('mac', 'MacBook Pro', 'Mac app · active now', 1), dev('ios', 'iPhone', 'iOS app · 2 hours ago'), dev('web', 'Firefox on Linux', 'Web · 6 days ago')].filter((d, i) => !st.revoked[['mac', 'ios', 'web'][i]]),
+      accents: this.ACCENTS.map(([name, color]) => ({ name, color, ring: color === curAccent ? 'var(--ink)' : 'transparent', pick: set({ accent: color }) })),
+      densities: Object.keys(this.DN).map(l => this.chip(l, curDn === l, set({ density: l })))
+    };
+  }
+}
+</script>
+</body>
+</html>

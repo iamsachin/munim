@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
+  <style>
+    :root { --bg: oklch(0.15 0 0); --panel: oklch(0.175 0 0); --card: oklch(0.215 0 0); --line: oklch(0.27 0 0); --ink: oklch(0.93 0 0); --mute: oklch(0.7 0 0); --accent: oklch(0.93 0 0); --a2: oklch(0.78 0 0); --a3: oklch(0.62 0 0); --ai-bg: oklch(0.215 0 0); --ai-ink: oklch(0.93 0 0); --fd: "Geist"; --fb: "Geist"; --fm: "Geist Mono"; --dw: 600; --dls: -0.01em; --ds: 1; --r: 5px; }
+    body { margin: 0; background: #111; }
+  </style>
+</helmet>
+<div style="position: relative; width: 390px; height: 760px; box-sizing: border-box; background: var(--bg); color: var(--ink); font-family: var(--fb), system-ui, sans-serif; font-size: calc(14px * var(--fz, 1)); line-height: 1.35; border: 1px solid var(--line); border-radius: 44px; overflow: hidden; display: flex; flex-direction: column;">
+  <div style="display: flex; justify-content: space-between; padding: 14px 30px 4px; font-weight: 600;"><span>9:41</span><span style="font-family: var(--fm); font-size: 10.5px; color: var(--mute);">Encrypted</span></div>
+  <div style="display: flex; align-items: center; gap: 6px; padding: 4px 14px 8px; border-bottom: 1px solid var(--line); font-size: 12.5px;">
+    <h2 style="margin: 0 4px 0 0; font-family: var(--fd); font-weight: var(--dw); letter-spacing: var(--dls); font-size: calc(19px * var(--ds)); line-height: 1.2;">Stream</h2>
+    <span style="padding: 2px 9px; border-radius: 99px; background: var(--accent); color: var(--bg); font-weight: 600;">All 42</span>
+    <span style="padding: 2px 9px; border-radius: 99px; border: 1px solid var(--line); color: var(--mute);">Unread</span>
+    <span style="padding: 2px 9px; border-radius: 99px; border: 1px solid var(--line); color: var(--mute);">Saved</span>
+    <span style="padding: 2px 9px; border-radius: 99px; border: 1px solid var(--line); color: var(--mute);">RSS</span>
+  </div>
+  <div style="padding: 7px 14px; background: var(--ai-bg); border-bottom: 1px solid var(--line); font-size: 13px;"><span style="font-family: var(--fm); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute);">Since 8:00 </span>42 new. Two threads you replied to have answers. One saved video finished processing.</div>
+  <sc-for list="{{ items }}" as="it" hint-placeholder-count="11">
+    <div style="min-height: 44px; box-sizing: border-box; padding: calc(6px * var(--dn, 1)) 14px; border-bottom: 1px solid color-mix(in oklch, var(--line) 55%, transparent); display: flex; flex-direction: column; justify-content: center; gap: 1px;">
+      <div style="display: flex; gap: 8px; font-family: var(--fm); font-size: 10.5px; color: var(--mute);"><span style="font-weight: 500; color: {{ it.c }};">{{ it.src }}</span><span>{{ it.from }}</span><span style="margin-left: auto;">{{ it.meta }}</span></div>
+      <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: {{ it.w }};">{{ it.title }}</div>
+    </div>
+  </sc-for>
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(4, 1fr); padding: 0 10px 18px; background: var(--panel); border-top: 1px solid var(--line); font-size: 12px; font-weight: 500; text-align: center;">
+    <div style="min-height: 44px; display: flex; align-items: center; justify-content: center; color: var(--ink); box-shadow: inset 0 2px 0 var(--accent);">Stream</div>
+    <div style="min-height: 44px; display: flex; align-items: center; justify-content: center; color: var(--mute);">Saved</div>
+    <div style="min-height: 44px; display: flex; align-items: center; justify-content: center; color: var(--mute);">RSS</div>
+    <div style="min-height: 44px; display: flex; align-items: center; justify-content: center; color: var(--mute);">Ask</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:760}}">
+class Component extends DCLogic {
+  renderVals() {
+    const C = { RD: 'var(--accent)', X: 'var(--ink)', IG: 'var(--a3)', RSS: 'var(--a2)', HN: 'var(--a2)' };
+    const raw = [
+      ['RD', 'r/selfhosted', '214 · 3h', 'What finally got you to move your feeds off five apps?', 1],
+      ['X', '@lena_builds', '37 · 4h', 'Shipped offline sync this week. The hard part was…', 1],
+      ['HN', '612 points', '388 · 4h', 'Show HN: A local-first archive for everything you read', 1],
+      ['RSS', 'Low Tech Notes', '6h', 'A year of running my own feed reader', 1],
+      ['IG', '@studio.kiln', '12 · 8h', 'Glaze test 14. Same recipe, three firing schedules', 0],
+      ['RD', 'r/homelab', '96 · 8h', 'Backups: what is your restore test schedule?', 1],
+      ['HN', '431 points', '172 · 9h', 'SQLite as an application file format, ten years on', 0],
+      ['X', '@ops_notes', '8 · 9h', 'Reading list for the week, mostly about queues', 0],
+      ['RSS', 'Plain Crypto', '10h', 'Notes on end-to-end encryption for small apps', 0],
+      ['RD', 'r/rss', '58 · 11h', 'Is anyone still using RSS for release notes?', 0],
+      ['RSS', 'Wire Notes', '12h', 'The case for boring sync protocols', 0],
+      ['HN', '208 points', '143 · 14h', 'Ask HN: How do you keep track of long discussions?', 0]
+    ];
+    return { items: raw.map(r => ({ src: r[0], c: C[r[0]], from: r[1], meta: r[2], title: r[3], w: r[4] ? 600 : 400 })) };
+  }
+}
+</script>
+</body>
+</html>

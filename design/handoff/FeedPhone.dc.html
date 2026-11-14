@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    :root { --bg: oklch(0.17 0.006 70); --panel: oklch(0.195 0.007 70); --card: oklch(0.23 0.008 70); --line: oklch(0.3 0.01 70); --ink: oklch(0.94 0.008 80); --mute: oklch(0.72 0.012 75); --accent: oklch(0.8 0.14 75); --a2: oklch(0.78 0.07 200); --a3: oklch(0.74 0.1 30); --ai-bg: oklch(0.26 0.035 75); --ai-ink: oklch(0.94 0.03 80); --fd: "IBM Plex Sans"; --fb: "IBM Plex Sans"; --fm: "IBM Plex Mono"; --dw: 600; --dls: -0.01em; --ds: 1; --r: 8px; }
+    body { margin: 0; background: #111; }
+  </style>
+</helmet>
+<div style="position: relative; width: 390px; height: 760px; box-sizing: border-box; background: var(--bg); color: var(--ink); font-family: var(--fb), system-ui, sans-serif; font-size: 15px; line-height: 1.45; border: 1px solid var(--line); border-radius: 44px; overflow: hidden; display: flex; flex-direction: column;">
+  <div style="display: flex; justify-content: space-between; padding: 16px 30px 6px; font-weight: 600; font-size: 15px;"><span>9:41</span><span style="font-family: var(--fm); font-size: 11px; color: var(--mute);">Encrypted</span></div>
+  <div style="padding: 10px 18px 0; display: flex; flex-direction: column; gap: 12px;">
+    <div style="display: flex; align-items: center; justify-content: space-between;">
+      <h2 style="margin: 0; font-family: var(--fd); font-weight: var(--dw); letter-spacing: var(--dls); font-size: calc(28px * var(--ds)); line-height: 1.15;">Stream</h2>
+      <span style="width: 32px; height: 32px; border-radius: 99px; background: var(--card); border: 1px solid var(--line);"></span>
+    </div>
+    <div style="display: flex; gap: 6px; font-size: 13px;">
+      <span style="padding: 5px 12px; border-radius: 99px; background: var(--accent); color: var(--bg); font-weight: 600;">All 42</span>
+      <span style="padding: 5px 12px; border-radius: 99px; border: 1px solid var(--line); color: var(--mute);">Unread</span>
+      <span style="padding: 5px 12px; border-radius: 99px; border: 1px solid var(--line); color: var(--mute);">Saved</span>
+      <span style="padding: 5px 12px; border-radius: 99px; border: 1px solid var(--line); color: var(--mute);">RSS</span>
+    </div>
+    <div style="background: var(--ai-bg); color: var(--ai-ink); border-radius: var(--r); padding: 14px; display: flex; flex-direction: column; gap: 6px;">
+      <div style="font-family: var(--fm); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent);">Since this morning</div>
+      <div style="font-size: 14px; text-wrap: pretty;">42 new items. Two threads you replied to have new answers, and one saved video finished processing.</div>
+    </div>
+    <article style="padding: 14px; border-radius: var(--r); background: var(--card); display: flex; flex-direction: column; gap: 6px;">
+      <div style="display: flex; align-items: center; gap: 8px; font-family: var(--fm); font-size: 11.5px; color: var(--mute);">
+        <span style="padding: 1px 8px; border-radius: 99px; color: var(--accent); background: color-mix(in oklch, var(--accent) 16%, transparent);">Reddit</span>
+        <span>r/selfhosted · 3h</span>
+      </div>
+      <div style="font-family: var(--fd); font-weight: var(--dw); letter-spacing: var(--dls); font-size: calc(17px * var(--ds)); line-height: 1.3; text-wrap: pretty;">What finally got you to move your feeds off five different apps?</div>
+      <div style="display: flex; gap: 14px; font-size: 13px; color: var(--mute);"><span>214 comments</span><span style="color: var(--accent);">Summarize</span><span style="margin-left: auto;">Save</span></div>
+    </article>
+    <article style="padding: 14px; border-radius: var(--r); background: var(--card); display: flex; flex-direction: column; gap: 6px;">
+      <div style="display: flex; align-items: center; gap: 8px; font-family: var(--fm); font-size: 11.5px; color: var(--mute);">
+        <span style="padding: 1px 8px; border-radius: 99px; color: var(--ink); background: color-mix(in oklch, var(--ink) 12%, transparent);">X</span>
+        <span>@lena_builds · 4h</span>
+      </div>
+      <div style="font-size: 14.5px;">Shipped offline sync this week. The hard part was deciding which device wins when both edit the same note.</div>
+      <div style="display: flex; gap: 14px; font-size: 13px; color: var(--mute);"><span>37 replies</span><span style="color: var(--accent);">Reply</span><span style="margin-left: auto;">Save</span></div>
+    </article>
+    <article style="padding: 14px; border-radius: var(--r); background: var(--card); display: flex; flex-direction: column; gap: 6px;">
+      <div style="display: flex; align-items: center; gap: 8px; font-family: var(--fm); font-size: 11.5px; color: var(--mute);">
+        <span style="padding: 1px 8px; border-radius: 99px; color: var(--a2); background: color-mix(in oklch, var(--a2) 16%, transparent);">RSS</span>
+        <span>Low Tech Notes · 6h</span>
+      </div>
+      <div style="font-family: var(--fd); font-weight: var(--dw); letter-spacing: var(--dls); font-size: calc(17px * var(--ds)); line-height: 1.3;">A year of running my own feed reader</div>
+    </article>
+  </div>
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(4, 1fr); padding: 0 10px 22px; background: var(--panel); border-top: 1px solid var(--line); font-size: 12px; font-weight: 500; text-align: center;">
+    <div style="min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; color: var(--accent);"><span style="width: 18px; height: 3px; border-radius: 99px; background: var(--accent);"></span>Stream</div>
+    <div style="min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; color: var(--mute);"><span style="width: 18px; height: 3px;"></span>Saved</div>
+    <div style="min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; color: var(--mute);"><span style="width: 18px; height: 3px;"></span>RSS</div>
+    <div style="min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; color: var(--mute);"><span style="width: 18px; height: 3px;"></span>Ask</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:760}}"></script>
+</body>
+</html>

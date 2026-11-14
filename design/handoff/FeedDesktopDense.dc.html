@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
+  <style>
+    :root { --bg: oklch(0.15 0 0); --panel: oklch(0.175 0 0); --card: oklch(0.215 0 0); --line: oklch(0.27 0 0); --ink: oklch(0.93 0 0); --mute: oklch(0.7 0 0); --accent: oklch(0.93 0 0); --a2: oklch(0.78 0 0); --a3: oklch(0.62 0 0); --ai-bg: oklch(0.215 0 0); --ai-ink: oklch(0.93 0 0); --fd: "Geist"; --fb: "Geist"; --fm: "Geist Mono"; --dw: 600; --dls: -0.01em; --ds: 1; --r: 5px; }
+    body { margin: 0; background: #111; }
+  </style>
+</helmet>
+<div style="width: 1180px; height: 760px; box-sizing: border-box; display: grid; grid-template-columns: 176px minmax(0, 1fr) 372px; background: var(--bg); color: var(--ink); font-family: var(--fb), system-ui, sans-serif; font-size: calc(12.5px * var(--fz, 1)); line-height: 1.4; border: 1px solid var(--line); border-radius: 10px; overflow: hidden;">
+
+  <aside style="background: var(--panel); border-right: 1px solid var(--line); padding: 10px 6px; display: flex; flex-direction: column; gap: 12px; overflow: hidden;">
+    <div style="display: flex; align-items: center; gap: 7px; padding: 0 6px;">
+      <span style="width: 14px; height: 14px; border-radius: 4px; background: var(--accent);"></span>
+      <span style="font-family: var(--fd); font-weight: var(--dw); letter-spacing: var(--dls); font-size: calc(14px * var(--ds));">Atrium</span>
+    </div>
+    <sc-for list="{{ groups }}" as="g" hint-placeholder-count="4">
+      <div style="display: flex; flex-direction: column;">
+        <div style="font-family: var(--fm); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute); padding: 0 6px 3px;">{{ g.label }}</div>
+        <sc-for list="{{ g.rows }}" as="n" hint-placeholder-count="5">
+          <div style="display: flex; justify-content: space-between; gap: 6px; padding: calc(3px * var(--dn, 1)) 6px; border-radius: var(--r); background: {{ n.bg }}; color: {{ n.fg }}; opacity: {{ n.op }};"><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ n.name }}</span><span style="font-family: var(--fm); font-size: 11px;">{{ n.count }}</span></div>
+        </sc-for>
+      </div>
+    </sc-for>
+    <div style="margin-top: auto; padding: 5px 6px; border: 1px solid var(--line); border-radius: var(--r); font-family: var(--fm); font-size: 10.5px; color: var(--mute);">Encrypted · keys on device</div>
+  </aside>
+
+  <main style="display: flex; flex-direction: column; min-width: 0; overflow: hidden;">
+    <div style="display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--line);">
+      <h2 style="margin: 0 6px 0 0; font-family: var(--fd); font-weight: var(--dw); letter-spacing: var(--dls); font-size: calc(15px * var(--ds)); line-height: 1.2;">Stream</h2>
+      <span style="padding: 1px 8px; border-radius: 99px; background: var(--accent); color: var(--bg); font-weight: 600; font-size: 11.5px;">All 42</span>
+      <span style="padding: 1px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--mute); font-size: 11.5px;">Unread</span>
+      <span style="padding: 1px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--mute); font-size: 11.5px;">Saved</span>
+      <span style="padding: 1px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--mute); font-size: 11.5px;">Video</span>
+      <input placeholder="Search or ask across everything" style="margin-left: auto; width: 220px; box-sizing: border-box; padding: 4px 8px; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); color: var(--ink); font: inherit; font-size: 12px; outline: none;" style-focus="border-color: var(--accent);">
+    </div>
+    <div style="display: grid; grid-template-columns: 38px minmax(0, 1fr) 132px 40px 30px 14px; gap: 0 10px; padding: 4px 10px; font-family: var(--fm); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute); border-bottom: 1px solid var(--line);">
+      <span>Src</span><span>Item</span><span>From</span><span style="text-align: right;">Repl</span><span style="text-align: right;">Age</span><span></span>
+    </div>
+    <sc-for list="{{ items }}" as="it" hint-placeholder-count="20">
+      <div style="display: grid; grid-template-columns: 38px minmax(0, 1fr) 132px 40px 30px 14px; gap: 0 10px; align-items: baseline; padding: calc(5px * var(--dn, 1)) 10px; border-bottom: 1px solid color-mix(in oklch, var(--line) 55%, transparent); background: {{ it.bg }}; cursor: pointer;" style-hover="background: var(--card);">
+        <span style="font-family: var(--fm); font-size: 10.5px; font-weight: 500; color: {{ it.c }};">{{ it.src }}</span>
+        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: {{ it.w }};">{{ it.title }} <span style="color: var(--mute); font-weight: 400;">{{ it.sub }}</span></span>
+        <span style="font-family: var(--fm); font-size: 11px; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ it.from }}</span>
+        <span style="font-family: var(--fm); font-size: 11px; color: var(--mute); text-align: right;">{{ it.n }}</span>
+        <span style="font-family: var(--fm); font-size: 11px; color: var(--mute); text-align: right;">{{ it.age }}</span>
+        <span style="font-size: 9px; color: var(--accent);">{{ it.saved }}</span>
+      </div>
+    </sc-for>
+  </main>
+
+  <section style="background: var(--panel); border-left: 1px solid var(--line); padding: 10px; display: flex; flex-direction: column; gap: 8px; min-width: 0; overflow: hidden;">
+    <div style="display: flex; align-items: center; gap: 8px; font-family: var(--fm); font-size: 11px; color: var(--mute);">
+      <span style="color: var(--accent); font-weight: 500;">RD</span><span>r/selfhosted · 214 comments · 3h</span>
+      <button style="margin-left: auto; padding: 2px 8px; background: transparent; border: 1px solid var(--line); border-radius: var(--r); color: var(--ink); font: 500 11.5px var(--fb); cursor: pointer;" style-hover="border-color: var(--accent);">Saved</button>
+    </div>
+    <div style="font-family: var(--fd); font-weight: var(--dw); letter-spacing: var(--dls); font-size: calc(15px * var(--ds)); line-height: 1.25; text-wrap: pretty;">What finally got you to move your feeds off five different apps?</div>
+    <div style="background: var(--ai-bg); color: var(--ai-ink); border: 1px solid var(--line); border-radius: var(--r); padding: 8px; display: flex; flex-direction: column; gap: 5px;">
+      <div style="font-family: var(--fm); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute);">Summary · 214 comments</div>
+      <div style="text-wrap: pretty;">Most replies name saving and search as the reason to consolidate. A smaller group warns that API limits make replying from a third-party client unreliable. Three people share their sync setups.</div>
+      <div style="display: flex; gap: 5px;">
+        <input placeholder="Ask about this thread" style="flex: 1; min-width: 0; padding: 4px 8px; background: var(--bg); border: 1px solid var(--line); border-radius: var(--r); color: var(--ink); font: inherit; font-size: 12px; outline: none;" style-focus="border-color: var(--accent);">
+        <button style="padding: 0 10px; background: transparent; border: 1px solid var(--line); border-radius: var(--r); color: var(--ink); font: 600 12px var(--fb); cursor: pointer;" style-hover="border-color: var(--accent);">Ask</button>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; min-height: 0; overflow: hidden;">
+      <sc-for list="{{ comments }}" as="c" hint-placeholder-count="9">
+        <div style="margin-left: {{ c.indent }}; padding: calc(5px * var(--dn, 1)) 0 calc(5px * var(--dn, 1)) 8px; border-left: 1px solid var(--line); border-bottom: 1px solid color-mix(in oklch, var(--line) 55%, transparent);">
+          <span style="font-weight: 600;">{{ c.who }}</span> <span style="font-family: var(--fm); font-size: 10.5px; color: var(--mute);">{{ c.meta }}</span><br>{{ c.text }}
+        </div>
+      </sc-for>
+    </div>
+    <div style="margin-top: auto; display: flex; gap: 5px;">
+      <input placeholder="Reply as u/you" style="flex: 1; min-width: 0; padding: 6px 8px; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); color: var(--ink); font: inherit; outline: none;" style-focus="border-color: var(--accent);">
+      <button style="padding: 0 14px; background: var(--accent); border: none; border-radius: var(--r); color: var(--bg); font: 600 12.5px var(--fb); cursor: pointer;" style-hover="filter: brightness(0.9);">Reply</button>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1180,&quot;height&quot;:760}}">
+class Component extends DCLogic {
+  renderVals() {
+    const C = { RD: 'var(--accent)', X: 'var(--ink)', IG: 'var(--a3)', RSS: 'var(--a2)', HN: 'var(--a2)' };
+    const raw = [
+      ['RD', 'What finally got you to move your feeds off five different apps?', 'I kept losing threads I meant to come back to', 'r/selfhosted', 214, '3h', 1, 1],
+      ['X', 'Shipped offline sync this week. The hard part was deciding which device wins', '', '@lena_builds', 37, '4h', 0, 1],
+      ['HN', 'Show HN: A local-first archive for everything you read', '', '612 points', 388, '4h', 1, 1],
+      ['RSS', 'A year of running my own feed reader', 'What broke and what I stopped reading', 'Low Tech Notes', '', '6h', 0, 1],
+      ['IG', 'Glaze test 14. Same recipe, three firing schedules', 'video 0:42', '@studio.kiln', 12, '8h', 1, 0],
+      ['RD', 'Backups: what is your restore test schedule?', '', 'r/homelab', 96, '8h', 0, 1],
+      ['HN', 'SQLite as an application file format, ten years on', '', '431 points', 172, '9h', 0, 0],
+      ['X', 'Reading list for the week, mostly about queues', 'thread 1/9', '@ops_notes', 8, '9h', 0, 0],
+      ['RSS', 'Notes on end-to-end encryption for small apps', '', 'Plain Crypto', '', '10h', 1, 0],
+      ['RD', 'Is anyone still using RSS for release notes?', '', 'r/rss', 58, '11h', 0, 0],
+      ['RSS', 'The case for boring sync protocols', '', 'Wire Notes', '', '12h', 0, 0],
+      ['IG', 'New studio shelving finally up', 'photo', '@studio.kiln', 4, '13h', 0, 0],
+      ['HN', 'Ask HN: How do you keep track of long discussions?', '', '208 points', 143, '14h', 0, 0],
+      ['X', 'Rate limits changed again. Summary of what moved', '', '@api_watch', 61, '15h', 0, 0],
+      ['RD', 'Weekly thread: what did you archive this week?', '', 'r/datahoarder', 320, '17h', 0, 0],
+      ['RSS', 'Designing a calendar that does less', '', 'Field Notes', '', '19h', 0, 0],
+      ['HN', 'A plain-text email client in 900 lines', '', '377 points', 119, '20h', 0, 0],
+      ['X', 'Small thing: export should be the first feature, not the last', '', '@lena_builds', 22, '21h', 0, 0],
+      ['RD', 'Summarizing 400-comment threads: what actually works', '', 'r/LocalLLaMA', 187, '22h', 1, 0],
+      ['RSS', 'Reading in the evening, a short essay', '', 'Low Tech Notes', '', '1d', 0, 0],
+      ['IG', 'Kiln opening, Saturday batch', 'video 1:10', '@studio.kiln', 9, '1d', 0, 0],
+      ['HN', 'Passkeys in practice after a year', '', '290 points', 201, '1d', 0, 0]
+    ];
+    const items = raw.map((r, i) => ({ src: r[0], c: C[r[0]], title: r[1], sub: r[2], from: r[3], n: r[4], age: r[5], saved: r[6] ? '●' : '', w: r[7] ? 600 : 400, bg: i === 0 ? 'var(--card)' : 'transparent' }));
+    const nav = (name, count, on, soon) => ({ name, count, bg: on ? 'var(--card)' : 'transparent', fg: on ? 'var(--ink)' : 'var(--mute)', op: soon ? 0.6 : 1 });
+    const groups = [
+      { label: 'Views', rows: [nav('Stream', 42, 1), nav('Saved', 128), nav('Replies', 3), nav('Ask', '')] },
+      { label: 'Sources', rows: [nav('Reddit', 18), nav('X', 11), nav('Instagram', 4), nav('Hacker News', 9)] },
+      { label: 'RSS', rows: [nav('Low Tech Notes', 2), nav('Plain Crypto', 1), nav('Wire Notes', 3), nav('Field Notes', 1), nav('Release notes', 2)] },
+      { label: 'Saved', rows: [nav('Videos', 31), nav('Threads', 64), nav('Posts', 33)] },
+      { label: 'Later', rows: [nav('Calendar', '', 0, 1), nav('Mail', '', 0, 1)] }
+    ];
+    const cm = (who, meta, text, d) => ({ who, meta, text, indent: (d * 14) + 'px' });
+    const comments = [
+      cm('marrow_fern', '2h · 86', 'Saving was the thing. Once everything landed in one archive I stopped opening the apps at all.', 0),
+      cm('tin_orchard', '1h · 21', 'Same, but replies still fail for me about one time in ten.', 1),
+      cm('marrow_fern', '1h · 9', 'Usually a token refresh. Re-auth fixed it here.', 2),
+      cm('quietpacket', '1h · 40', 'Search across all of it. I can finally find the comment I half remember.', 0),
+      cm('oldbarn', '58m · 17', 'What do you index, full text or just titles?', 1),
+      cm('quietpacket', '51m · 12', 'Full text, plus transcripts for saved videos.', 2),
+      cm('nine_lathes', '44m · 28', 'API limits. I read here and still reply in the native apps.', 0),
+      cm('you', '30m · 4', 'Which limits hit you first, Reddit or X?', 1),
+      cm('nine_lathes', '12m · 2', 'X by a wide margin.', 2)
+    ];
+    return { items, groups, comments };
+  }
+}
+</script>
+</body>
+</html>
