@@ -333,6 +333,34 @@ test('a fresh install, from set-up to the admin, against the real server', async
     await expect(heading(other, 'Site administration')).toBeVisible();
   });
 
+  await test.step('YouTube setup shows the address of this browser for Google to return to', async () => {
+    await page.goto('/connections');
+    await page.getByRole('button', { name: 'Set up YouTube' }).click();
+    const setup = page.getByRole('region', { name: 'YouTube setup' });
+    // Not the server's own address behind the proxy: the session lives at the browser's.
+    await expect(setup).toContainText('http://localhost:4173/api/sources/youtube/callback');
+    await setup.getByLabel('Client ID').fill('1234567890-madeup.apps.googleusercontent.com');
+    await setup.getByLabel('Client secret').fill('a-made-up-client-secret');
+    await setup.getByRole('button', { name: 'Save' }).click();
+    const connect = page.getByRole('link', { name: 'Connect YouTube' });
+    await expect(connect).toBeVisible();
+    // The link leads to Google, carrying that same address and asking only to read.
+    const start = await page.request.get('/api/sources/youtube/start', { maxRedirects: 0 });
+    const google = new URL(start.headers().location ?? '');
+    expect(google.origin + google.pathname).toBe('https://accounts.google.com/o/oauth2/v2/auth');
+    expect(google.searchParams.get('redirect_uri')).toBe(
+      'http://localhost:4173/api/sources/youtube/callback',
+    );
+    expect(google.searchParams.get('scope')).toBe(
+      'https://www.googleapis.com/auth/youtube.readonly',
+    );
+    // An answer that did not start with this browser's sign-in is refused, and says so.
+    await page.goto('/api/sources/youtube/callback?code=made-up&state=made-up');
+    await expect(setup.getByRole('status')).toHaveText(
+      'That sign-in did not start here. Connect YouTube again.',
+    );
+  });
+
   await test.step('everything can be exported, then deleted with the passphrase', async () => {
     await page.goto('/settings');
     const downloading = page.waitForEvent('download');
