@@ -6,10 +6,11 @@ import { focusId, useKeys } from '../shell/keys';
 import { Button, buttonClass } from '../ui/Button';
 import { cx } from '../ui/cx';
 import { Input } from '../ui/Input';
+import { Modal } from '../ui/Modal';
 import { EmptyState, ErrorState, LoadingRows } from '../ui/States';
 import { AskCard } from './AskCard';
 import { Blocks } from './Blocks';
-import { EMPTY } from './copy';
+import { EMPTY, removalOf } from './copy';
 import { age, useChangeItem, useFeeds, useItem, useItems } from './queries';
 import { marksFor } from './units';
 
@@ -33,6 +34,21 @@ export function Rss() {
     () => (article.data ? marksFor([article.data.blocks], article.data.highlights, [])[0] : []),
     [article.data],
   );
+
+  // Removing a feed deletes articles, so it is asked about first.
+  const [removing, setRemoving] = useState(false);
+  const remove = useMutation({
+    mutationFn: api.removeFeed,
+    onSuccess: () => {
+      setRemoving(false);
+      setChosenFeed(undefined);
+      setChosen(undefined);
+      // Its articles leave the stream and the counts; what was kept stays in them.
+      return Promise.all(
+        ['feeds', 'items', 'counts'].map((key) => queries.invalidateQueries({ queryKey: [key] })),
+      );
+    },
+  });
 
   const add = useMutation({
     mutationFn: api.addFeed,
@@ -133,6 +149,23 @@ export function Rss() {
       </div>
 
       <div className="min-h-0 overflow-y-auto border-r border-line">
+        {feed && (
+          <div className="flex items-center gap-8 border-b border-rule px-16 py-dn-4">
+            <span className="font-mono text-meta text-mute">
+              {feed.articles} {feed.articles === 1 ? 'article' : 'articles'}
+            </span>
+            <Button
+              className="ml-auto"
+              aria-label={`Remove feed: ${feed.title}`}
+              onClick={() => {
+                remove.reset();
+                setRemoving(true);
+              }}
+            >
+              Remove feed
+            </Button>
+          </div>
+        )}
         {feed?.problem && (
           <p role="status" className="border-b border-rule px-16 py-10 text-note text-a3">
             Could not refresh this feed. {feed.problem}
@@ -220,6 +253,43 @@ export function Rss() {
           )
         )}
       </article>
+
+      {removing && feed && (
+        <Modal
+          label="Remove feed"
+          onClose={() => {
+            setRemoving(false);
+          }}
+        >
+          <div className="flex w-full max-w-420 flex-col gap-12 rounded-8 border border-line bg-panel p-14">
+            <h2 className="text-title font-semibold text-pretty">Remove {feed.title}?</h2>
+            <p className="text-mute">Munim stops following this feed. {removalOf(feed)}</p>
+            <div role="alert" className="text-note text-a3 empty:hidden">
+              {remove.isError && !sessionOver(remove.error) ? reason(remove.error) : null}
+            </div>
+            <div className="flex justify-end gap-6">
+              <Button
+                size="md"
+                onClick={() => {
+                  setRemoving(false);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="md"
+                danger
+                disabled={remove.isPending}
+                onClick={() => {
+                  remove.mutate(feed.id);
+                }}
+              >
+                Remove feed
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </main>
   );
 }

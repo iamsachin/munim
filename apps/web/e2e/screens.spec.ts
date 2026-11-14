@@ -640,6 +640,74 @@ test('rss: adding a feed opens it; an address that is not a feed says so', async
   await expect(page.getByRole('alert')).toBeHidden();
 });
 
+for (const theme of ['Dark', 'Light'] as const) {
+  test(`rss: removing a feed asks first and says what happens to its articles (${theme})`, async ({
+    page,
+  }) => {
+    await open(page, '/rss', theme);
+    await page.getByRole('button', { name: /^Wire Notes/ }).click();
+    await expect(page.getByText('2 articles')).toBeVisible();
+    await page.getByRole('button', { name: 'Remove feed: Wire Notes' }).click();
+
+    // One of its two articles is highlighted, so it stays.
+    const dialog = page.getByRole('dialog', { name: 'Remove feed' });
+    await expect(dialog.getByRole('heading')).toHaveText('Remove Wire Notes?');
+    await expect(dialog).toContainText(
+      'Munim stops following this feed. 1 article is deleted. The 1 you saved, queued or highlighted is kept.',
+    );
+    // The safe answer has the focus, so Enter does not delete anything.
+    await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeFocused();
+    await expect(page).toHaveScreenshot(`rss-remove-feed-${theme.toLowerCase()}.png`);
+    expect(await axeFailures(page)).toEqual([]);
+  });
+}
+
+test('rss: a removed feed is gone, with its articles, except what was kept', async ({ page }) => {
+  await open(page, '/rss');
+  await page.getByRole('button', { name: /^Wire Notes/ }).click();
+  await page.getByRole('button', { name: 'Remove feed: Wire Notes' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Remove feed' });
+
+  // Cancel, and Escape, change nothing.
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(dialog).toHaveCount(0);
+  await page.getByRole('button', { name: 'Remove feed: Wire Notes' }).click();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /^Wire Notes/ })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Remove feed: Wire Notes' }).click();
+  await dialog.getByRole('button', { name: 'Remove feed' }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /^Wire Notes/ })).toHaveCount(0);
+  // The first feed is shown again, and the count of feed articles follows: the one that was
+  // kept no longer belongs to a feed, so it is in the Stream but not on this screen.
+  await expect(page.getByRole('heading', { level: 2 })).toHaveText(
+    'Designing a calendar that does less',
+  );
+  await expect(page.getByRole('link', { name: /^RSS/ })).toHaveText(/5$/);
+
+  // The highlighted article is still in the stream, under the feed's name; the other is not.
+  await page.getByRole('link', { name: /^Stream/ }).click();
+  await expect(
+    page.getByRole('button', { name: /^The case for boring sync protocols/ }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('row').filter({ hasText: 'The case for boring sync protocols' }),
+  ).toContainText('Wire Notes');
+  await expect(page.getByRole('button', { name: /^What a retry budget is/ })).toHaveCount(0);
+});
+
+test('rss: if a feed cannot be removed, the dialog says so and stays', async ({ page }) => {
+  await open(page, '/rss');
+  await page.route('**/api/feeds/*', (route) => route.abort());
+  await page.getByRole('button', { name: /^Remove feed:/ }).click();
+  const dialog = page.getByRole('dialog', { name: 'Remove feed' });
+  await dialog.getByRole('button', { name: 'Remove feed' }).click();
+  await expect(dialog.getByRole('alert')).toHaveText('Could not reach the server.');
+  await expect(dialog).toBeVisible();
+});
+
 test('rss: with no feeds, and when the server fails, the screen says so', async ({ page }) => {
   await fakeServer(page);
   await page.route('**/api/feeds', (route) =>

@@ -345,6 +345,24 @@
         "security": [{ "Open": [] }]
       }
     },
+    "/api/feeds/{feed_id}": {
+      "delete": {
+        "operationId": "reader_api_remove_feed",
+        "summary": "Remove Feed",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "feed_id",
+            "schema": { "title": "Feed Id", "type": "integer" },
+            "required": true
+          }
+        ],
+        "responses": { "204": { "description": "No Content" } },
+        "description": "Stops following a feed. Articles the owner saved, queued or highlighted stay, under the\nfeed's name; the rest go with it.",
+        "tags": ["reader"],
+        "security": [{ "Open": [] }]
+      }
+    },
     "/api/items": {
       "get": {
         "operationId": "reader_api_list_items",
@@ -791,9 +809,10 @@
           "title": { "title": "Title", "type": "string" },
           "url": { "title": "Url", "type": "string" },
           "articles": { "title": "Articles", "type": "integer" },
+          "kept": { "title": "Kept", "type": "integer" },
           "problem": { "title": "Problem", "type": "string" }
         },
-        "required": ["id", "title", "url", "articles", "problem"],
+        "required": ["id", "title", "url", "articles", "kept", "problem"],
         "title": "FeedOut",
         "type": "object"
       },

@@ -8,6 +8,8 @@ Last updated: 2026-11-14
 
 Milestone 3 in progress. Merged: the Django scaffold (#6), the account API (#8), the web app signing in against the server (#9), RSS (#10), background polling (#11), the Stream on real items (#12), feed articles readable in the thread pane (#13), rich text as blocks with images fetched through the server (#14), Hacker News with its discussions (#15), sealed storage for secrets with the AI provider keys on the server (#16), the Docker Compose install (#17), full-text search in the Stream (#18), search matches marked in the open article (#19), and highlights on the server (#20).
 
+Open for the owner's approval: removing a feed.
+
 Still on sample data in the browser: watches, digest, Ask, every Connections row except Hacker News, and on the AI screen the models, usage and limit (the provider keys are real).
 
 Next: YouTube, once the owner has chosen between an API key and OAuth.
@@ -88,7 +90,7 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] Encrypted storage for secrets (`munim/vault.py`), first used by the AI provider keys, which the server checks with the provider and stores sealed
 - [ ] Restore the sidebar status button and the Connections note with truthful wording, now that secrets are sealed (needs the owner's approval of the wording)
 - [x] RSS: add a feed, fetch and parse it safely, read its articles; every feed is polled every fifteen minutes
-- [ ] RSS: remove a feed from the app (only possible in the admin now; needs a design)
+- [ ] RSS: remove a feed from the app; what the owner saved, queued or highlighted stays (built; waits for the owner's approval of the design)
 - [x] RSS articles in the Stream, with unread state
 - [x] Rich text: every source's text becomes blocks on the server (headings, lists, quotes, code, links, bold and italic), with images fetched through the server and kept in the data folder
 - [x] Hacker News: the front page and each story's discussion, switched on and off in Connections

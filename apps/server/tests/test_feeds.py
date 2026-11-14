@@ -9,7 +9,7 @@ from procrastinate.contrib.django import app
 
 from reader import feeds
 from reader.blocks import text_of
-from reader.models import Feed
+from reader.models import Feed, Highlight, Item
 from reader.tasks import poll_feeds
 
 from .conftest import PASSPHRASE, Handler, post
@@ -369,3 +369,62 @@ def test_feeds_need_an_open_session(owner_client: Client, web: Any) -> None:
     post(owner_client, "lock")
     assert owner_client.get("/api/feeds").status_code == 423
     assert owner_client.get("/api/items").status_code == 423
+
+
+def test_removing_a_feed_keeps_what_the_owner_kept_and_deletes_the_rest(
+    owner_client: Client, web: Any
+) -> None:
+    web(ok(RSS))
+    feed = post(owner_client, "feeds", {"url": "https://lowtech.example/feed"}).json()
+    saved, queued, marked, plain = (
+        Item.objects.create(
+            feed_id=feed["id"], guid=name, title=name, published_at=timezone.now(), **state
+        )
+        for name, state in (
+            ("saved", {"saved_at": timezone.now()}),
+            ("queued", {"later_at": timezone.now()}),
+            ("marked", {}),
+            ("plain", {}),
+        )
+    )
+    Highlight.objects.create(item=marked, unit=0, start=0, end=4, quote="mark")
+    Highlight.objects.create(item=marked, unit=0, start=5, end=9, quote="more")
+    listed = owner_client.get("/api/feeds").json()[0]
+    assert listed["kept"] == 3
+    before = listed["articles"]
+
+    assert owner_client.delete(f"/api/feeds/{feed['id']}").status_code == 204
+    assert owner_client.get("/api/feeds").json() == []
+    kept = {item["title"]: item for item in owner_client.get("/api/items").json()}
+    # Still there, and still under the feed's name, though the feed is gone.
+    assert sorted(kept) == ["marked", "queued", "saved"]
+    assert {item["origin"] for item in kept.values()} == {feed["title"]}
+    assert before > 3 and Item.objects.count() == 3
+    assert Highlight.objects.count() == 2
+    assert not Item.objects.filter(pk=plain.pk).exists()
+    assert owner_client.get(f"/api/items/{saved.pk}").status_code == 200
+    assert queued.pk in {item["id"] for item in owner_client.get("/api/items?show=later").json()}
+
+    # The same feed can be followed again; what was kept does not get in its way.
+    again = post(owner_client, "feeds", {"url": "https://lowtech.example/feed"})
+    assert again.status_code == 201
+    assert again.json()["kept"] == 0
+    # Removing what is not there is not an error.
+    assert owner_client.delete("/api/feeds/0").status_code == 204
+
+
+def test_articles_kept_from_two_removed_feeds_do_not_collide(owner_client: Client) -> None:
+    for name in ("a", "b"):
+        feed = Feed.objects.create(url=f"https://{name}.example/feed", title=name.upper())
+        # Both feeds call their first entry "1".
+        Item.objects.create(
+            feed=feed, guid="1", title=name, published_at=timezone.now(), saved_at=timezone.now()
+        )
+        assert owner_client.delete(f"/api/feeds/{feed.pk}").status_code == 204
+    assert sorted(item["origin"] for item in owner_client.get("/api/items").json()) == ["A", "B"]
+
+
+def test_removing_a_feed_needs_an_open_session(client: Client, db: None) -> None:
+    feed = Feed.objects.create(url="https://a.example/feed", title="A")
+    assert client.delete(f"/api/feeds/{feed.pk}").status_code == 401
+    assert Feed.objects.count() == 1
