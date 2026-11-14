@@ -130,3 +130,12 @@
 @utility stripes {
   background: repeating-linear-gradient(135deg, var(--color-card) 0 5px, var(--color-line) 5px 6px);
 }
+
+/* Media preview placeholder fill. */
+@utility stripes-lg {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--color-card) 0 14px,
+    var(--color-panel) 14px 28px
+  );
+}
