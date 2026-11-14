@@ -34,7 +34,9 @@ The quality bar is the point of this project. Prefer a smaller thing finished pr
 | Distribution | Docker Compose: app container plus Postgres. `docker compose up` is the whole install. |
 | Licence | AGPL-3.0. |
 
-Chosen by Claude, not yet confirmed by the owner (change freely if told otherwise): pnpm workspace with `apps/web`, `apps/server`, `packages/shared`; Hono for the server; Drizzle with checked-in SQL migrations; Zod at every trust boundary; Vitest; Playwright.
+Chosen by Claude, not yet confirmed by the owner (change freely if told otherwise): pnpm workspace with `apps/web` (exists), `apps/server` and `packages/shared` (created when first needed); Hono for the server; Drizzle with checked-in SQL migrations; Zod at every trust boundary; Vitest; Playwright.
+
+Version pins with a reason: TypeScript stays on 6.0 until typescript-eslint supports 7. ESLint is 10 with a peer allowance for eslint-plugin-jsx-a11y in `pnpm-workspace.yaml`.
 
 ## Honesty rules
 
@@ -66,7 +68,16 @@ A piece of work is done only when all of these pass, and the result has been loo
 - Playwright visual regression against approved baselines for every component and screen touched. A changed baseline needs the owner's approval, never a silent update.
 - Accessibility: real buttons, links and inputs; full keyboard operation; visible themed focus; axe checks pass; contrast holds in both themes and every accent.
 
-`pnpm check` must run all of the above once the toolchain exists. Report failures with their output; never describe unverified work as done.
+`pnpm check` runs all of the above. Report failures with their output; never describe unverified work as done.
+
+## Commands
+
+- `pnpm dev`: the web app at http://localhost:5173. Until the app shell exists this is the design-system gallery.
+- `pnpm check`: types, lint, format, unit tests, then a production build with Playwright visual regression and axe.
+- `pnpm format`: apply Prettier.
+- `pnpm --filter web exec playwright test --update-snapshots`: re-record baselines. Only for a change the owner has approved; look at every changed image first.
+
+Baselines are recorded on macOS Chromium and are platform-specific; other platforms need their own.
 
 ## Git
 

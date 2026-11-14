@@ -1,0 +1,9 @@
+packages:
+  - apps/*
+  - packages/*
+
+# eslint-plugin-jsx-a11y 6.10 has not widened its peer range to ESLint 10 yet. Its rules run
+# correctly on 10 (checked), and ESLint 9 is out of support. Remove once the plugin catches up.
+peerDependencyRules:
+  allowedVersions:
+    'eslint-plugin-jsx-a11y>eslint': '10'

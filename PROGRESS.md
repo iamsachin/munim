@@ -6,7 +6,13 @@ Last updated: 2026-11-14
 
 ## Now
 
-Milestone 1 not started. Next: scaffold the workspace and the `pnpm check` gate.
+Milestone 1 is built and all gates pass. Waiting on the owner to review the gallery (`pnpm dev`) and decide:
+
+1. Approve the dark design system as a faithful port of the handoff.
+2. Approve or change the proposed light theme (values in `apps/web/src/styles.css`).
+3. Unsaved save-dot: the design draws it in the `line` colour, about 1.4:1 against the ground, below the 3:1 needed for interface marks. Keep as designed, or lighten it.
+
+Milestone 2 does not start until 1 is approved.
 
 ## 0. Preparation
 
@@ -17,16 +23,18 @@ Milestone 1 not started. Next: scaffold the workspace and the `pnpm check` gate.
 
 ## 1. Design system
 
-- [ ] Workspace scaffold (pnpm, `apps/web`, strict TypeScript, ESLint, Prettier)
-- [ ] `pnpm check` runs types, lint, Vitest, Playwright visual regression, axe
-- [ ] Tokens in the Tailwind `@theme` block: colours, type sizes, radii, density
-- [ ] Fonts (IBM Plex Sans, IBM Plex Mono)
-- [ ] Shared components on a gallery page: AI badge, AI card, section label, ghost button, primary button, filter chip, On/Off toggle, nav row, table header, table row, source code tag, text input, status dot, highlight mark, citation row, media thumb, section card
-- [ ] Accent and density switching
-- [ ] Themed focus ring and keyboard operation for every component
-- [ ] Light theme (design gap)
-- [ ] Visual baselines recorded
+- [x] Workspace scaffold (pnpm, `apps/web`, strict TypeScript, ESLint, Prettier)
+- [x] `pnpm check` runs types, lint, format, Vitest, Playwright visual regression, axe
+- [x] Tokens in the Tailwind `@theme` block: colours, type sizes, radii, density
+- [x] Fonts (IBM Plex Sans, IBM Plex Mono), self-hosted
+- [x] Shared components on a gallery page: AI badge, AI card, section label, buttons (ghost, primary, accent outline), filter chip, On/Off toggle, accent swatch, nav row, table (header, row, row button), source code tag, text input, status dot, highlight mark, save dot, citation row, media thumb, section card
+- [x] Accent and density switching
+- [x] Themed focus ring; every control is a native, keyboard-operable element
+- [x] Light theme proposed (design gap, not yet approved)
+- [x] Visual baselines recorded: both themes at every density and every accent (macOS Chromium)
 - [ ] **Approved by owner**
+
+Not built yet because only one screen uses each: ask bar, suggestion chip, chat bubble, media preview overlay. They come with their screens in milestone 2.
 
 ## 2. Screens on mock data
 

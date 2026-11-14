@@ -1,0 +1,25 @@
+{
+  "name": "munim",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "scripts": {
+    "dev": "pnpm --filter web dev",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "eslint .",
+    "format": "prettier --write \"apps/**/*.{ts,tsx,css,html,json}\" \"*.{js,json,yaml}\"",
+    "format:check": "prettier --check \"apps/**/*.{ts,tsx,css,html,json}\" \"*.{js,json,yaml}\"",
+    "test": "pnpm -r test",
+    "e2e": "pnpm -r e2e",
+    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm e2e"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.14.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "prettier": "^3.10.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.2"
+  }
+}

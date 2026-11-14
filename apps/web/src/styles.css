@@ -1,0 +1,129 @@
+@import 'tailwindcss';
+
+/* Tokens from design/handoff/Atrium.dc.html. Components use only these. */
+@theme static {
+  /* 1 unit = 1px, so the prototype's pixel values map straight onto utilities (p-14, gap-6). */
+  --spacing: 1px;
+
+  --color-*: initial;
+  --color-bg: oklch(0.16 0.008 255);
+  --color-panel: oklch(0.185 0.008 255);
+  --color-card: oklch(0.225 0.008 255);
+  --color-line: oklch(0.285 0.008 255);
+  --color-ink: oklch(0.93 0.008 255);
+  --color-mute: oklch(0.71 0.008 255);
+  --color-accent: var(--accent);
+  --color-a2: oklch(0.78 0.09 240);
+  --color-a3: oklch(0.76 0.1 20);
+  --color-a4: oklch(0.78 0.1 305);
+  --color-ok: oklch(0.8 0.1 155);
+  --color-scrim: oklch(0.1 0.008 255 / 0.82);
+  --color-rule: color-mix(in oklch, var(--color-line) 55%, transparent);
+  --color-ai-fill: color-mix(in oklch, var(--color-accent) 9%, var(--color-card));
+  --color-ai-line: color-mix(in oklch, var(--color-accent) 45%, transparent);
+  --color-ask-fill: color-mix(in oklch, var(--color-accent) 10%, var(--color-bg));
+  --color-ask-ring: color-mix(in oklch, var(--color-accent) 16%, transparent);
+  --color-mark: color-mix(in oklch, var(--color-accent) 22%, transparent);
+
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+
+  /* The fractional sizes are the design's; never round them. */
+  --text-*: initial;
+  --text-micro: 9px;
+  --text-dot: 10px;
+  --text-label: 10.5px;
+  --text-code: 11px;
+  --text-meta: 11.5px;
+  --text-sm: 12px;
+  --text-note: 12.5px;
+  --text-btn: 13px;
+  --text-base: 13.5px;
+  --text-input: 14px;
+  --text-prose: 14.5px;
+  --text-read: 15px;
+  --text-brand: 15.5px;
+  --text-title: 17px;
+  --text-headline: 22px;
+
+  --leading-*: initial;
+  --leading-ui: normal;
+  --leading-headline: 1.25;
+  --leading-title: 1.3;
+  --leading-prose: 1.6;
+  --leading-read: 1.65;
+
+  --tracking-*: initial;
+  --tracking-label: 0.08em;
+
+  --radius-*: initial;
+  --radius-2: 2px;
+  --radius-4: 4px;
+  --radius-5: 5px;
+  --radius-6: 6px;
+  --radius-8: 8px;
+  --radius-pill: 99px;
+}
+
+/* Light theme: a design gap, proposed for the owner's approval. Same hue and roles, lightness ladder inverted. */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --color-bg: oklch(0.975 0.008 255);
+  --color-panel: oklch(0.955 0.008 255);
+  --color-card: oklch(0.925 0.008 255);
+  --color-line: oklch(0.87 0.008 255);
+  --color-ink: oklch(0.2 0.008 255);
+  --color-mute: oklch(0.46 0.008 255);
+  /* The chosen accent keeps its hue and chroma but drops to a lightness that holds contrast on a light ground. */
+  --color-accent: oklch(from var(--accent) 0.45 c h);
+  --color-a2: oklch(0.45 0.09 240);
+  --color-a3: oklch(0.45 0.1 20);
+  --color-a4: oklch(0.45 0.1 305);
+  --color-ok: oklch(0.45 0.1 155);
+  --color-scrim: oklch(0.3 0.008 255 / 0.6);
+}
+
+@layer base {
+  :root {
+    /* Set at runtime by applyTheme(). */
+    --accent: oklch(0.82 0.13 75);
+    --dn: 1.7;
+    color-scheme: dark;
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    background: var(--color-bg);
+    color: var(--color-ink);
+    font-size: var(--text-base);
+    line-height: 1.45;
+  }
+  a {
+    color: var(--color-accent);
+  }
+  a:hover {
+    color: var(--color-ink);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+}
+
+/* Density-scaled vertical padding: py-dn-5 is calc(5px * var(--dn)). */
+@utility py-dn-* {
+  padding-block: calc(--value(integer) * 1px * var(--dn));
+}
+
+/* Selected-row marker. */
+@utility row-bar {
+  box-shadow: inset 2px 0 0 var(--color-accent);
+}
+
+/* Media placeholder fill. */
+@utility stripes {
+  background: repeating-linear-gradient(135deg, var(--color-card) 0 5px, var(--color-line) 5px 6px);
+}
