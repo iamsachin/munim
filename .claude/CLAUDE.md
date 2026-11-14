@@ -53,7 +53,7 @@ Version pins with a reason: TypeScript stays on 6.0 until typescript-eslint supp
 
 ## Design gaps (need a design before code)
 
-Disabled-reply state; highlighting by selecting text; the Encryption card on Security and settings (waits for milestone 3, when its claims become true).
+The Encryption card on Security and settings (waits for milestone 3, when its claims become true). Anything else the handoff does not show.
 
 ## Build order
 
