@@ -13,3 +13,4 @@ __pycache__/
 .ruff_cache/
 .pytest_cache/
 apps/server/data/
+apps/server/static/

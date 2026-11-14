@@ -131,5 +131,19 @@ TIME_ZONE = "UTC"
 USE_I18N = False
 USE_TZ = True
 
+# The admin's own files, gathered by `collectstatic` when the image is built.
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "static"
+
+# The built web app, which the image puts beside the server. WhiteNoise serves its files from the
+# root of the site; munim/web.py gives every other address its index.html. In development the
+# folder does not exist: Vite serves the web app and proxies the API.
+WEB_DIR = Path(env("WEB_DIR", str(BASE_DIR / "web")))
+WHITENOISE_ROOT = WEB_DIR if WEB_DIR.is_dir() else None
+# Vite names each file in /assets by its contents, so a browser may keep them for good.
+WHITENOISE_IMMUTABLE_FILE_TEST = lambda path, url: url.startswith("/assets/")  # noqa: E731
+# Only where the files have been gathered, which is in the built image. In development Django's
+# own server hands out the admin's files and Vite the web app's.
+if STATIC_ROOT.is_dir():
+    MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

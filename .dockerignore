@@ -1,0 +1,20 @@
+# Keeps the build small and keeps this machine's own state out of the image.
+.git
+.github
+.claude
+.duhview
+design
+**/node_modules
+**/__pycache__
+**/.venv
+**/.mypy_cache
+**/.ruff_cache
+**/.pytest_cache
+**/.env*
+apps/server/data
+apps/server/static
+apps/server/tests
+apps/web/dist
+apps/web/e2e
+apps/web/test-results
+apps/web/playwright-report

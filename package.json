@@ -13,7 +13,7 @@
     "e2e": "pnpm -r e2e",
     "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm api:check && pnpm test && pnpm e2e",
     "dev:server": "pnpm --filter server dev",
-    "db": "docker compose up -d --wait db",
+    "db": "docker compose -f compose.dev.yaml up -d --wait db",
     "gen:api": "pnpm --filter web gen:api",
     "api:check": "pnpm gen:api && git diff --exit-code -- apps/server/openapi.json apps/web/src/api/schema.d.ts",
     "dev:web": "pnpm --filter web dev",

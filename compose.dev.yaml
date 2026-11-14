@@ -1,0 +1,25 @@
+# Development database only. The install is compose.yaml. Start this with `pnpm db`. The password
+# is for local development, and the port is bound to this machine alone.
+#
+# The project keeps the name it always had, so the database and its volume stay the same ones.
+name: munim
+
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: munim
+      POSTGRES_PASSWORD: munim
+      POSTGRES_DB: munim
+    ports:
+      - '127.0.0.1:5433:5432'
+    volumes:
+      - db:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U munim']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  db:
