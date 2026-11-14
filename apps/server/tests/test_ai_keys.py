@@ -154,7 +154,8 @@ def test_keys_need_an_open_session(client: Client, db: None, provider: Any) -> N
 def test_the_security_screen_is_told_facts_not_secrets(
     owner_client: Client, provider: Any, settings: Any
 ) -> None:
-    assert owner_client.get("/api/security").json() == {"master_key": "file", "sealed": 0}
+    # Nothing has been sealed yet, so no key file has been made.
+    assert owner_client.get("/api/security").json() == {"master_key": "unmade", "sealed": 0}
     put(owner_client, "openai", OPENAI_KEY)
     told = owner_client.get("/api/security")
     assert told.json() == {"master_key": "file", "sealed": 1}

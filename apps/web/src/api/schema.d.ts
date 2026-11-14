@@ -545,7 +545,7 @@ export interface components {
        * Master Key
        * @enum {string}
        */
-      master_key: 'environment' | 'file';
+      master_key: 'environment' | 'file' | 'unmade';
       /** Sealed */
       sealed: number;
     };

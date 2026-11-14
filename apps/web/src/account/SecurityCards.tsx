@@ -304,6 +304,12 @@ export function DataCard() {
   );
 }
 
+const MASTER_KEY = {
+  file: 'A file in the data folder, master.key',
+  unmade: 'Not made yet: a file in the data folder, once a key is stored',
+  environment: 'Set by this install (MUNIM_MASTER_KEY)',
+} as const;
+
 /**
  * What Munim encrypts and what it does not. Every line is something this install does: the
  * handoff's card claimed end-to-end encryption, which this architecture does not have.
@@ -329,13 +335,7 @@ export function EncryptionCard() {
       </p>
       <dl className="grid grid-cols-[120px_minmax(0,1fr)] gap-x-12 gap-y-4 text-note">
         <dt className="text-mute">Master key</dt>
-        <dd>
-          {facts.data
-            ? facts.data.master_key === 'file'
-              ? 'A file in the data folder, master.key'
-              : 'Set by this install (MUNIM_MASTER_KEY)'
-            : unknown}
-        </dd>
+        <dd>{facts.data ? MASTER_KEY[facts.data.master_key] : unknown}</dd>
         <dt className="text-mute">Sealed now</dt>
         <dd>
           {sealed === undefined
