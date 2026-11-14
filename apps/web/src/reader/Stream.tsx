@@ -1,5 +1,7 @@
-import { useState, type CSSProperties } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { Navigate, useParams } from 'react-router';
+import { useTheme } from '../settings';
+import { focusId, useKeys } from '../shell/keys';
 import { ScreenHeader } from '../shell/ScreenHeader';
 import { MediaThumb, SaveDot, SourceTag, SOURCES, type Source } from '../ui/atoms';
 import { Button } from '../ui/Button';
@@ -12,7 +14,7 @@ import { AskCard } from './AskCard';
 import { EMPTY } from './copy';
 import { ITEMS } from './fixtures';
 import { MediaPreview } from './MediaPreview';
-import { itemAt, laterRowFor, toggled, useReader, withoutLater } from './store';
+import { itemAt, laterRowFor, laterToggled, toggled, useReader } from './store';
 
 const COLS = 'grid-cols-[34px_minmax(0,1fr)_40px_30px_16px]';
 const FILTERS = ['All', 'Unread', 'Saved', 'Video'] as const;
@@ -27,9 +29,8 @@ export function Stream() {
   const [query, setQuery] = useState('');
   const [zoom, setZoom] = useState<number | null>(null);
 
-  // An address like /stream/mastodon names no source we have.
-  if (param !== undefined && !isSource(param)) return <Navigate to="/today" replace />;
-  const source = param;
+  const { theme } = useTheme();
+  const source = param !== undefined && isSource(param) ? param : undefined;
 
   // The open thread must belong to the stream being shown: if the selected item is from another
   // source, show this source's first item instead.
@@ -49,6 +50,44 @@ export function Stream() {
   const select = (i: number) => {
     update({ selected: i });
   };
+  /** Moves the selection through the rows on screen, stopping at either end. */
+  const move = (step: number) => {
+    const at = rows.findIndex((r) => r.i === current);
+    const next = rows[at < 0 ? 0 : Math.min(rows.length - 1, Math.max(0, at + step))];
+    if (next) select(next.i);
+  };
+  useKeys(
+    {
+      j: () => {
+        move(1);
+      },
+      k: () => {
+        move(-1);
+      },
+      s: () => {
+        update((st) => ({ saved: toggled(st.saved, current) }));
+      },
+      l: () => {
+        update((st) => laterToggled(st, current));
+      },
+      a: () => {
+        focusId('item-ask');
+      },
+      r: () => {
+        focusId('thread-reply');
+      },
+    },
+    theme.shortcuts === 'On',
+  );
+  // Keep the selected row in view when it is moved with the keyboard.
+  useEffect(() => {
+    document
+      .querySelector('[role="row"][aria-current="true"]')
+      ?.scrollIntoView({ block: 'nearest' });
+  }, [current]);
+
+  // An address like /stream/mastodon names no source we have.
+  if (param !== undefined && !source) return <Navigate to="/today" replace />;
 
   return (
     <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.5fr)_minmax(280px,0.8fr)]">
@@ -195,9 +234,7 @@ function Thread({ index: i }: { index: number }) {
           className="font-sans"
           aria-pressed={!!queued}
           onClick={() => {
-            update((s) =>
-              queued ? withoutLater(s, queued) : { laterAdded: [i, ...s.laterAdded] },
-            );
+            update((s) => laterToggled(s, i));
           }}
         >
           {queued ? 'Queued' : 'Read later'}
@@ -237,6 +274,7 @@ function Thread({ index: i }: { index: number }) {
         }}
       >
         <Input
+          id="thread-reply"
           size="lg"
           className="flex-1"
           aria-label={`Reply on ${SOURCES[item.src].name}`}

@@ -544,3 +544,193 @@ test('settings: deleting everything needs the passphrase, and the mock says it d
   await page.getByRole('button', { name: 'Cancel' }).last().click();
   await expect(page.getByLabel('Passphrase to confirm deleting')).toHaveCount(0);
 });
+
+const threadHeading = (page: Page) =>
+  page.getByRole('complementary', { name: 'Thread' }).getByRole('heading');
+
+test('keyboard: g then a letter goes to a view, and typing in a field is left alone', async ({
+  page,
+}) => {
+  await open(page, '/today');
+  await page.keyboard.press('g');
+  await page.keyboard.press('s');
+  await expect(page).toHaveURL(/\/stream$/);
+  await page.keyboard.press('g');
+  await page.keyboard.press(',');
+  await expect(page).toHaveURL(/\/settings$/);
+
+  await page.keyboard.press('g');
+  await page.keyboard.press('s');
+  const search = page.getByLabel('Search the stream');
+  await search.focus();
+  await page.keyboard.type('gv');
+  await expect(search).toHaveValue('gv');
+  await expect(page).toHaveURL(/\/stream$/);
+});
+
+test('keyboard: j and k move through the stream, and s, l, a, r act on the selected item', async ({
+  page,
+}) => {
+  await open(page, '/stream');
+  await page.keyboard.press('j');
+  await expect(threadHeading(page)).toHaveText(/^Shipped offline sync/);
+  await page.keyboard.press('j');
+  await expect(threadHeading(page)).toHaveText(/^Show HN/);
+  await page.keyboard.press('k');
+  await expect(threadHeading(page)).toHaveText(/^Shipped offline sync/);
+  await page.keyboard.press('k');
+  await page.keyboard.press('k'); // stops at the first row
+  await expect(threadHeading(page)).toHaveText(/^What finally got you/);
+
+  await page.keyboard.press('j');
+  await page.keyboard.press('s');
+  await expect(page.getByRole('link', { name: /^Saved/ })).toHaveText(/14$/);
+  await page.keyboard.press('l');
+  await expect(page.getByRole('link', { name: /^Read later/ })).toHaveText(/7$/);
+  await page.keyboard.press('r');
+  await expect(page.getByLabel('Reply on X')).toBeFocused();
+  await page.getByLabel('Reply on X').blur();
+  await page.keyboard.press('a');
+  await expect(page.getByLabel('Ask about this thread')).toBeFocused();
+});
+
+test('keyboard: the last row scrolls into view, and "g s" does not also save', async ({ page }) => {
+  await open(page, '/stream');
+  for (let i = 0; i < 17; i++) await page.keyboard.press('j');
+  await expect(threadHeading(page)).toHaveText(/^Summarizing 400-comment threads/);
+  await expect(rows(page).last()).toBeInViewport();
+
+  await page.keyboard.press('g');
+  await page.keyboard.press('s');
+  await expect(page).toHaveURL(/\/stream$/);
+  await expect(page.getByRole('link', { name: /^Saved/ })).toHaveText(/13$/);
+});
+
+test('keyboard: / focuses the ask bar; rss moves with j and k', async ({ page }) => {
+  await open(page, '/rss');
+  await page.getByRole('button', { name: /^Wire Notes/ }).click();
+  await page.keyboard.press('j');
+  await expect(page.getByRole('heading', { level: 2 })).toHaveText('What a retry budget is');
+  await page.keyboard.press('j'); // stops at the last article
+  await page.keyboard.press('k');
+  await expect(page.getByRole('heading', { level: 2 })).toHaveText(
+    'The case for boring sync protocols',
+  );
+  await page.keyboard.press('/');
+  await expect(page.getByRole('search').getByLabel('Ask')).toBeFocused();
+  await expect(page.getByRole('search').getByLabel('Ask')).toHaveValue('');
+});
+
+test('keyboard: single-key shortcuts can be switched off; the commands shortcut still works', async ({
+  page,
+}) => {
+  await open(page, '/settings');
+  await page.getByRole('switch', { name: 'Single-key shortcuts' }).click();
+  await page.keyboard.press('g');
+  await page.keyboard.press('s');
+  await expect(page).toHaveURL(/\/settings$/);
+  await page.keyboard.press('?');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.keyboard.press('ControlOrMeta+k');
+  await expect(page.getByRole('dialog', { name: 'Commands' })).toBeVisible();
+});
+
+test('keyboard: no shortcut acts behind a dialog or the lock screen', async ({ page }) => {
+  await open(page, '/stream');
+  await page.getByRole('button', { name: 'Preview video' }).first().click();
+  await page.keyboard.press('j');
+  await page.keyboard.press('ControlOrMeta+k');
+  await expect(page.getByRole('dialog')).toHaveCount(1);
+  await page.keyboard.press('Escape');
+  await expect(threadHeading(page)).toHaveText(/^What finally got you/);
+
+  await page.keyboard.press('g');
+  await page.keyboard.press(',');
+  await page.getByRole('button', { name: 'Lock', exact: true }).click();
+  await page.getByLabel('Passphrase').blur();
+  await page.keyboard.press('g');
+  await page.keyboard.press('s');
+  await page.keyboard.press('ControlOrMeta+k');
+  await expect(page).toHaveURL(/\/settings$/);
+  await expect(page.getByRole('heading', { name: 'Locked' })).toBeVisible();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+});
+
+test('shortcut list opens with ? and from settings, and closes with Escape', async ({ page }) => {
+  await open(page, '/today');
+  await page.keyboard.press('?');
+  const help = page.getByRole('dialog', { name: 'Keyboard shortcuts' });
+  await expect(help).toBeVisible();
+  await expect(page).toHaveScreenshot('shortcuts-dark.png');
+  expect(await axeFailures(page)).toEqual([]);
+  await page.keyboard.press('Escape');
+  await expect(help).toBeHidden();
+
+  await page.goto('/settings');
+  await page.getByRole('button', { name: 'Show' }).click();
+  await expect(help).toBeVisible();
+  await help.getByRole('button', { name: 'Close' }).click();
+  await expect(help).toBeHidden();
+});
+
+for (const theme of ['Dark', 'Light']) {
+  test(`command palette: looks right and is accessible (${theme})`, async ({ page }) => {
+    await open(page, '/today', theme);
+    await page.keyboard.press('ControlOrMeta+k');
+    await expect(page.getByRole('dialog', { name: 'Commands' })).toBeVisible();
+    await expect(page.getByRole('combobox')).toBeFocused();
+    await expect(page).toHaveScreenshot(`palette-${theme.toLowerCase()}.png`);
+    expect(await axeFailures(page)).toEqual([]);
+  });
+}
+
+test('command palette: filter, move with arrows, run with Enter, or ask what was typed', async ({
+  page,
+}) => {
+  await open(page, '/today');
+  await page.getByRole('button', { name: /^Commands/ }).click();
+  const field = page.getByRole('combobox');
+  const options = page.getByRole('option');
+
+  await field.fill('saved');
+  await expect(options).toHaveText(['Go to Savedg v', 'Ask: saved']);
+  await field.press('Enter');
+  await expect(page).toHaveURL(/\/saved$/);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+
+  await page.keyboard.press('ControlOrMeta+k');
+  await field.fill('go to');
+  await field.press('ArrowDown');
+  await expect(options.nth(1)).toHaveAttribute('aria-selected', 'true');
+  await field.press('ArrowUp');
+  await field.press('ArrowUp'); // wraps to the last option
+  await expect(options.last()).toHaveAttribute('aria-selected', 'true');
+  await expect(options.last()).toHaveText('Ask: go to');
+
+  await field.fill('What changed in sync this week?');
+  await expect(options).toHaveCount(1);
+  await field.press('Enter');
+  await expect(page).toHaveURL(/\/ask$/);
+  await expect(page.getByText('What changed in sync this week?')).toBeVisible();
+});
+
+test('command palette: actions change the theme, open the shortcut list, and lock', async ({
+  page,
+}) => {
+  await open(page, '/today');
+  const field = page.getByRole('combobox');
+  await page.keyboard.press('ControlOrMeta+k');
+  await field.fill('light theme');
+  await field.press('Enter');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+
+  await page.keyboard.press('ControlOrMeta+k');
+  await page.getByRole('option', { name: /^Keyboard shortcuts/ }).click();
+  await expect(page.getByRole('dialog', { name: 'Keyboard shortcuts' })).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  await page.keyboard.press('ControlOrMeta+k');
+  await field.fill('lock');
+  await field.press('Enter');
+  await expect(page.getByRole('heading', { name: 'Locked' })).toBeVisible();
+});

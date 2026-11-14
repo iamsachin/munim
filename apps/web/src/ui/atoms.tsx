@@ -122,3 +122,13 @@ export function MediaThumb({ kind, onClick }: { kind: 'Video' | 'Image'; onClick
     </button>
   );
 }
+
+/** A key on the keyboard. */
+export function Kbd(props: ComponentProps<'kbd'>) {
+  return (
+    <kbd
+      className="rounded-4 border border-line bg-card px-5 font-mono text-code text-ink"
+      {...props}
+    />
+  );
+}

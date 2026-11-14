@@ -24,6 +24,7 @@ export function AskBar() {
       >
         <AiBadge />
         <input
+          id="ask-bar"
           aria-label="Ask"
           value={draft}
           onChange={(e) => {

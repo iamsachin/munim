@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Button } from '../ui/Button';
 import { cx } from '../ui/cx';
 import { Input } from '../ui/Input';
+import { useTheme } from '../settings';
+import { focusId, useKeys } from '../shell/keys';
 import { AskCard } from './AskCard';
 import { EMPTY } from './copy';
 import { FEEDS } from './fixtures';
@@ -19,6 +21,26 @@ export function Rss() {
   const feeds: Feed[] = [...FEEDS, ...state.extraFeeds.map((name) => ({ name, articles: [] }))];
   const feed = feeds[feedIndex] ?? feeds[0];
   const article = feed?.articles[articleIndex];
+
+  const { theme } = useTheme();
+  const move = (step: number) => {
+    const last = (feed?.articles.length ?? 1) - 1;
+    setArticleIndex((i) => Math.min(last, Math.max(0, i + step)));
+  };
+  useKeys(
+    {
+      j: () => {
+        move(1);
+      },
+      k: () => {
+        move(-1);
+      },
+      a: () => {
+        focusId('item-ask');
+      },
+    },
+    theme.shortcuts === 'On',
+  );
 
   return (
     <main className="grid min-h-0 flex-1 grid-cols-[220px_minmax(0,1fr)_minmax(0,1.2fr)]">

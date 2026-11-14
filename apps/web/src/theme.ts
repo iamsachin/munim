@@ -10,16 +10,21 @@ export const DENSITIES = { Compact: 1, Comfortable: 1.7, Roomy: 2.4 } as const;
 
 export const THEMES = { Dark: 'dark', Light: 'light' } as const;
 
+/** Single-key shortcuts can be switched off, for people whose input method types stray keys. */
+export const SHORTCUTS = { On: true, Off: false } as const;
+
 export interface ThemeSettings {
   theme: keyof typeof THEMES;
   accent: keyof typeof ACCENTS;
   density: keyof typeof DENSITIES;
+  shortcuts: keyof typeof SHORTCUTS;
 }
 
 export const DEFAULT_THEME: ThemeSettings = {
   theme: 'Dark',
   accent: 'Amber',
   density: 'Comfortable',
+  shortcuts: 'On',
 };
 
 /** Writes the three hooks styles.css reads: data-theme, --accent and --dn. */
@@ -48,5 +53,6 @@ export function parseTheme(raw: string | null): ThemeSettings {
     theme: own(THEMES, v.theme, DEFAULT_THEME.theme),
     accent: own(ACCENTS, v.accent, DEFAULT_THEME.accent),
     density: own(DENSITIES, v.density, DEFAULT_THEME.density),
+    shortcuts: own(SHORTCUTS, v.shortcuts, DEFAULT_THEME.shortcuts),
   };
 }

@@ -17,13 +17,13 @@ test('default theme matches the design handoff', () => {
 
 test('theme, accent and density are applied independently', () => {
   const { root, vars, dataset } = fakeRoot();
-  applyTheme({ theme: 'Light', accent: 'Blue', density: 'Roomy' }, root);
+  applyTheme({ ...DEFAULT_THEME, theme: 'Light', accent: 'Blue', density: 'Roomy' }, root);
   expect(dataset).toEqual({ theme: 'light' });
   expect(vars).toEqual({ '--accent': 'oklch(0.76 0.12 250)', '--dn': '2.4' });
 });
 
 test('saved settings are restored', () => {
-  const saved = { theme: 'Light', accent: 'Coral', density: 'Compact' } as const;
+  const saved = { theme: 'Light', accent: 'Coral', density: 'Compact', shortcuts: 'Off' } as const;
   expect(parseTheme(JSON.stringify(saved))).toEqual(saved);
 });
 
