@@ -1,0 +1,20 @@
+model:
+  name: gpt-5.5
+  verifier: null
+review:
+  block_on_severity: major
+  min_severity: minor
+  # Setting this replaces duhview's defaults, so they are repeated. Added: the design handoff
+  # (a prototype, not our code), screenshot baselines and the licence text.
+  exclude:
+    - '*.lock'
+    - '*package-lock.json'
+    - '*pnpm-lock.yaml'
+    - '*.min.js'
+    - '*.min.css'
+    - '*.map'
+    - 'design/*'
+    - '*.png'
+    - 'LICENSE'
+budget:
+  max_usd_per_review: 2.00
