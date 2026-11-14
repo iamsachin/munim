@@ -19,8 +19,6 @@ export const ITEMS: Item[] = [
     replies: 214,
     age: '3h',
     unread: true,
-    summary:
-      'Most replies name saving and search as the reason to consolidate. A smaller group warns that API limits make replying from a third-party client unreliable.',
     comments: [
       {
         who: 'marrow_fern',
@@ -62,8 +60,6 @@ export const ITEMS: Item[] = [
     replies: 37,
     age: '4h',
     unread: true,
-    summary:
-      'A nine-post thread on conflict handling. They tried last-write-wins, then per-field merges, and settled on per-field merges with a visible history.',
     comments: [
       {
         who: '@ops_notes',
@@ -87,8 +83,6 @@ export const ITEMS: Item[] = [
     replies: 388,
     age: '4h',
     unread: true,
-    summary:
-      'Discussion centers on storage format and search. Several commenters ask about import from existing read-later tools; the author says export came first.',
     comments: [
       { who: 'pfk', meta: '3h', text: 'Export as the first feature is the right call.', depth: 0 },
       {
@@ -108,8 +102,6 @@ export const ITEMS: Item[] = [
     replies: 142,
     age: '5h',
     unread: true,
-    summary:
-      'An 18-minute build video. Chapters cover the frame, cooling, cable runs and power. The transcript is saved and searchable.',
     comments: [
       {
         who: 'railside',
@@ -134,8 +126,6 @@ export const ITEMS: Item[] = [
     replies: 0,
     age: '6h',
     unread: true,
-    summary:
-      'The author kept 40 of 130 feeds after a year and reads in one evening session. Polling less often fixed most reliability problems.',
     comments: [],
   },
   {
@@ -146,8 +136,6 @@ export const ITEMS: Item[] = [
     replies: 12,
     age: '8h',
     unread: false,
-    summary:
-      'A 42-second video comparing three firing schedules on one glaze. Transcript and frames are saved.',
     comments: [
       { who: '@clay.daily', meta: '7h', text: 'The slow cool one is the best by far.', depth: 0 },
     ],
@@ -161,8 +149,6 @@ export const ITEMS: Item[] = [
     replies: 96,
     age: '8h',
     unread: true,
-    summary:
-      'Most people test restores quarterly or never. The top reply recommends restoring one random file every week.',
     comments: [],
     media: 'Image',
   },
@@ -174,8 +160,6 @@ export const ITEMS: Item[] = [
     replies: 172,
     age: '9h',
     unread: false,
-    summary:
-      'Largely positive experience reports, with caveats about concurrent writers and network file systems.',
     comments: [],
   },
   {
@@ -186,7 +170,6 @@ export const ITEMS: Item[] = [
     replies: 8,
     age: '9h',
     unread: false,
-    summary: 'Nine links on queueing, three of which are already in your saved items.',
     comments: [],
   },
   {
@@ -197,7 +180,6 @@ export const ITEMS: Item[] = [
     replies: 64,
     age: '10h',
     unread: false,
-    summary: 'A short explainer on merge strategies for offline edits, with one worked example.',
     comments: [],
     media: 'Video',
   },
@@ -209,8 +191,6 @@ export const ITEMS: Item[] = [
     replies: 0,
     age: '10h',
     unread: false,
-    summary:
-      'A practical checklist: where keys live, how recovery works, and what the server can still see.',
     comments: [],
   },
   {
@@ -221,8 +201,6 @@ export const ITEMS: Item[] = [
     replies: 58,
     age: '11h',
     unread: false,
-    summary:
-      'Yes, widely. Most code hosts still publish release feeds and several people list the URL patterns.',
     comments: [],
   },
   {
@@ -233,7 +211,6 @@ export const ITEMS: Item[] = [
     replies: 0,
     age: '12h',
     unread: false,
-    summary: 'Argues for periodic full sync with checksums over clever incremental schemes.',
     comments: [],
   },
   {
@@ -244,7 +221,6 @@ export const ITEMS: Item[] = [
     replies: 4,
     age: '13h',
     unread: false,
-    summary: 'One photo, four comments.',
     comments: [],
     media: 'Image',
   },
@@ -256,7 +232,6 @@ export const ITEMS: Item[] = [
     replies: 143,
     age: '14h',
     unread: false,
-    summary: 'Answers split between summaries, saved highlights and simply not trying.',
     comments: [],
   },
   {
@@ -267,7 +242,6 @@ export const ITEMS: Item[] = [
     replies: 61,
     age: '15h',
     unread: false,
-    summary: 'Read limits dropped for the free tier; posting limits are unchanged.',
     comments: [],
     media: 'Image',
   },
@@ -279,7 +253,6 @@ export const ITEMS: Item[] = [
     replies: 23,
     age: '18h',
     unread: false,
-    summary: 'A 41-minute walkthrough of four firing schedules. Chapters and transcript are saved.',
     comments: [],
     media: 'Video',
   },
@@ -291,8 +264,6 @@ export const ITEMS: Item[] = [
     replies: 187,
     age: '22h',
     unread: false,
-    summary:
-      'Chunking by reply tree beats chunking by length. People recommend summarizing each top-level branch, then merging.',
     comments: [],
     media: 'Image',
   },
@@ -312,7 +283,7 @@ export const SAVED: SavedItem[] = [
     src: 'RD',
     title: 'What finally got you to move your feeds off five different apps?',
     from: 'r/selfhosted',
-    parsed: 'Summary · 214 comments',
+    parsed: '214 comments',
     when: 'Today',
   },
   {
@@ -320,7 +291,7 @@ export const SAVED: SavedItem[] = [
     src: 'HN',
     title: 'Show HN: A local-first archive for everything you read',
     from: '612 points',
-    parsed: 'Summary · 388 comments',
+    parsed: '388 comments',
     when: 'Today',
   },
   {
@@ -360,7 +331,7 @@ export const SAVED: SavedItem[] = [
     src: 'RD',
     title: 'Summarizing 400-comment threads: what actually works',
     from: 'r/LocalLLaMA',
-    parsed: 'Summary · 187 comments',
+    parsed: '187 comments',
     when: 'Mon',
   },
   {
@@ -400,7 +371,7 @@ export const SAVED: SavedItem[] = [
     src: 'HN',
     title: 'Passkeys in practice after a year',
     from: '290 points',
-    parsed: 'Summary · 201 comments',
+    parsed: '201 comments',
     when: 'Thu',
   },
 ];
@@ -412,13 +383,11 @@ export const FEEDS: Feed[] = [
       {
         title: 'A year of running my own feed reader',
         meta: '6h · 12 min',
-        summary: 'The author kept 40 of 130 feeds after a year and reads in one evening session.',
         body: 'I started the year with 130 feeds and a habit of opening the reader whenever I was bored. By March the unread count had become a second inbox. What fixed it was not a feature. I stopped polling every fifteen minutes, moved to twice a day, and deleted any feed I had skipped ten times in a row.',
       },
       {
         title: 'Reading in the evening, a short essay',
         meta: '1d · 5 min',
-        summary: 'A short case for reading once a day at a fixed time.',
         body: 'There is a particular quiet to reading things after they have stopped being new. Most of what felt urgent at noon has resolved itself by nine.',
       },
     ],
@@ -429,8 +398,6 @@ export const FEEDS: Feed[] = [
       {
         title: 'Notes on end-to-end encryption for small apps',
         meta: '10h · 9 min',
-        summary:
-          'A checklist: where keys live, how recovery works, and what the server can still see.',
         body: 'Before choosing a cipher, write down what the server is allowed to know. For most small apps the honest answer includes sizes, timestamps and who talks to whom. Decide whether that is acceptable, then design recovery, because recovery is where most schemes quietly give the server a copy of the key.',
       },
     ],
@@ -441,13 +408,11 @@ export const FEEDS: Feed[] = [
       {
         title: 'The case for boring sync protocols',
         meta: '12h · 7 min',
-        summary: 'Argues for periodic full sync with checksums over clever incremental schemes.',
         body: 'Incremental sync is fast until it is wrong, and when it is wrong it is wrong silently. A periodic full comparison with checksums is slow, predictable, and tells you when something drifted.',
       },
       {
         title: 'What a retry budget is',
         meta: '2d · 4 min',
-        summary: 'Defines retry budgets and shows one worked example.',
         body: 'A retry budget caps the share of requests that may be retries. Ten percent is a common starting point.',
       },
     ],
@@ -458,7 +423,6 @@ export const FEEDS: Feed[] = [
       {
         title: 'Designing a calendar that does less',
         meta: '19h · 8 min',
-        summary: 'A calendar that shows only today and the next thing.',
         body: 'Most calendar views answer a question nobody asked: what does the whole month look like. The question people ask is what is next, and how long until it starts.',
       },
     ],
@@ -469,7 +433,6 @@ export const FEEDS: Feed[] = [
       {
         title: 'Reader 4.2: faster full-text search',
         meta: '1d · 2 min',
-        summary: 'Search index rebuilt; queries are about three times faster.',
         body: 'This release rebuilds the search index. Existing libraries are migrated in the background on first launch.',
       },
     ],

@@ -16,3 +16,17 @@ export function Chip({ on, className, ...rest }: ComponentProps<'button'> & { on
     />
   );
 }
+
+/** A suggested question. Outlined in the AI tint, because pressing it asks the AI. */
+export function SuggestChip({ className, ...rest }: ComponentProps<'button'>) {
+  return (
+    <button
+      type="button"
+      className={cx(
+        'cursor-pointer rounded-pill border border-ai-line px-12 py-4 text-note hover:bg-accent/12',
+        className,
+      )}
+      {...rest}
+    />
+  );
+}

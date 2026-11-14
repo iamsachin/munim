@@ -13,6 +13,7 @@ const SCREENS = [
   ['watches', '/watches'],
   ['ask', '/ask'],
   ['connections', '/connections'],
+  ['ai', '/ai'],
   ['settings', '/settings'],
 ] as const;
 
@@ -204,16 +205,105 @@ test('ask bar: a question opens Ask with an honest placeholder answer; blank doe
   await expect(bar).toHaveValue('');
 });
 
-test('thread question is scoped to the open thread', async ({ page }) => {
+test('thread question is scoped to the open item', async ({ page }) => {
   await open(page, '/stream');
   await page.getByLabel('Ask about this thread').fill('Who disagrees?');
   await page.getByLabel('Ask about this thread').press('Enter');
   await expect(page).toHaveURL(/\/ask$/);
-  await expect(page.getByRole('button', { name: 'Open thread' })).toHaveAttribute(
+  await expect(page.getByRole('button', { name: 'Open item' })).toHaveAttribute(
     'aria-pressed',
     'true',
   );
-  await expect(page.getByText('in open thread')).toBeVisible();
+  await expect(page.getByText('in open item')).toBeVisible();
+});
+
+test('nothing is summarised automatically: a summary is one press away, as an Ask', async ({
+  page,
+}) => {
+  await open(page, '/stream');
+  const thread = page.getByRole('complementary', { name: 'Thread' });
+  await expect(thread.getByText('Most replies name saving and search')).toHaveCount(0);
+  await thread.getByRole('button', { name: 'Summarize this thread' }).click();
+  await expect(page).toHaveURL(/\/ask$/);
+  await expect(page.getByText('Summarize this thread')).toBeVisible();
+  await expect(page.getByText('From open item')).toBeVisible();
+
+  await page.getByRole('link', { name: /^RSS/ }).click();
+  await page.getByRole('button', { name: 'Summarize this article' }).click();
+  await expect(page.getByText('Summarize this article')).toBeVisible();
+});
+
+test('ai: a new key makes that provider selectable; removing a key switches its features off', async ({
+  page,
+}) => {
+  await open(page, '/ai');
+  const askModel = page.getByLabel('Model for Ask');
+  await expect(askModel).toHaveValue('gpt-5.5');
+  await expect(askModel.locator('option', { hasText: 'claude-sonnet-5-5' })).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Add key for Anthropic' }).click();
+  const field = page.getByLabel('Anthropic API key');
+  await expect(field).toBeFocused();
+  await field.fill('sk-ant-0123456789abcdefWXYZ');
+  await field.press('Enter');
+  const anthropic = page.getByRole('row').filter({ hasText: 'Anthropic' });
+  await expect(anthropic).toContainText('Ends in WXYZ');
+  await expect(anthropic).toContainText('Connected');
+  await expect(page.getByText('sk-ant-0123456789abcdefWXYZ')).toHaveCount(0);
+  await askModel.selectOption('claude-sonnet-5-5');
+  await expect(askModel).toHaveValue('claude-sonnet-5-5');
+
+  await page.getByRole('button', { name: 'Remove key for OpenAI' }).click();
+  await expect(page.getByLabel('Model for Digest')).toHaveValue('');
+  await expect(page.getByText('No model chosen, so this is off.')).toHaveCount(2);
+  await expect(askModel).toHaveValue('claude-sonnet-5-5');
+  expect(await axeFailures(page)).toEqual([]);
+});
+
+test('ai: a rejected key is reported and Cancel leaves things alone', async ({ page }) => {
+  await open(page, '/ai');
+  await page.getByRole('button', { name: 'Add key for Anthropic' }).click();
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await expect(page.getByRole('row').filter({ hasText: 'Anthropic' })).toContainText('No key');
+
+  await page.getByRole('button', { name: 'Replace key for OpenAI' }).click();
+  await page.getByLabel('OpenAI API key').fill('short');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('row').filter({ hasText: 'OpenAI' })).toContainText('Key rejected');
+  await expect(page.getByLabel('Model for Ask')).toBeDisabled();
+  await expect(page).toHaveScreenshot('ai-no-working-key-dark.png');
+  expect(await axeFailures(page)).toEqual([]);
+});
+
+test('ai: reaching the monthly limit pauses AI and says so; no limit never pauses', async ({
+  page,
+}) => {
+  await open(page, '/ai');
+  await expect(page.getByText('$4.20 of $10.00 this month')).toBeVisible();
+  const limit = page.getByLabel('Monthly limit in dollars');
+  await limit.fill('4');
+  await expect(page.getByRole('status')).toContainText('AI is paused');
+  await expect(page).toHaveScreenshot('ai-paused-dark.png');
+  expect(await axeFailures(page)).toEqual([]);
+
+  const bar = page.getByRole('search').getByLabel('Ask');
+  await bar.fill('Anything new?');
+  await bar.press('Enter');
+  await expect(page.getByText(/AI is paused: this month's limit is reached/)).toBeVisible();
+
+  await page.getByRole('link', { name: 'AI', exact: true }).click();
+  await page.getByRole('switch', { name: 'Monthly limit' }).click();
+  await expect(page.getByRole('status')).toHaveCount(0);
+  await expect(page.getByLabel('Monthly limit in dollars')).toBeDisabled();
+  await expect(page.getByText('$4.20 this month')).toBeVisible();
+});
+
+test('ai: usage can be viewed for last month', async ({ page }) => {
+  await open(page, '/ai');
+  const usage = page.getByRole('table', { name: 'Usage' });
+  await expect(usage.getByRole('row').last()).toContainText('$4.20');
+  await page.getByRole('button', { name: 'Last month' }).click();
+  await expect(usage.getByRole('row').last()).toContainText('$7.85');
 });
 
 test('read later: Done removes the row and updates the totals', async ({ page }) => {

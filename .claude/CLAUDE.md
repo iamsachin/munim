@@ -34,7 +34,7 @@ The quality bar is the point of this project. Prefer a smaller thing finished pr
 | Sources | RSS, Hacker News and YouTube first. Reddit next through its official OAuth API. X and Instagram are shown as "Not available yet". Official APIs only: no scraping, no bridges. |
 | Writing back | Replies, comments and votes only where the source's official API allows it (Reddit first). Elsewhere the control is disabled with a one-line reason and a link to the original. |
 | Saving | Full text, whole comment thread, video transcript and chapters, image thumbnails. Never download video files. |
-| AI | OpenAI and Anthropic, each with an owner-supplied key set in the UI. Each AI feature (summary, digest, Ask, and any new one) has its own provider and model setting. Settings show usage per provider, model and feature. |
+| AI | OpenAI and Anthropic, each with an owner-supplied key set in the UI. Three features call a model, each with its own provider and model setting: Digest, Ask, Watch matching. Nothing is summarised automatically: a summary is an Ask the owner sends ("Summarize this thread"), to save tokens. A monthly spend limit pauses all AI when reached. Settings show usage per feature and model. |
 | Encryption | Source tokens and AI keys are encrypted by the app with a master key. The key is a file generated on first run in the data folder, or supplied as an environment variable; it is not derived from the passphrase. Content is plain in Postgres so search and Ask work. Disk encryption is the self-hoster's job. |
 | Sign-in | One passphrase, server-side sessions, built on Django's auth and session framework. The device list is the session list, with working Revoke and idle lock. Passkeys and two-step come later. |
 | Distribution | Docker Compose: app container plus Postgres. `docker compose up` is the whole install. |
@@ -106,4 +106,5 @@ Baselines are recorded on macOS Chromium and are platform-specific; other platfo
 ## Open decisions (ask before building the part that depends on them)
 
 - YouTube: API key for public channels, or OAuth for the owner's subscriptions.
+- Spend limit pricing: the limit is in dollars, which needs each model's price. Providers' model lists do not include prices, so either Munim ships a price table that goes stale between releases, or the owner enters prices, or the limit is in tokens.
 - Digest schedule: fixed at 7:00 daily and Sunday weekly as designed, or configurable. (They run on the server either way.)

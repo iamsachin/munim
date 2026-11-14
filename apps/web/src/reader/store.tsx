@@ -1,9 +1,10 @@
 import { createContext, use, useState, type ReactNode } from 'react';
+import { AI_INITIAL, type AiState } from '../account/ai';
 import type { Source } from '../ui/atoms';
 import { FEEDS, ITEMS, LATER, SAVED, WATCHES } from './fixtures';
 import type { Item, SavedItem, Watch } from './types';
 
-export const SCOPES = ['Everything', 'Saved', 'This week', 'Open thread'] as const;
+export const SCOPES = ['Everything', 'Saved', 'This week', 'Open item'] as const;
 export type Scope = (typeof SCOPES)[number];
 
 /** Everything the owner can change in the mock reader. Items are identified by their index in ITEMS. */
@@ -19,6 +20,7 @@ export interface ReaderState {
   scope: Scope;
   asks: readonly { q: string; scope: Scope }[];
   disconnected: ReadonlySet<string>;
+  ai: AiState;
 }
 
 const STORED_TITLES = new Set(SAVED.map((s) => s.title));
@@ -36,6 +38,7 @@ export const INITIAL: ReaderState = {
   scope: 'Everything',
   asks: [],
   disconnected: new Set(),
+  ai: AI_INITIAL,
 };
 
 type Update = (patch: Partial<ReaderState> | ((s: ReaderState) => Partial<ReaderState>)) => void;

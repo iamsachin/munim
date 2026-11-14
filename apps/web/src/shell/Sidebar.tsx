@@ -56,6 +56,7 @@ export function Sidebar() {
       </Group>
       <Group label="Account">
         <NavRow name="Connections" to="/connections" />
+        <NavRow name="AI" to="/ai" />
         <NavRow name="Security and settings" to="/settings" />
       </Group>
       <Group label="Planned">

@@ -6,15 +6,12 @@ Last updated: 2026-11-14
 
 ## Now
 
-Milestone 2, first pull request (#1): every designed screen is built on mock data, all gates pass, and two duhview reviews have been answered. Waiting on the owner to review the screens (`pnpm dev`) and merge.
+On branch `milestone-2-gaps`, built and passing all gates, **waiting for the owner's approval** (`pnpm dev`):
 
-Decisions the owner should know about, all listed in `port-design` under "Where the port departs from the handoff":
+1. The new AI screen at `/ai`: provider keys, a model per feature, monthly limit, usage.
+2. No automatic summaries: the thread pane (`/stream`) and RSS article (`/rss`) now have an Ask card with a "Summarize this ..." button in place of the summary text.
 
-1. No security claims are shown yet (sidebar status button, Saved, Connections), because nothing is encrypted in a mock.
-2. "Security and settings" has only the Appearance card (theme, accent, density). The other cards need the honest-security design first.
-3. X and Instagram appear connected, as in the handoff's mock data. They become "Not available yet" when real sources arrive.
-
-Next: the design gaps below, each shown to the owner for approval.
+Not started, next in line: sign-in, first-run and lock screens together with the Sign-in, Devices and Your data cards (they only make sense together); then loading, error and empty states; then keyboard navigation.
 
 ## 0. Preparation
 
@@ -58,7 +55,8 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] Appearance settings (theme, accent, density), remembered in the browser
 - [ ] **Designed screens approved by owner**
 - [ ] Security and settings: honest Encryption, Sign-in and lock, Devices, Your data (design gap)
-- [ ] AI settings: keys, per-feature model, usage (design gap)
+- [ ] AI settings: keys, per-feature model, monthly limit, usage (design gap; built, awaiting approval)
+- [ ] On-demand summaries in place of automatic ones (built, awaiting approval)
 - [ ] First-run setup, sign-in, lock screen (design gap)
 - [ ] Loading, error and empty states for every screen (design gap)
 - [ ] Keyboard navigation, command palette, shortcut help (design gap)
@@ -89,7 +87,7 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [ ] OpenAI and Anthropic providers, keys set in the UI
 - [ ] Per-feature model selection
 - [ ] Usage tracking and display
-- [ ] Summaries
+- [ ] Summaries on demand, through Ask (no automatic summaries)
 - [ ] Digest (daily, weekly)
 - [ ] Ask with citations
 - [ ] Watches matching
