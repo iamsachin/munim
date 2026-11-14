@@ -1,15 +1,52 @@
-# Development database. The full install, with the app container, is added later in milestone 3.
-# Start it with `docker compose up -d db`. The password is for local development only, and the
-# port is bound to this machine alone.
+# Munim, the whole install: `docker compose up -d`, then open http://localhost:8000.
+#
+# Nothing needs setting to try it on this machine. Every value below can be changed from a file
+# named .env beside this one; README.md says which to set before others can reach it.
+name: munim-install
+
 services:
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      MUNIM_DB_HOST: db
+      MUNIM_DB_PORT: 5432
+      MUNIM_DB_PASSWORD: ${MUNIM_DB_PASSWORD:-munim}
+      # The names this install answers to, and the address people type if it is behind a proxy.
+      MUNIM_ALLOWED_HOSTS: ${MUNIM_ALLOWED_HOSTS:-localhost,127.0.0.1}
+      MUNIM_TRUSTED_ORIGINS: ${MUNIM_TRUSTED_ORIGINS:-}
+      # 1 only if it is reached over plain http from another machine. Use https instead.
+      MUNIM_INSECURE_COOKIES: ${MUNIM_INSECURE_COOKIES:-0}
+      # Left empty, both are made on first start and kept in the data volume.
+      MUNIM_SECRET_KEY: ${MUNIM_SECRET_KEY:-}
+      MUNIM_MASTER_KEY: ${MUNIM_MASTER_KEY:-}
+    ports:
+      # Reachable from this machine only, until MUNIM_BIND says otherwise.
+      - '${MUNIM_BIND:-127.0.0.1}:${MUNIM_PORT:-8000}:8000'
+    volumes:
+      - data:/data
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
   db:
     image: postgres:18
+    restart: unless-stopped
     environment:
       POSTGRES_USER: munim
-      POSTGRES_PASSWORD: munim
+      POSTGRES_PASSWORD: ${MUNIM_DB_PASSWORD:-munim}
       POSTGRES_DB: munim
-    ports:
-      - '127.0.0.1:5433:5432'
+    # No port is published: only the app can reach the database.
     volumes:
       - db:/var/lib/postgresql
     healthcheck:
@@ -19,4 +56,6 @@ services:
       retries: 10
 
 volumes:
+  # Fetched images, the master key and the session key. Back it up together with db.
+  data:
   db:
