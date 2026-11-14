@@ -51,12 +51,27 @@ export function Blocks({
                 {run(block.spans)}
               </h4>
             );
-          case 'quote':
+          case 'quote': {
+            // A quotation of several paragraphs arrives as several blocks: draw them as one.
+            if (i > 0 && blocks.at(i - 1)?.type === 'quote') return null;
+            const paragraphs: (readonly Span[])[] = [];
+            for (const next of blocks.slice(i)) {
+              if (next.type !== 'quote') break;
+              paragraphs.push(next.spans);
+            }
             return (
-              <blockquote key={i} className={cx(READ, 'border-l-2 border-line pl-12 text-mute')}>
-                <span {...mine}>{run(block.spans)}</span>
+              <blockquote
+                key={i}
+                className={cx(READ, 'flex flex-col gap-12 border-l-2 border-line pl-12 text-mute')}
+              >
+                {paragraphs.map((spans, n) => (
+                  <p key={n} className="whitespace-pre-line" {...mine}>
+                    {run(spans)}
+                  </p>
+                ))}
               </blockquote>
             );
+          }
           case 'list': {
             const List = block.ordered ? 'ol' : 'ul';
             return (
