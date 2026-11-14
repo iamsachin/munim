@@ -20,7 +20,6 @@ export interface Item {
   replies: number;
   age: string;
   unread: boolean;
-  summary: string;
   comments: Comment[];
   media?: MediaKind;
 }
@@ -39,7 +38,6 @@ export interface SavedItem {
 export interface Article {
   title: string;
   meta: string;
-  summary: string;
   body: string;
 }
 

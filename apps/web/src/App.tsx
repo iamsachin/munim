@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router';
+import { AiSettings } from './account/AiSettings';
 import { Connections } from './account/Connections';
 import { Settings } from './account/Settings';
 import { Gallery } from './gallery/Gallery';
@@ -27,6 +28,7 @@ export function App() {
         <Route path="watches" element={<Watches />} />
         <Route path="ask" element={<Ask />} />
         <Route path="connections" element={<Connections />} />
+        <Route path="ai" element={<AiSettings />} />
         <Route path="settings" element={<Settings />} />
       </Route>
       {/* The design-system reference; not linked from the app. */}

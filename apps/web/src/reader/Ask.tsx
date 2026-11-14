@@ -1,7 +1,8 @@
+import { aiPaused } from '../account/ai';
 import { ScreenHeader } from '../shell/ScreenHeader';
 import { AiBadge, SectionLabel, type Source } from '../ui/atoms';
 import { Card } from '../ui/Card';
-import { Chip } from '../ui/Chip';
+import { Chip, SuggestChip } from '../ui/Chip';
 import { CitationRow } from '../ui/CitationRow';
 import { ask, SCOPES, useReader } from './store';
 
@@ -36,13 +37,16 @@ const TRY = [
 
 export function Ask() {
   const { state, update } = useReader();
+  const paused = aiPaused(state.ai);
   const log: Exchange[] = [
     SAMPLE,
     ...state.asks.map(({ q, scope }) => ({
       q,
       scope: `From ${scope.toLowerCase()}`,
-      // Honest placeholder until the AI milestone.
-      a: `Answers are not connected yet. This question would be run over ${scope.toLowerCase()}.`,
+      // Honest placeholders until the AI milestone.
+      a: paused
+        ? "AI is paused: this month's limit is reached. Raise it under AI, or wait for next month."
+        : `Answers are not connected yet. This question would be run over ${scope.toLowerCase()}.`,
       cites: [],
     })),
   ];
@@ -82,16 +86,14 @@ export function Ask() {
         <div className="flex flex-wrap items-center gap-6">
           <SectionLabel>Try</SectionLabel>
           {TRY.map((t) => (
-            <button
+            <SuggestChip
               key={t}
-              type="button"
               onClick={() => {
                 ask(update, t);
               }}
-              className="cursor-pointer rounded-pill border border-ai-line px-12 py-4 text-note hover:bg-accent/12"
             >
               {t}
-            </button>
+            </SuggestChip>
           ))}
         </div>
       </div>

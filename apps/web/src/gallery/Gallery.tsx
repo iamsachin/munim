@@ -14,11 +14,12 @@ import {
 } from '../ui/atoms';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
-import { Chip } from '../ui/Chip';
+import { Chip, SuggestChip } from '../ui/Chip';
 import { CitationRow } from '../ui/CitationRow';
 import { cx } from '../ui/cx';
 import { Input } from '../ui/Input';
 import { NavRow } from '../ui/NavRow';
+import { Select } from '../ui/Select';
 import { Swatch } from '../ui/Swatch';
 import { Cell, RowButton, Table, TableHeader, TableRow, Th } from '../ui/Table';
 import { Toggle } from '../ui/Toggle';
@@ -265,6 +266,10 @@ export function Gallery() {
               </Chip>
             ))}
           </div>
+          <div className="flex flex-wrap items-center gap-6">
+            <SuggestChip>Summarize this thread</SuggestChip>
+            <SuggestChip>Which threads have replies to me?</SuggestChip>
+          </div>
           <div className="flex items-center gap-12">
             <div className="flex-1">
               <div className="font-medium">Lock when idle</div>
@@ -283,6 +288,12 @@ export function Gallery() {
 
         <Section title="Inputs">
           <Input aria-label="Search the stream" placeholder="Search the stream" />
+          <Select aria-label="Model" defaultValue="gpt-5.5">
+            <optgroup label="OpenAI">
+              <option>gpt-5.5</option>
+              <option>gpt-5.4-mini</option>
+            </optgroup>
+          </Select>
           <div className="flex gap-6">
             <Input className="flex-1" aria-label="Feed URL" placeholder="Feed URL" />
             <Button variant="accent">Ask</Button>

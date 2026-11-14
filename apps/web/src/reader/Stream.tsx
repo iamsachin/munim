@@ -1,16 +1,16 @@
 import { useState, type CSSProperties } from 'react';
-import { Navigate, useNavigate, useParams } from 'react-router';
+import { Navigate, useParams } from 'react-router';
 import { ScreenHeader } from '../shell/ScreenHeader';
-import { AiBadge, MediaThumb, SaveDot, SourceTag, SOURCES, type Source } from '../ui/atoms';
+import { MediaThumb, SaveDot, SourceTag, SOURCES, type Source } from '../ui/atoms';
 import { Button } from '../ui/Button';
-import { Card } from '../ui/Card';
 import { Chip } from '../ui/Chip';
 import { cx } from '../ui/cx';
 import { Input } from '../ui/Input';
 import { Cell, RowButton, Table, TableBody, TableHeader, TableRow, Th } from '../ui/Table';
+import { AskCard } from './AskCard';
 import { ITEMS } from './fixtures';
 import { MediaPreview } from './MediaPreview';
-import { ask, itemAt, laterRowFor, toggled, useReader, withoutLater } from './store';
+import { itemAt, laterRowFor, toggled, useReader, withoutLater } from './store';
 
 const COLS = 'grid-cols-[34px_minmax(0,1fr)_40px_30px_16px]';
 const FILTERS = ['All', 'Unread', 'Saved', 'Video'] as const;
@@ -156,11 +156,9 @@ export function Stream() {
   );
 }
 
-/** The selected item: summary, a question field, replies and the reply box. Keyed by item, so drafts reset. */
+/** The selected item: a question field, replies and the reply box. Keyed by item, so drafts reset. */
 function Thread({ index: i }: { index: number }) {
   const { state, update } = useReader();
-  const navigate = useNavigate();
-  const [question, setQuestion] = useState('');
   const [draft, setDraft] = useState('');
 
   const item = itemAt(i);
@@ -205,37 +203,7 @@ function Thread({ index: i }: { index: number }) {
       </div>
       <h2 className="text-title leading-title font-semibold text-pretty">{item.title}</h2>
 
-      <Card tone="ai" compact className="gap-7">
-        <div className="flex items-center gap-8 font-mono text-label tracking-label text-accent uppercase">
-          <AiBadge />
-          Summary
-        </div>
-        <div className="text-pretty">{item.summary}</div>
-        <form
-          className="flex gap-6"
-          onSubmit={(e) => {
-            e.preventDefault();
-            // An empty question still opens Ask, scoped to this thread.
-            if (!ask(update, question, 'Open thread')) update({ scope: 'Open thread' });
-            void navigate('/ask');
-          }}
-        >
-          <Input
-            size="md"
-            tone="ai"
-            className="flex-1"
-            aria-label="Ask about this thread"
-            placeholder="Ask about this thread"
-            value={question}
-            onChange={(e) => {
-              setQuestion(e.target.value);
-            }}
-          />
-          <Button type="submit" variant="accent">
-            Ask
-          </Button>
-        </form>
-      </Card>
+      <AskCard what="thread" />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
         {comments.map((c, n) => (

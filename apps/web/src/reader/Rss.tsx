@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import { AiBadge } from '../ui/atoms';
 import { Button } from '../ui/Button';
-import { Card } from '../ui/Card';
 import { cx } from '../ui/cx';
 import { Input } from '../ui/Input';
+import { AskCard } from './AskCard';
 import { FEEDS } from './fixtures';
 import { useReader } from './store';
 import type { Feed } from './types';
@@ -106,14 +105,10 @@ export function Rss() {
         <h2 className="text-headline leading-headline font-semibold text-pretty">
           {article?.title ?? feed?.name}
         </h2>
-        <Card tone="ai" compact className="gap-5">
-          <div className="flex items-center gap-8 font-mono text-label tracking-label text-accent uppercase">
-            <AiBadge />
-            Summary
-          </div>
-          <div className="text-pretty">{article?.summary ?? 'No articles fetched yet.'}</div>
-        </Card>
-        <p className="max-w-[62ch] text-read leading-read text-pretty">{article?.body}</p>
+        <AskCard what="article" />
+        <p className="max-w-[62ch] text-read leading-read text-pretty">
+          {article ? article.body : 'No articles fetched yet.'}
+        </p>
       </article>
     </main>
   );
