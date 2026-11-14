@@ -638,8 +638,9 @@ test('sign-in: after three wrong passphrases the server makes even the right one
     await expect(field).toHaveValue('');
     await expect(page.getByRole('alert')).toHaveText('That passphrase is not right.');
   }
-  // Stop the clock, so the countdown stays at 30 for the screenshot.
-  await page.clock.pauseAt(new Date());
+  // Stop the clock, so the countdown stays at 30 for the screenshot. A second ahead, because the
+  // page's clock may already be past this process's "now", and it cannot be set backwards.
+  await page.clock.pauseAt(Date.now() + 1000);
   await field.fill(GOOD);
   await button.click();
   await expect(page.getByRole('alert')).toHaveText('Too many attempts. Try again in 30 seconds.');
