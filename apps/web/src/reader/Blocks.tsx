@@ -104,7 +104,7 @@ export function Blocks({
               </pre>
             );
           case 'image':
-            return <Picture key={i} src={block.src} alt={block.alt} />;
+            return <Picture key={block.src} src={block.src} alt={block.alt} />;
         }
       })}
     </div>
