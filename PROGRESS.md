@@ -68,13 +68,13 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 
 ## 3. Server, sign-in, sources
 
-- [ ] Server scaffold in `apps/server`: FastAPI, uv, ruff, mypy, pytest, wired into `pnpm check`
-- [ ] Postgres, SQLAlchemy models, Alembic migrations
+- [ ] Server scaffold in `apps/server`: Django, Django Ninja, uv, ruff, mypy, pytest, wired into `pnpm check`
+- [ ] Postgres, Django models and migrations, admin
 - [ ] OpenAPI document, generated front-end client replacing the mock store
 - [ ] Postgres job queue and scheduler
 - [ ] Docker Compose: one app container serving web, API and jobs, plus Postgres
 - [ ] Master key file, generated on first run
-- [ ] Passphrase sign-in, sessions, device list with Revoke, idle lock
+- [ ] Passphrase sign-in, sessions, device list with Revoke, idle lock (Django auth and sessions)
 - [ ] Encrypted storage for source tokens and AI keys; then restore the sidebar status button and the Connections note with truthful wording
 - [ ] RSS
 - [ ] Hacker News
