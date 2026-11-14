@@ -170,6 +170,11 @@ def test_polling_again_updates_stories_and_asks_for_a_thread_only_when_it_grew(
     poll_hacker_news(timestamp=0)
     assert "hn.algolia.com/api/v1/items/1" in asked
 
+    # HN Search gave three of the four replies, so it is asked again though nothing has grown.
+    asked.clear()
+    poll_hacker_news(timestamp=0)
+    assert "hn.algolia.com/api/v1/items/1" in asked
+
     show, _ = stories(owner_client)
     assert (show["origin"], show["replies"], show["unread"]) == ("700 points", 4, False)
 

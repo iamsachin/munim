@@ -96,9 +96,12 @@ def _store(client: httpx.Client, number: int) -> None:
     item = Item.objects.filter(source=Source.HACKER_NEWS, feed=None, guid=str(number)).first()
     item = item or Item(source=Source.HACKER_NEWS, guid=str(number))
 
-    # The discussion is asked for only if there is one, and again only when its size has changed
-    # or the last attempt came back with nothing.
-    if story.descendants and (item.replies != story.descendants or not item.comments):
+    # The discussion is asked for only if there is one, and again when its size has changed or
+    # HN Search, which can be minutes behind the site, has given fewer replies than there are.
+    if story.descendants and (
+        item.replies != story.descendants
+        or len(item.comments) < min(story.descendants, MAX_COMMENTS)
+    ):
         try:
             item.comments = comments(_fetch(client, THREAD.format(number), Reply), page)
         except feeds.FeedProblem:
