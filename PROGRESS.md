@@ -6,7 +6,7 @@ Last updated: 2026-11-14
 
 ## Now
 
-Milestone 2, first pull request: every designed screen is built on mock data and all gates pass. Waiting on the owner to review the screens (`pnpm dev`), and on the duhview review of the pull request.
+Milestone 2, first pull request (#1): every designed screen is built on mock data, all gates pass, and two duhview reviews have been answered. Waiting on the owner to review the screens (`pnpm dev`) and merge.
 
 Decisions the owner should know about, all listed in `port-design` under "Where the port departs from the handoff":
 
@@ -35,7 +35,7 @@ Next: the design gaps below, each shown to the owner for approval.
 - [x] Light theme (design gap, approved)
 - [x] Visual baselines recorded: both themes at every density and every accent (macOS Chromium)
 - [x] Unsaved save-dot ring lightened to 3:1 (`dim` token, owner's decision)
-- [x] duhview review on pull requests (`.duhview/`, GitHub Action)
+- [x] duhview review on request for critical pull requests (`.duhview/`, GitHub Action)
 - [x] **Approved by owner**
 
 Not built yet because only one screen uses each: ask bar, suggestion chip, chat bubble, media preview overlay. They come with their screens in milestone 2.

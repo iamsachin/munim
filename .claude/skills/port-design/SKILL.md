@@ -61,7 +61,7 @@ Density: `--dn` is 1 (Compact), 1.7 (Comfortable, default) or 2.4 (Roomy). Row p
 - Runtime theme: `applyTheme()` in `apps/web/src/theme.ts` sets `data-theme`, `--accent` and `--dn` on the root element.
 - Shared components: `apps/web/src/ui/`. The gallery at `apps/web/src/gallery/Gallery.tsx` shows every one; add each new shared component to it.
 - Tables are CSS grid with ARIA table roles (`Table`, `TableHeader`, `Th`, `TableRow`, `Cell`). A row's main action is a `RowButton`, whose hit area covers the row; other controls in the row need `relative z-1`.
-- Grid templates are the one place arbitrary values are allowed (`grid-cols-[34px_minmax(0,1fr)_40px]`).
+- Arbitrary values are allowed only where no token can exist: grid templates, and layout in viewport units or `ch` (`max-h-[70vh]`, `max-w-[62ch]`). Never for a colour, font size, radius or pixel spacing; use a named utility when one exists (`max-w-4/5`, not `max-w-[80%]`).
 - Navigation is a link, not a button. For a link that looks like a button use `buttonClass()` from `ui/Button.tsx` on a router `Link`.
 - Screens live in their module folder (`reader/`, `account/`), start with `ScreenHeader`, and are routed in `App.tsx`. Mock state and its selectors are in `reader/store.tsx`; fixtures are generated from the handoff into `reader/fixtures.ts`.
 - Every screen gets an entry in `SCREENS` in `apps/web/e2e/screens.spec.ts` (five baselines and two axe scans) and a behaviour test for anything it lets the owner do.
@@ -73,6 +73,8 @@ Density: `--dn` is 1 (Compact), 1.7 (Comfortable, default) or 2.4 (Roomy). Row p
 - An item that is already in the read-later queue shows as "Queued" and cannot be added twice.
 - A control the mock cannot honour is disabled with a `title` giving the reason (RSS "Save" and "Open original").
 - Buttons never wrap, and the thread's metadata line truncates, so the 920px minimum width holds together.
+- The Saved list and its count follow what is saved in the stream; the handoff's two were independent.
+- The light theme's media-preview veil is light, so the caption under the preview stays readable.
 - Counts are computed from the data (the sidebar's RSS count is 7, not the handoff's hard-coded 9).
 
 ## Shared components

@@ -30,12 +30,12 @@ export function MediaPreview({
       aria-label="Media preview"
       onClose={onClose}
       onClick={(e) => {
-        // A click that lands on the dialog element itself is a click on the backdrop.
+        // The dialog fills the screen; a click on it rather than on its content is a click outside.
         if (e.target === e.currentTarget) onClose();
       }}
-      className="m-auto w-[min(880px,calc(100%-64px))] max-w-none cursor-zoom-out bg-transparent text-ink backdrop:bg-scrim"
+      className="m-0 size-full max-h-none max-w-none cursor-zoom-out items-center justify-center bg-transparent p-32 text-ink backdrop:bg-scrim open:flex"
     >
-      <div className="flex cursor-default flex-col gap-10">
+      <div className="flex w-full max-w-880 cursor-default flex-col gap-10">
         <div className="stripes-lg flex aspect-16/10 max-h-[70vh] items-center justify-center rounded-8 border border-line">
           <span className="rounded-4 bg-bg px-10 py-4 font-mono text-sm text-mute">
             {item.media} from {item.from}

@@ -6,7 +6,7 @@ import {
   laterRows,
   laterTotal,
   matchCount,
-  savedCount,
+  savedRows,
   toggled,
   watchRows,
   withoutLater,
@@ -22,10 +22,19 @@ test('toggled adds a missing value and removes a present one, without mutating',
   expect([...set]).toEqual([1]);
 });
 
-test('saved count starts at the stored total and follows stream saves', () => {
-  expect(savedCount(INITIAL)).toBe(SAVED.length);
-  expect(savedCount(state({ saved: toggled(INITIAL.saved, 1) }))).toBe(SAVED.length + 1);
-  expect(savedCount(state({ saved: toggled(INITIAL.saved, 0) }))).toBe(SAVED.length - 1);
+test('saved: stream items in the stored list start saved; the list follows saves and unsaves', () => {
+  expect(savedRows(INITIAL)).toEqual(SAVED);
+  // Item 9, "Conflict-free sync explained in 12 minutes", is in the stored list.
+  expect(INITIAL.saved.has(9)).toBe(true);
+
+  const unsaved = savedRows(state({ saved: toggled(INITIAL.saved, 9) }));
+  expect(unsaved).toHaveLength(SAVED.length - 1);
+  expect(unsaved.some((r) => r.title.startsWith('Conflict-free sync'))).toBe(false);
+
+  // Item 3 is a YouTube video that is not in the stored list.
+  const added = savedRows(state({ saved: toggled(INITIAL.saved, 3) }));
+  expect(added).toHaveLength(SAVED.length + 1);
+  expect(added[0]).toMatchObject({ kind: 'Video', src: 'YT', when: 'Now', parsed: 'Processing' });
 });
 
 test('read later: queued items come first, finished ones drop out', () => {

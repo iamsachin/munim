@@ -3,7 +3,7 @@ import {
   articleCount,
   laterRows,
   matchCount,
-  savedCount,
+  savedRows,
   sourceCount,
   useReader,
 } from '../reader/store';
@@ -36,7 +36,7 @@ export function Sidebar() {
         <NavRow name="Today" to="/today" />
         <NavRow name="Stream" count={ITEMS.length} to="/stream" />
         <NavRow name="Read later" count={laterRows(state).length} to="/later" />
-        <NavRow name="Saved" count={savedCount(state)} to="/saved" />
+        <NavRow name="Saved" count={savedRows(state).length} to="/saved" />
         <NavRow name="Highlights" count={HIGHLIGHTS.length} to="/highlights" />
         <NavRow name="RSS" count={articleCount()} to="/rss" />
         <NavRow name="Digest" to="/digest" />

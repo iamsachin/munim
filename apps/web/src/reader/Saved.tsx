@@ -3,7 +3,7 @@ import { ScreenHeader } from '../shell/ScreenHeader';
 import { SourceTag } from '../ui/atoms';
 import { Chip } from '../ui/Chip';
 import { Cell, Table, TableBody, TableHeader, TableRow, Th } from '../ui/Table';
-import { SAVED } from './fixtures';
+import { savedRows, useReader } from './store';
 import type { SavedKind } from './types';
 
 const COLS = 'grid-cols-[56px_34px_minmax(0,1fr)_120px_160px_64px]';
@@ -12,7 +12,8 @@ const META = 'font-mono text-meta text-mute';
 
 export function Saved() {
   const [kind, setKind] = useState<SavedKind | 'All'>('All');
-  const rows = SAVED.filter((s) => kind === 'All' || s.kind === kind);
+  const { state } = useReader();
+  const rows = savedRows(state).filter((s) => kind === 'All' || s.kind === kind);
 
   return (
     <main className="flex min-h-0 flex-1 flex-col">

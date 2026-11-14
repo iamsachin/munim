@@ -143,6 +143,23 @@ test('stream: selecting, saving, queueing and replying update the thread and the
   await expect(rows(page).filter({ hasText: 'Shipped offline sync' })).toContainText('38');
 });
 
+test('saved: an item saved in the stream is listed, an unsaved one is not', async ({ page }) => {
+  await open(page, '/stream');
+  await rows(page)
+    .filter({ hasText: 'Building a home server rack' })
+    .getByRole('button', { name: 'Save' })
+    .click();
+  await rows(page)
+    .filter({ hasText: 'Show HN: A local-first archive' })
+    .getByRole('button', { name: 'Save' })
+    .click();
+  await page.getByRole('link', { name: /^Saved/ }).click();
+  const saved = page.getByRole('table', { name: 'Saved' });
+  await expect(saved.getByRole('row')).toHaveCount(14); // header + 13: one added, one removed
+  await expect(saved.getByRole('row').nth(1)).toContainText('Building a home server rack');
+  await expect(saved.getByText('Show HN: A local-first archive')).toHaveCount(0);
+});
+
 test('media preview opens from a thumbnail, closes on Escape, and can open the thread', async ({
   page,
 }) => {
@@ -169,6 +186,7 @@ test('media preview: light theme', async ({ page }) => {
   await page.getByRole('button', { name: 'Preview video' }).first().click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await expect(page).toHaveScreenshot('media-preview-light.png');
+  expect(await axeFailures(page)).toEqual([]);
 });
 
 test('ask bar: a question opens Ask with an honest placeholder answer; blank does nothing', async ({

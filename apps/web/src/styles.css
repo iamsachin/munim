@@ -83,7 +83,8 @@
   --color-a3: oklch(0.45 0.1 20);
   --color-a4: oklch(0.45 0.1 305);
   --color-ok: oklch(0.45 0.1 155);
-  --color-scrim: oklch(0.3 0.008 255 / 0.6);
+  /* A light veil: the preview's caption sits on it in dark ink. */
+  --color-scrim: oklch(0.99 0.008 255 / 0.86);
 }
 
 @layer base {
@@ -142,5 +143,5 @@
 
 /* Reply nesting: one step per level. The element sets --depth. */
 @utility thread-indent {
-  margin-left: calc(var(--depth, 0) * 16px);
+  margin-left: calc(var(--depth, 0) * var(--spacing) * 16);
 }
