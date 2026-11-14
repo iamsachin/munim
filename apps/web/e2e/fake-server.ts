@@ -130,7 +130,11 @@ export async function fakeServer(page: Page, start: State = 'open') {
     start: 0,
     end: 0,
   }));
-  let hackerNews = { enabled: true, synced_at: ago(2 * 60_000), problem: '' };
+  let hackerNews: { enabled: boolean; synced_at: string | null; problem: string } = {
+    enabled: true,
+    synced_at: ago(2 * 60_000),
+    problem: '',
+  };
   let devices = [
     { id: 1, name: 'Chrome on macOS', last_seen: ago(0), current: true },
     { id: 2, name: 'Safari on iPhone', last_seen: ago(2 * HOUR), current: false },
@@ -435,6 +439,15 @@ export async function fakeServer(page: Page, start: State = 'open') {
             .match(/[\p{L}\p{N}]+/gu) ?? []
         ).map((word) => [word]),
       });
+    }
+    if (call === 'POST delete-all') {
+      if (await refused(body.passphrase, 403)) return;
+      items.splice(0, items.length);
+      feeds.splice(0, feeds.length);
+      highlights = [];
+      for (const provider of Object.keys(aiKeys)) aiKeys[provider] = null;
+      hackerNews = { enabled: false, synced_at: null, problem: '' };
+      return reply(204);
     }
     if (call === 'POST passphrase') {
       if (await refused(body.current, 403)) return;

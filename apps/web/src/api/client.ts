@@ -80,6 +80,7 @@ export const api = {
   active: () => call<undefined>('POST', 'active'),
   changePassphrase: (current: string, next: string) =>
     call<undefined>('POST', 'passphrase', { current, new: next } satisfies Schemas['ChangeIn']),
+  deleteAll: (value: string) => call<undefined>('POST', 'delete-all', passphrase(value)),
   devices: () => call<Device[]>('GET', 'devices'),
   revokeDevice: (id: number) => call<undefined>('DELETE', `devices/${String(id)}`),
   lockSettings: () => call<Schemas['LockSettings']>('GET', 'lock-settings'),

@@ -332,4 +332,33 @@ test('a fresh install, from set-up to the admin, against the real server', async
     // Having signed in, it goes on to the admin page that was asked for.
     await expect(heading(other, 'Site administration')).toBeVisible();
   });
+
+  await test.step('everything can be exported, then deleted with the passphrase', async () => {
+    await page.goto('/settings');
+    const downloading = page.waitForEvent('download');
+    await page.getByRole('link', { name: 'Export everything' }).click();
+    const download = await downloading;
+    expect(download.suggestedFilename()).toMatch(/^munim-export-\d{4}-\d{2}-\d{2}\.zip$/);
+    // A zip, and one that holds the article that was saved.
+    const archive = readFileSync(await download.path());
+    expect(archive.subarray(0, 2).toString()).toBe('PK');
+    expect(archive.includes('saved/')).toBe(true);
+
+    await page.getByRole('button', { name: 'Delete all data' }).click();
+    await page.getByLabel('Passphrase to confirm deleting').fill('not the passphrase');
+    await page.getByRole('button', { name: 'Delete everything' }).click();
+    await expect(page.getByRole('alert')).toHaveText('That passphrase is not right.');
+    await expect(page.getByRole('link', { name: /^Saved/ })).toHaveText(/1$/);
+
+    await page.getByLabel('Passphrase to confirm deleting').fill(NEW_PASSPHRASE);
+    await page.getByRole('button', { name: 'Delete everything' }).click();
+    await expect(page.getByRole('status')).toHaveText('Everything was deleted.');
+    await expect(page.getByRole('link', { name: /^Saved/ })).toHaveText(/0$/);
+    // Gone on the server, not only from this page; and the owner is still signed in.
+    await page.reload();
+    await expect(page.getByRole('link', { name: /^Stream/ })).toHaveText(/0$/);
+    await page.goto('/rss');
+    await expect(page.getByText('No feeds yet. Add one below.')).toBeVisible();
+    forgetWrongPassphrases();
+  });
 });

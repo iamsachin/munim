@@ -8,6 +8,8 @@ Last updated: 2026-11-14
 
 Milestone 3 in progress. Merged: the Django scaffold (#6), the account API (#8), the web app signing in against the server (#9), RSS (#10), background polling (#11), the Stream on real items (#12), feed articles readable in the thread pane (#13), rich text as blocks with images fetched through the server (#14), Hacker News with its discussions (#15), sealed storage for secrets with the AI provider keys on the server (#16), the Docker Compose install (#17), full-text search in the Stream (#18), search matches marked in the open article (#19), highlights on the server (#20), removing a feed (#21), and the Encryption card (#22).
 
+Open: export and delete-all.
+
 Still on sample data in the browser: watches, digest, Ask, every Connections row except Hacker News, and on the AI screen the models, usage and limit (the provider keys are real).
 
 Next: YouTube, once the owner has chosen between an API key and OAuth.
@@ -79,12 +81,12 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] Master key file, generated on first use (or `MUNIM_MASTER_KEY`)
 - [x] Server: passphrase sign-in, sessions, device list with Revoke, lock and idle lock, change passphrase (Django auth and sessions)
 - [x] Server-side rate limiting on every passphrase check, with growing waits, counted in the database; tested by attempting a brute force from one address and from many
-- [ ] Delete-all, when it exists, must confirm the passphrase through the same check
+- [x] Delete-all confirms the passphrase through the same rate-limited check as sign-in
 - [ ] Trusted reverse-proxy setting, so the limit sees real client addresses behind a proxy
 - [x] Web app wired to the account API: setup, sign-in, lock screen with an idle timer, devices, lock settings, change passphrase
 - [ ] Idle lock: watch it happen for real once (15 minutes in a browser); so far proven by unit tests and by the server's tests
 - [x] Encryption card on Security and settings, saying what this install does; and a line on the AI screen about how keys are kept (approved)
-- [ ] Export and delete-all (buttons are disabled until the server stores data; the approved passphrase confirmation for delete-all returns with it)
+- [x] Export (a zip of JSON and text files, with no secrets in it) and delete-all (feeds, items, highlights, connections and API keys; the account stays)
 - [x] Encrypted storage for secrets (`munim/vault.py`), first used by the AI provider keys, which the server checks with the provider and stores sealed
 - [ ] The Connections note about stored tokens returns when a source stores one (YouTube or Reddit); the sidebar's status slot stays the Commands button
 - [x] RSS: add a feed, fetch and parse it safely, read its articles; every feed is polled every fifteen minutes
