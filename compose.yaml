@@ -1,0 +1,22 @@
+# Development database. The full install, with the app container, is added later in milestone 3.
+# Start it with `docker compose up -d db`. The password is for local development only, and the
+# port is bound to this machine alone.
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: munim
+      POSTGRES_PASSWORD: munim
+      POSTGRES_DB: munim
+    ports:
+      - '127.0.0.1:5433:5432'
+    volumes:
+      - db:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U munim']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  db:

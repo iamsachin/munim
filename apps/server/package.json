@@ -1,0 +1,11 @@
+{
+  "name": "server",
+  "private": true,
+  "scripts": {
+    "dev": "MUNIM_DEBUG=1 uv run python manage.py runserver 8000",
+    "typecheck": "MUNIM_DEBUG=1 uv run mypy .",
+    "lint": "uv run ruff check . && uv run ruff format --check .",
+    "format": "uv run ruff check --fix . && uv run ruff format .",
+    "test": "MUNIM_DEBUG=1 uv run pytest -q"
+  }
+}

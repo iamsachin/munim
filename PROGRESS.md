@@ -6,9 +6,9 @@ Last updated: 2026-11-14
 
 ## Now
 
-Milestone 2 is complete: every screen runs on sample data, approved by the owner and merged (pull requests #1 to #5).
+Milestone 3 has started. On branch `milestone-3-server` (pull request #6): the Django scaffold, a health endpoint, the OpenAPI document, and the development database.
 
-Next: milestone 3, the Django server. Start with the scaffold in `apps/server` and the open decision on YouTube access.
+Next: passphrase sign-in and sessions with server-side rate limiting, which is a critical pull request and gets a duhview review.
 
 ## 0. Preparation
 
@@ -63,8 +63,9 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 
 ## 3. Server, sign-in, sources
 
-- [ ] Server scaffold in `apps/server`: Django, Django Ninja, uv, ruff, mypy, pytest, wired into `pnpm check`
-- [ ] Postgres, Django models and migrations, admin
+- [x] Server scaffold in `apps/server`: Django, Django Ninja, uv, ruff, mypy, pytest, wired into `pnpm check`
+- [x] Development Postgres in Docker; Django admin and built-in migrations
+- [ ] Munim's own models and migrations
 - [ ] OpenAPI document, generated front-end client replacing the mock store
 - [ ] Loading, error and empty states wired into every screen (`ui/States.tsx`, wording in `reader/copy.ts`)
 - [ ] Postgres job queue and scheduler
