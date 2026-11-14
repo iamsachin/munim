@@ -119,6 +119,7 @@ The development database (`munim`, behind `pnpm dev` on ports 5173 and 8000) is 
 - A source followed as a whole (Hacker News) has a `Connection` row and is off until the owner switches it on in Connections. Switching it on queues its first fetch for the worker; it is never fetched inside the request.
 - A reply's text is blocks too, drawn by the same `Blocks` component. Replies carry no images.
 - A highlight is stored by where it is: the item, the reply (or none), the unit (each paragraph, heading, quotation paragraph and list item is one; `reader/units.ts`) and the characters within it, plus its words. The browser marks it there if the words still match, and otherwise finds it by its words. A new kind of block must say how many units it is (`unitCount`).
+- Whatever the owner can put into Munim is in `munim/data.py`: `export()` writes it into the archive and `delete_all()` removes it. A new model that holds the owner's data must be added to both, and to the list in the archive's README. Secrets are never exported.
 - Search is Postgres full-text on `Item.search`, a column Postgres itself keeps from the title and the text, so nothing has to remember to update it. Text a search should find must end up in `Item.body`.
 - Server data in the web app is read with TanStack Query (`apps/web/src/api/queries.tsx`); each screen shows `LoadingRows`, `ErrorState` and `EmptyState` for its own reads.
 - An install reached through a reverse proxy must list its public address in `MUNIM_TRUSTED_ORIGINS`, or Django refuses its calls as cross-site.

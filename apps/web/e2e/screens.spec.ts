@@ -798,6 +798,61 @@ test('settings: the Encryption card says what this install does, and no more', a
   await expect(card).toContainText('Kept only as a hash');
 });
 
+test('settings: export is a download; deleting everything asks for the passphrase', async ({
+  page,
+}) => {
+  await open(page, '/settings');
+  const exportLink = page.getByRole('link', { name: 'Export everything' });
+  await expect(exportLink).toHaveAttribute('href', '/api/export');
+  await expect(exportLink).toHaveAttribute('download', '');
+
+  await page.getByRole('button', { name: 'Delete all data' }).click();
+  const field = page.getByLabel('Passphrase to confirm deleting');
+  await expect(field).toBeFocused();
+  await expect(
+    page.getByText('This cannot be undone. Enter your passphrase to confirm.'),
+  ).toBeVisible();
+  await expect(page).toHaveScreenshot('settings-delete-all-dark.png');
+  expect(await axeFailures(page)).toEqual([]);
+
+  // Cancel changes nothing; neither does a wrong passphrase.
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await expect(field).toHaveCount(0);
+  await page.getByRole('button', { name: 'Delete all data' }).click();
+  await field.fill('not it');
+  await page.getByRole('button', { name: 'Delete everything' }).click();
+  await expect(page.getByRole('alert')).toHaveText('That passphrase is not right.');
+  await expect(page.getByRole('link', { name: /^Stream/ })).toHaveText(/22$/);
+
+  await field.fill(GOOD);
+  await page.getByRole('button', { name: 'Delete everything' }).click();
+  await expect(page.getByRole('status')).toHaveText('Everything was deleted.');
+  await expect(field).toHaveCount(0);
+  // Every count follows, and the owner is still signed in.
+  await expect(page.getByRole('link', { name: /^Stream/ })).toHaveText(/0$/);
+  await expect(page.getByRole('link', { name: /^Highlights/ })).toHaveText(/0$/);
+  await page.getByRole('link', { name: /^Stream/ }).click();
+  await expect(
+    page.getByText('Nothing here yet. Connect a source and its items appear here.'),
+  ).toBeVisible();
+});
+
+test('settings: after three wrong passphrases, deleting has to wait', async ({ page }) => {
+  await open(page, '/settings');
+  await page.getByRole('button', { name: 'Delete all data' }).click();
+  const field = page.getByLabel('Passphrase to confirm deleting');
+  for (let i = 0; i < 3; i++) {
+    await field.fill('wrong');
+    await page.getByRole('button', { name: 'Delete everything' }).click();
+    await expect(page.getByRole('alert')).toHaveText('That passphrase is not right.');
+    await field.fill('');
+  }
+  await field.fill(GOOD);
+  await page.getByRole('button', { name: 'Delete everything' }).click();
+  await expect(page.getByRole('alert')).toHaveText(/Too many attempts\. Try again in 30 seconds\./);
+  await expect(page.getByRole('link', { name: /^Stream/ })).toHaveText(/22$/);
+});
+
 test('settings: appearance applies at once and survives a reload', async ({ page }) => {
   // Not open(): its init script would reset the saved theme on reload.
   await fakeServer(page);
@@ -1015,18 +1070,6 @@ test('settings: revoking a device removes it; signing out leaves the app', async
   await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
 });
 
-test('settings: export and delete say they are not available yet', async ({ page }) => {
-  await open(page, '/settings');
-  for (const name of ['Export everything', 'Delete all data']) {
-    const button = page.getByRole('button', { name });
-    await expect(button).toBeDisabled();
-    await expect(button).toHaveAttribute('title', /Available when Munim stores your data/);
-  }
-});
-
-const threadHeading = (page: Page) =>
-  page.getByRole('complementary', { name: 'Thread' }).getByRole('heading');
-
 test('keyboard: g then a letter goes to a view, and typing in a field is left alone', async ({
   page,
 }) => {
@@ -1046,6 +1089,9 @@ test('keyboard: g then a letter goes to a view, and typing in a field is left al
   await expect(search).toHaveValue('gv');
   await expect(page).toHaveURL(/\/stream$/);
 });
+
+const threadHeading = (page: Page) =>
+  page.getByRole('complementary', { name: 'Thread' }).getByRole('heading');
 
 test('keyboard: j and k move through the stream, and s, l, a act on the selected item', async ({
   page,

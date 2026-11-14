@@ -8,8 +8,9 @@ from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
-from django.http import HttpRequest, HttpResponse
+from django.http import FileResponse, HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from ninja import Field, Router, Schema, Status
 from ninja.decorators import decorate_view
@@ -19,7 +20,7 @@ from account.auth import OWNER, Csrf, Open, SignedIn, is_locked, mark_active, ow
 from account.models import Device, Preferences
 from account.throttle import TooManyAttempts, address, attempt
 from ai.models import ProviderKey
-from munim import vault
+from munim import data, vault
 
 router = Router(tags=["account"])
 
@@ -247,3 +248,23 @@ def security(request: HttpRequest) -> SecurityOut:
     return SecurityOut.model_validate(
         {"master_key": vault.kept_in(), "sealed": ProviderKey.objects.count()}
     )
+
+
+@router.get("/export", auth=Open(), include_in_schema=False)
+def export(request: HttpRequest) -> FileResponse:
+    """Everything Munim holds, as a zip of JSON and text files. No secrets are in it."""
+    name = f"munim-export-{timezone.localdate().isoformat()}.zip"
+    return FileResponse(
+        data.export(), as_attachment=True, filename=name, content_type="application/zip"
+    )
+
+
+@router.post("/delete-all", auth=Open(), response={204: None, 403: Error, 429: Wait})
+def delete_all(
+    request: HttpRequest, response: HttpResponse, body: PassphraseIn
+) -> Status[None] | Status[Error] | Status[Wait]:
+    """Removes everything the owner put into Munim, after the passphrase. The account stays."""
+    if refusal := _check(request, response, body.passphrase, wrong=403):
+        return refusal
+    data.delete_all()
+    return Status(204, None)

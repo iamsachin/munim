@@ -305,6 +305,35 @@
         "security": [{ "Open": [] }]
       }
     },
+    "/api/delete-all": {
+      "post": {
+        "operationId": "account_api_delete_all",
+        "summary": "Delete All",
+        "parameters": [],
+        "responses": {
+          "204": { "description": "No Content" },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Wait" } } }
+          }
+        },
+        "description": "Removes everything the owner put into Munim, after the passphrase. The account stays.",
+        "tags": ["account"],
+        "requestBody": {
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/PassphraseIn" } }
+          },
+          "required": true
+        },
+        "security": [{ "Open": [] }]
+      }
+    },
     "/api/feeds": {
       "get": {
         "operationId": "reader_api_list_feeds",

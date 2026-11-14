@@ -1,8 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState, type ReactNode } from 'react';
 import { api, reason, Refused, type Device, type LockMinutes } from '../api/client';
 import { SectionLabel, StatusDot } from '../ui/atoms';
-import { Button } from '../ui/Button';
+import { Button, buttonClass } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { Chip } from '../ui/Chip';
 import { focusOnMount, Input } from '../ui/Input';
@@ -280,26 +280,106 @@ export function DevicesCard() {
   );
 }
 
-const NOT_YET = 'Available when Munim stores your data on the server';
-
-/** Both actions need data on the server, which does not exist yet, so they say so and do nothing. */
+/**
+ * Export hands over everything Munim holds; Delete all removes it, after the passphrase. The
+ * account itself (passphrase, devices, lock setting) stays.
+ */
 export function DataCard() {
+  const session = useSession();
+  const queries = useQueryClient();
+  const [confirming, setConfirming] = useState(false);
+  const [passphrase, setPassphrase] = useState('');
+  const [problem, setProblem] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+
+  const close = () => {
+    setConfirming(false);
+    setPassphrase('');
+    setProblem(null);
+  };
+  const remove = async () => {
+    setBusy(true);
+    try {
+      await api.deleteAll(passphrase);
+      close();
+      setDone(true);
+      // Every list and count on every screen is now out of date.
+      await queries.invalidateQueries();
+    } catch (error) {
+      if (session.refused(error)) return;
+      if (error instanceof Refused && error.waitSeconds) setProblem(waitMessage(error.waitSeconds));
+      else if (error instanceof Refused && error.status === 403) {
+        setProblem('That passphrase is not right.');
+      } else setProblem(reason(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <Card className="gap-8">
       <SectionLabel as="h2">Your data</SectionLabel>
       <p className="text-pretty text-mute">
-        Export downloads everything Munim holds as an archive of JSON and text files. Deleting
-        removes every saved item, highlight, watch and connection, after you confirm with your
-        passphrase.
+        Export downloads everything Munim holds as an archive of JSON and text files, except the API
+        keys you gave it. Deleting removes every feed, item, highlight, connection and API key,
+        after you confirm with your passphrase. Your passphrase and devices stay.
       </p>
       <div className="flex gap-6">
-        <Button size="lg" disabled title={NOT_YET}>
+        {/* A plain link: the browser downloads the archive the server sends. */}
+        <a href="/api/export" download className={buttonClass({ size: 'lg' })}>
           Export everything
-        </Button>
-        <Button size="lg" danger disabled title={NOT_YET}>
+        </a>
+        <Button
+          size="lg"
+          danger
+          aria-expanded={confirming}
+          onClick={() => {
+            setDone(false);
+            setConfirming(true);
+          }}
+        >
           Delete all data
         </Button>
       </div>
+      {confirming && (
+        <form
+          className="flex flex-col gap-6"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (passphrase && !busy) void remove();
+          }}
+        >
+          <p className="text-a3">This cannot be undone. Enter your passphrase to confirm.</p>
+          <div className="flex gap-6">
+            <Input
+              ref={focusOnMount}
+              size="md"
+              type="password"
+              autoComplete="current-password"
+              className="flex-1"
+              aria-label="Passphrase to confirm deleting"
+              placeholder="Passphrase"
+              value={passphrase}
+              onChange={(e) => {
+                setPassphrase(e.target.value);
+              }}
+            />
+            <Button type="submit" size="stretch" danger disabled={busy}>
+              Delete everything
+            </Button>
+            <Button size="stretch" onClick={close}>
+              Cancel
+            </Button>
+          </div>
+          <Problem>{problem}</Problem>
+        </form>
+      )}
+      {done && (
+        <p role="status" className="text-note text-mute">
+          Everything was deleted.
+        </p>
+      )}
     </Card>
   );
 }

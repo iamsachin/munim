@@ -245,6 +245,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/delete-all': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Delete All
+     * @description Removes everything the owner put into Munim, after the passphrase. The account stays.
+     */
+    post: operations['account_api_delete_all'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/feeds': {
     parameters: {
       query?: never;
@@ -1283,6 +1303,46 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['SecurityOut'];
+        };
+      };
+    };
+  };
+  account_api_delete_all: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PassphraseIn'];
+      };
+    };
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+      /** @description Too Many Requests */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Wait'];
         };
       };
     };
