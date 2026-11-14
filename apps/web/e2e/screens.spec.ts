@@ -15,6 +15,8 @@ const SCREENS = [
   ['connections', '/connections'],
   ['ai', '/ai'],
   ['settings', '/settings'],
+  ['setup', '/setup'],
+  ['sign-in', '/sign-in'],
 ] as const;
 
 // Both themes, every density, and the narrowest supported width. `axe` marks the two runs that
@@ -371,4 +373,174 @@ test('settings: appearance applies at once and survives a reload', async ({ page
   await expect(html).toHaveAttribute('data-theme', 'light');
   await expect(page.getByRole('button', { name: 'Blue' })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('button', { name: 'Roomy' })).toHaveAttribute('aria-pressed', 'true');
+});
+
+const GOOD = 'four unrelated words';
+
+test('first run: the passphrase must be long enough and repeated exactly', async ({ page }) => {
+  await open(page, '/setup');
+  const first = page.getByLabel('Passphrase', { exact: true });
+  await expect(first).toBeFocused();
+  await first.fill('short');
+  await page.getByLabel('Repeat passphrase').fill('short');
+  await page.getByRole('button', { name: 'Create and open Munim' }).click();
+  await expect(page.getByRole('alert')).toHaveText('Use at least 12 characters.');
+  await expect(page).toHaveURL(/\/setup$/);
+
+  await first.fill(GOOD);
+  await page.getByLabel('Repeat passphrase').fill('four unrelated wordz');
+  await page.getByRole('button', { name: 'Create and open Munim' }).click();
+  await expect(page.getByRole('alert')).toHaveText('The two entries do not match.');
+  await expect(page).toHaveScreenshot('setup-problem-dark.png');
+  expect(await axeFailures(page)).toEqual([]);
+
+  await page.getByLabel('Repeat passphrase').fill(GOOD);
+  await page.getByRole('button', { name: 'Create and open Munim' }).click();
+  await expect(page).toHaveURL(/\/today$/);
+});
+
+test('sign-in: a wrong passphrase is refused, three in a row must wait, the right one opens Today', async ({
+  page,
+}) => {
+  await open(page, '/sign-in');
+  const field = page.getByLabel('Passphrase');
+  await field.fill('wrong');
+  await field.press('Enter');
+  await expect(page.getByRole('alert')).toHaveText('That passphrase is not right.');
+  await expect(field).toHaveValue('');
+  await expect(page).toHaveScreenshot('sign-in-wrong-dark.png');
+  expect(await axeFailures(page)).toEqual([]);
+
+  await field.fill(GOOD);
+  await field.press('Enter');
+  await expect(page).toHaveURL(/\/today$/);
+
+  await page.goto('/sign-in');
+  for (let i = 0; i < 3; i++) {
+    await page.getByLabel('Passphrase').fill('wrong');
+    await page.getByRole('button', { name: 'Sign in' }).click();
+  }
+  await expect(page.getByRole('alert')).toHaveText('Too many attempts. Try again in 30 seconds.');
+  await expect(page.getByRole('button', { name: 'Sign in' })).toBeDisabled();
+  await expect(page.getByLabel('Passphrase')).toBeDisabled();
+  await expect(page).toHaveScreenshot('sign-in-waiting-dark.png');
+});
+
+test('sign-in: the wait ends after thirty seconds', async ({ page }) => {
+  await page.clock.install();
+  await open(page, '/sign-in');
+  for (let i = 0; i < 3; i++) {
+    await page.getByLabel('Passphrase').fill('wrong');
+    await page.getByRole('button', { name: 'Sign in' }).click();
+  }
+  await expect(page.getByRole('button', { name: 'Sign in' })).toBeDisabled();
+  await page.clock.fastForward(30_000);
+  await expect(page.getByRole('button', { name: 'Sign in' })).toBeEnabled();
+  await expect(page.getByRole('alert')).toBeHidden();
+});
+
+for (const theme of ['Dark', 'Light']) {
+  test(`lock: covers the app, and unlocking returns to the same place (${theme})`, async ({
+    page,
+  }) => {
+    await open(page, '/settings', theme);
+    await page.getByRole('button', { name: 'Lock', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Locked' })).toBeVisible();
+    // The app underneath is inert: not clickable, not focusable, not read aloud.
+    const app = page.locator('div[inert]');
+    await expect(app).toHaveCount(1);
+    await expect(app.getByRole('link', { name: /^Today/ })).toHaveCount(1);
+    for (let i = 0; i < 8; i++) {
+      await page.keyboard.press('Tab');
+      expect(await page.evaluate(() => !!document.activeElement?.closest('[inert]'))).toBe(false);
+    }
+    await expect(page).toHaveScreenshot(`locked-${theme.toLowerCase()}.png`);
+    expect(await axeFailures(page)).toEqual([]);
+
+    await page.getByLabel('Passphrase').fill('nope');
+    await page.getByRole('button', { name: 'Unlock' }).click();
+    await expect(page.getByRole('alert')).toHaveText('That passphrase is not right.');
+
+    await page.getByLabel('Passphrase').fill(GOOD);
+    await page.getByRole('button', { name: 'Unlock' }).click();
+    await expect(page.getByRole('heading', { name: 'Locked' })).toHaveCount(0);
+    await expect(app).toHaveCount(0);
+    await expect(page).toHaveURL(/\/settings$/);
+    await expect(page.getByRole('heading', { name: 'Security and settings' })).toBeVisible();
+  });
+}
+
+test('lock: signing out from the lock screen leaves the app', async ({ page }) => {
+  await open(page, '/settings');
+  await page.getByRole('button', { name: 'Lock', exact: true }).click();
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  await expect(page).toHaveURL(/\/sign-in$/);
+});
+
+test('settings: idle lock can be retimed or switched off', async ({ page }) => {
+  await open(page, '/settings');
+  await expect(page.getByText('After 15 minutes without activity')).toBeVisible();
+  await page
+    .getByRole('group', { name: 'Lock after' })
+    .getByRole('button', { name: '1 hour' })
+    .click();
+  await expect(page.getByText('After 1 hour without activity')).toBeVisible();
+  await page.getByRole('switch', { name: 'Lock when idle' }).click();
+  await expect(page.getByText('Munim stays open until you sign out')).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Lock after' })).toHaveCount(0);
+});
+
+test('settings: changing the passphrase checks the current one and the new one', async ({
+  page,
+}) => {
+  await open(page, '/settings');
+  await page.getByRole('button', { name: 'Change' }).click();
+  await page.getByLabel('Current passphrase').fill('nope');
+  await page.getByLabel('New passphrase', { exact: true }).fill(GOOD);
+  await page.getByLabel('Repeat new passphrase').fill(GOOD);
+  await page.getByRole('button', { name: 'Save passphrase' }).click();
+  await expect(page.getByRole('alert')).toHaveText('The current passphrase is not right.');
+
+  await page.getByLabel('Current passphrase').fill('the old passphrase');
+  await page.getByLabel('Repeat new passphrase').fill('something else here');
+  await page.getByRole('button', { name: 'Save passphrase' }).click();
+  await expect(page.getByRole('alert')).toHaveText('The two entries do not match.');
+
+  await page.getByLabel('Repeat new passphrase').fill(GOOD);
+  await page.getByRole('button', { name: 'Save passphrase' }).click();
+  await expect(page.getByRole('status')).toHaveText(/this build runs on sample data/);
+  await expect(page.getByLabel('Current passphrase')).toHaveCount(0);
+});
+
+test('settings: revoking a device removes it; signing out leaves the app', async ({ page }) => {
+  await open(page, '/settings');
+  await page.getByRole('button', { name: 'Revoke Safari on iPhone' }).click();
+  await expect(page.getByText('Safari on iPhone')).toHaveCount(0);
+  await expect(page.getByText('Firefox on Linux')).toBeVisible();
+  await page.getByRole('link', { name: 'Sign out' }).click();
+  await expect(page).toHaveURL(/\/sign-in$/);
+});
+
+test('settings: deleting everything needs the passphrase, and the mock says it did nothing', async ({
+  page,
+}) => {
+  await open(page, '/settings');
+  await page.getByRole('button', { name: 'Change' }).click();
+  await page.getByRole('button', { name: 'Delete all data' }).click();
+  const confirm = page.getByLabel('Passphrase to confirm deleting');
+  await expect(confirm).toBeFocused();
+  await expect(page).toHaveScreenshot('settings-forms-open-dark.png');
+  expect(await axeFailures(page)).toEqual([]);
+
+  await confirm.fill('nope');
+  await page.getByRole('button', { name: 'Delete everything' }).click();
+  await expect(page.getByText('That passphrase is not right.')).toBeVisible();
+  await confirm.fill(GOOD);
+  await page.getByRole('button', { name: 'Delete everything' }).click();
+  await expect(confirm).toHaveCount(0);
+  await expect(page.getByText(/Nothing happened: this build runs on sample data/)).toBeVisible();
+
+  await page.getByRole('button', { name: 'Delete all data' }).click();
+  await page.getByRole('button', { name: 'Cancel' }).last().click();
+  await expect(page.getByLabel('Passphrase to confirm deleting')).toHaveCount(0);
 });

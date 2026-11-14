@@ -2,6 +2,8 @@ import { Navigate, Route, Routes } from 'react-router';
 import { AiSettings } from './account/AiSettings';
 import { Connections } from './account/Connections';
 import { Settings } from './account/Settings';
+import { Setup } from './account/Setup';
+import { SignIn } from './account/SignIn';
 import { Gallery } from './gallery/Gallery';
 import { Ask } from './reader/Ask';
 import { DigestScreen } from './reader/DigestScreen';
@@ -31,6 +33,8 @@ export function App() {
         <Route path="ai" element={<AiSettings />} />
         <Route path="settings" element={<Settings />} />
       </Route>
+      <Route path="setup" element={<Setup />} />
+      <Route path="sign-in" element={<SignIn />} />
       {/* The design-system reference; not linked from the app. */}
       <Route path="gallery" element={<Gallery />} />
       <Route path="*" element={<Navigate to="/today" replace />} />

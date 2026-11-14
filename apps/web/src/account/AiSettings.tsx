@@ -4,7 +4,7 @@ import { ScreenHeader } from '../shell/ScreenHeader';
 import { AiBadge, SectionLabel, StatusDot } from '../ui/atoms';
 import { Button } from '../ui/Button';
 import { Chip } from '../ui/Chip';
-import { Input } from '../ui/Input';
+import { focusOnMount, Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Cell, Table, TableHeader, TableRow, Th } from '../ui/Table';
 import { Toggle } from '../ui/Toggle';
@@ -108,9 +108,7 @@ export function AiSettings() {
                     }}
                   >
                     <Input
-                      ref={(el) => {
-                        el?.focus();
-                      }}
+                      ref={focusOnMount}
                       type="password"
                       autoComplete="off"
                       className="w-full max-w-360"
