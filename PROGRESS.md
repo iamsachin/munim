@@ -6,12 +6,9 @@ Last updated: 2026-11-14
 
 ## Now
 
-On branch `milestone-2-highlights` (pull request #5). Built, passing all gates, **waiting for the owner's approval** (`pnpm dev`): the last two pieces of milestone 2.
+Milestone 2 is complete: every screen runs on sample data, approved by the owner and merged (pull requests #1 to #5).
 
-1. Replies only where the source allows them: Reddit keeps its reply box; the others say why not.
-2. Highlighting by selecting text in a comment or article, marked in place, with notes and removal on the Highlights screen.
-
-When these are approved, milestone 2 is complete and milestone 3 (the Django server) begins.
+Next: milestone 3, the Django server. Start with the scaffold in `apps/server` and the open decision on YouTube access.
 
 ## 0. Preparation
 
@@ -53,16 +50,16 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] Ask
 - [x] Connections
 - [x] Appearance settings (theme, accent, density), remembered in the browser
-- [ ] **Designed screens approved by owner**
+- [x] **Designed screens approved by owner**
 - [x] Security and settings: Sign-in and lock, Devices, Your data (design gap, approved)
 - [x] AI settings: keys, per-feature model, monthly limit, usage (design gap, approved)
 - [x] On-demand summaries in place of automatic ones (approved)
 - [x] First-run setup, sign-in, lock screen (design gap, approved)
 - [x] Loading, error and empty states: patterns and wording (design gap, approved; wired in milestone 3)
 - [x] Keyboard navigation, command palette, shortcut help (design gap, approved)
-- [ ] Disabled-reply state for sources without an official write API (design gap; built, awaiting approval)
-- [ ] Highlight by selecting text, with a note (built, awaiting approval)
-- [ ] **Approved by owner**
+- [x] Disabled-reply state for sources without an official write API (design gap, approved)
+- [x] Highlight by selecting text, with a note (approved)
+- [x] **Approved by owner**
 
 ## 3. Server, sign-in, sources
 
@@ -85,6 +82,7 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [ ] Reddit (official OAuth)
 - [ ] Saving: full text, threads, transcripts, thumbnails
 - [ ] Search (Postgres full-text)
+- [ ] Highlights stored with their position in the text, so a short quote is not also marked inside other words
 - [ ] **Approved by owner**
 
 ## 4. AI and write-back

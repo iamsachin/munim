@@ -83,6 +83,8 @@ Single-key shortcuts are registered with `useKeys` from `shell/keys.ts`, which i
 - The Ask scope "Open thread" is "Open item", since it also covers articles.
 - Security and settings drops "Unlock with Touch ID or Face ID" and "Hide previews in notifications" (a web app has neither), lists browsers rather than apps under Devices, and adds idle-lock timing, "Lock now" and "Change passphrase".
 - The sidebar's bottom slot, the handoff's encryption status button, is the "Commands" button; it is pinned and the navigation scrolls above it.
+- The reply box appears only for sources in which Munim can write (`NO_REPLY` in `reader/marks.ts` lists the ones it cannot, with the line shown instead). RSS items have no replies at all.
+- Highlights are made by selecting text in a comment or an article body (`SelectionHighlight`, `highlightable()`), are marked in place by matching the quote's text, and get their notes on the Highlights screen. Text already inside a highlight offers nothing.
 - Counts are computed from the data (the sidebar's RSS count is 7, not the handoff's hard-coded 9).
 
 ## Shared components
