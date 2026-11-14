@@ -5,6 +5,7 @@ import pytest
 from django.test import Client
 from django.utils import timezone
 
+from reader.blocks import from_text
 from reader.models import Feed, Item
 
 from .conftest import post
@@ -24,6 +25,7 @@ def stream(owner_client: Client) -> Client:
             guid=title,
             title=title,
             body=body,
+            blocks=from_text(body),
             url=f"https://example.com/{title.split()[0].lower()}",
             published_at=BASE - timedelta(hours=hours_ago),
         )
@@ -69,7 +71,10 @@ def test_the_stream_lists_items_newest_first(stream: Client) -> None:
 
 def test_an_opened_item_has_its_text_and_address(stream: Client) -> None:
     opened = stream.get(f"/api/items/{the(stream, 'Sync')['id']}").json()
-    assert opened["paragraphs"] == ["First paragraph.", "Second paragraph."]
+    assert opened["blocks"] == [
+        {"type": "paragraph", "spans": [{"text": "First paragraph.", "marks": [], "href": None}]},
+        {"type": "paragraph", "spans": [{"text": "Second paragraph.", "marks": [], "href": None}]},
+    ]
     assert opened["url"] == "https://example.com/sync"
     assert opened["comments"] == []
     assert stream.get("/api/items/999999").status_code == 404
@@ -150,7 +155,7 @@ def test_a_refetch_keeps_what_the_owner_did_with_an_item(owner_client: Client, w
     poll_feeds(timestamp=0)
 
     again = owner_client.get(f"/api/items/{year['id']}").json()
-    assert again["paragraphs"][0] == "I started the year with 131 feeds."
+    assert again["blocks"][0]["spans"][1]["text"] == "131 feeds"
     assert again["unread"] is False and again["saved_at"] is not None
 
 

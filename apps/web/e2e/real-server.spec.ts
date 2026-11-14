@@ -1,4 +1,5 @@
 import { execSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { expect, test, type Page } from '@playwright/test';
@@ -30,7 +31,9 @@ const FEED = `<?xml version="1.0"?>
     <link>https://lowtech.example/year</link><guid>year</guid>
     <pubDate>Sat, 14 Nov 2026 06:00:00 GMT</pubDate>
     <description><![CDATA[<p>I started the year with <b>130 feeds</b>.</p>
-      <script>document.title = 'hacked'</script><p>By March it was a second inbox.</p>]]></description>
+      <script>document.title = 'hacked'</script><p>By March it was a second inbox.</p>
+      <img src="http://SITE/pic.png" alt="The reader on a small screen" onerror="document.title = 'hacked'">
+      <img src="http://SITE/missing.png" alt="A chart that is gone">]]></description>
   </item>
   <item><title>Reading in the evening</title>
     <link>https://lowtech.example/evening</link><guid>evening</guid>
@@ -42,9 +45,21 @@ const FEED = `<?xml version="1.0"?>
 /** A web site on this machine with one feed and one ordinary page, for the server to fetch. */
 async function feedSite() {
   const site = createServer((request, response) => {
-    const isFeed = request.url === '/feed.xml';
-    response.writeHead(200, { 'Content-Type': isFeed ? 'application/rss+xml' : 'text/html' });
-    response.end(isFeed ? FEED : '<html><body>Just a page</body></html>');
+    if (request.url === '/pic.png') {
+      response.writeHead(200, { 'Content-Type': 'image/png' });
+      response.end(readFileSync(new URL('./sample.png', import.meta.url)));
+    } else if (request.url === '/missing.png') {
+      response.writeHead(404);
+      response.end();
+    } else {
+      const isFeed = request.url === '/feed.xml';
+      response.writeHead(200, { 'Content-Type': isFeed ? 'application/rss+xml' : 'text/html' });
+      response.end(
+        isFeed
+          ? FEED.replaceAll('SITE', request.headers.host ?? '')
+          : '<html><body>Just a page</body></html>',
+      );
+    }
   });
   await new Promise<void>((resolve) => site.listen(0, '127.0.0.1', resolve));
   const { port } = site.address() as AddressInfo;
@@ -180,9 +195,18 @@ test('a fresh install, from set-up to the admin, against the real server', async
       await expect(page.getByRole('button', { name: /^Low Tech Notes/ })).toBeVisible();
       await expect(heading(page, 'A year of running my own feed reader')).toBeVisible();
       await expect(page.getByRole('link', { name: /^RSS/ })).toHaveText(/2$/);
-      // The feed's HTML arrives as text: tags gone, paragraphs kept, and its script never runs.
+      // The feed's HTML arrives as blocks of text: its script and its handlers never run.
       await expect(page.getByText('I started the year with 130 feeds.')).toBeVisible();
       await expect(page.getByText('By March it was a second inbox.')).toBeVisible();
+      // Its image comes through Munim's server, never straight from the site that published it.
+      const picture = page.getByRole('img', { name: 'The reader on a small screen' });
+      await expect(picture).toHaveAttribute('src', /^\/api\/items\/\d+\/images\/0$/);
+      await expect
+        .poll(() => picture.evaluate((img: HTMLImageElement) => img.naturalWidth))
+        .toBe(320);
+      await expect(
+        page.getByText('An image could not be loaded: A chart that is gone'),
+      ).toBeVisible();
       await expect(page).toHaveTitle('RSS · Munim');
       await expect(page.getByRole('link', { name: 'Open original' })).toHaveAttribute(
         'href',

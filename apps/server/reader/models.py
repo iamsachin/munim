@@ -40,7 +40,9 @@ class Item(models.Model):
     guid = models.CharField(max_length=1000)
     url = models.URLField(max_length=1000, blank=True)
     title = models.CharField(max_length=500)
-    # Plain text; paragraphs are separated by a blank line.
+    # The text as blocks (see reader/blocks.py), which is what is shown.
+    blocks = models.JSONField(default=list, blank=True)
+    # The same words as plain text, for search and reading time.
     body = models.TextField(blank=True)
     published_at = models.DateTimeField()
     # What the owner has done with it. Null means not read, not saved, not queued.

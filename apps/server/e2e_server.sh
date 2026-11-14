@@ -5,6 +5,9 @@ set -e
 cd "$(dirname "$0")"
 # The feed in real-server.spec.ts is served from this machine, which counts as a private network.
 export MUNIM_DEBUG=1 MUNIM_DB_NAME=munim_e2e MUNIM_ALLOW_PRIVATE_FEEDS=1
+# Its files (fetched images) go in a folder of their own, not beside the owner's.
+MUNIM_DATA_DIR="$(mktemp -d)"
+export MUNIM_DATA_DIR
 
 uv run python - <<'PY'
 import os

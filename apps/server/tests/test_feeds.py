@@ -8,6 +8,7 @@ from django.utils import timezone
 from procrastinate.contrib.django import app
 
 from reader import feeds
+from reader.blocks import text_of
 from reader.models import Feed
 from reader.tasks import poll_feeds
 
@@ -54,16 +55,30 @@ def ok(content: bytes, **headers: str) -> Handler:
 # --- reading a feed
 
 
-def test_rss_is_read_into_plain_text_articles() -> None:
+def texts(entry: feeds.Entry) -> list[str]:
+    return text_of(entry.blocks).split("\n\n")
+
+
+def test_rss_is_read_into_blocks() -> None:
     parsed = feeds.parse(RSS)
     assert (parsed.title, parsed.site_url) == ("Low Tech Notes", "https://lowtech.example/")
     first, second = parsed.entries
     assert first.guid == "year-1"
     assert first.url == "https://lowtech.example/year"
     assert first.published_at == datetime(2026, 11, 14, 6, 0, tzinfo=UTC)
-    # Tags are gone, paragraphs are kept, and the script never becomes text.
-    assert first.body == "I started the year with 130 feeds.\n\nBy March it was a second inbox."
-    assert second.body == "A short case for reading once a day."
+    # Formatting is kept as marks, and the script never becomes text.
+    assert first.blocks == [
+        {
+            "type": "paragraph",
+            "spans": [
+                {"text": "I started the year with "},
+                {"text": "130 feeds", "marks": ["bold"]},
+                {"text": "."},
+            ],
+        },
+        {"type": "paragraph", "spans": [{"text": "By March it was a second inbox."}]},
+    ]
+    assert texts(second) == ["A short case for reading once a day."]
 
 
 def test_atom_is_read_too() -> None:
@@ -71,8 +86,22 @@ def test_atom_is_read_too() -> None:
     assert parsed.title == "Plain Crypto"
     (entry,) = parsed.entries
     assert entry.title == "Notes on encryption & small apps"
-    assert entry.body == "Write down what the server may know."
+    assert texts(entry) == ["Write down what the server may know."]
     assert entry.published_at == datetime(2026, 11, 14, 2, 0, tzinfo=UTC)
+
+
+def test_links_and_images_in_an_entry_are_relative_to_its_own_page() -> None:
+    feed = RSS.replace(
+        b"<p>By March it was a second inbox.</p>",
+        b'<p>See <a href="/notes">my notes</a>.</p><img src="chart.png" alt="Feeds kept">',
+    )
+    blocks = feeds.parse(feed).entries[0].blocks
+    assert blocks[1]["spans"][1] == {"text": "my notes", "href": "https://lowtech.example/notes"}
+    assert blocks[2] == {
+        "type": "image",
+        "src": "https://lowtech.example/chart.png",
+        "alt": "Feeds kept",
+    }
 
 
 @pytest.mark.parametrize("content", [b"<html><body>Just a page</body></html>", b"", b"not xml"])
@@ -86,13 +115,9 @@ def test_an_entry_listed_twice_is_read_once() -> None:
     assert [e.guid for e in feeds.parse(doubled).entries] == ["year-1"]
 
 
-def test_html_becomes_text() -> None:
-    assert feeds.to_text("<h2>Title</h2><ul><li>one</li><li>two &amp; three</li></ul>") == (
-        "Title\n\none\n\ntwo & three"
-    )
-    assert feeds.to_text("plain   text\nwith   spaces") == "plain text with spaces"
-    assert feeds.to_text("<style>p{}</style><p>kept</p><script>dropped()</script>") == "kept"
-    assert feeds.to_text("") == ""
+def test_titles_are_one_line_of_plain_text() -> None:
+    assert feeds.plain("A <b>bold</b>\n  title &amp; more") == "A bold title & more"
+    assert feeds.plain("") == ""
 
 
 def test_reading_time_rounds_up_and_is_at_least_a_minute() -> None:
@@ -196,10 +221,8 @@ def test_adding_a_feed_fetches_it_and_lists_its_articles(owner_client: Client, w
     ]
     assert {a["origin"] for a in articles} == {"Low Tech Notes"}
     opened = owner_client.get(f"/api/items/{articles[0]['id']}").json()
-    assert opened["paragraphs"] == [
-        "I started the year with 130 feeds.",
-        "By March it was a second inbox.",
-    ]
+    assert [b["type"] for b in opened["blocks"]] == ["paragraph", "paragraph"]
+    assert opened["blocks"][0]["spans"][1] == {"text": "130 feeds", "marks": ["bold"], "href": None}
     assert opened["url"] == "https://lowtech.example/year"
     assert opened["minutes"] == 1
 
