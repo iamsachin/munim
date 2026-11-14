@@ -228,6 +228,9 @@ test('a fresh install, from set-up to the admin, against the real server', async
 
   await test.step('saving and queueing are kept by the server', async () => {
     const thread = page.getByRole('complementary', { name: 'Thread' });
+    // The article itself is read here, as plain text.
+    await expect(thread.getByText('I started the year with 130 feeds.')).toBeVisible();
+    await expect(thread.getByText('By March it was a second inbox.')).toBeVisible();
     await thread.getByRole('button', { name: 'Save' }).click();
     await expect(thread.getByRole('button', { name: 'Saved' })).toBeVisible();
     await thread.getByRole('button', { name: 'Read later' }).click();

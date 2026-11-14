@@ -233,6 +233,26 @@ test('stream: an empty stream, a failed one, and a failed item each say so', asy
   );
 });
 
+test('stream: a feed article is read in the thread pane, and can be highlighted there', async ({
+  page,
+}) => {
+  await open(page, '/stream');
+  const thread = page.getByRole('complementary', { name: 'Thread' });
+  await page.getByRole('button', { name: /^A year of running my own feed reader/ }).click();
+  await expect(thread.getByText('I started the year with 130 feeds')).toBeVisible();
+  await expect(page).toHaveScreenshot('stream-article-dark.png');
+  expect(await axeFailures(page)).toEqual([]);
+
+  await selectText(page, 'I stopped polling every fifteen minutes');
+  await page.getByRole('button', { name: 'Highlight', exact: true }).click();
+  await expect(thread.locator('mark', { hasText: 'I stopped polling' })).toBeVisible();
+  await expect(page.getByRole('link', { name: /^Highlights/ })).toHaveText(/6$/);
+
+  // A thread, which has no text of its own, shows its replies as before.
+  await page.getByRole('button', { name: /^What finally got you/ }).click();
+  await expect(thread.getByText('Saving was the thing.')).toBeVisible();
+});
+
 test('replies: no source can be replied to yet, and each says why', async ({ page }) => {
   await open(page, '/stream');
   const thread = page.getByRole('complementary', { name: 'Thread' });

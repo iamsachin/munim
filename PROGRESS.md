@@ -6,13 +6,11 @@ Last updated: 2026-11-14
 
 ## Now
 
-Milestone 3 in progress. Merged: the Django scaffold (#6), the account API (#8), the web app signing in against the server (#9), RSS (#10), background polling (#11).
-
-On branch `milestone-3-stream` (pull request #12): the Stream, its thread pane, Saved, Read later, Today and the sidebar counts read real items from the server, with unread, saved and queued state. Only feed articles exist as items so far.
+Milestone 3 in progress. Merged: the Django scaffold (#6), the account API (#8), the web app signing in against the server (#9), RSS (#10), background polling (#11), the Stream on real items (#12), and feed articles readable in the thread pane (#13).
 
 Still on sample data in the browser: highlights, watches, digest, Ask, connections, AI settings.
 
-Next: decide with the owner whether the thread pane should show a feed article's text; then Hacker News as the second source (needs no account), which brings real comments.
+Next: Hacker News as the second source (needs no account), which brings real comments into the thread pane.
 
 ## 0. Preparation
 

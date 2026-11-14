@@ -226,7 +226,7 @@ export function Stream() {
   );
 }
 
-/** The open item: a question field, its replies, and where to go to answer. Keyed by item. */
+/** The open item: a question field, its text and replies, and where to go next. Keyed by item. */
 function Thread({ id, now }: { id: number; now: number }) {
   const { state } = useReader();
   const item = useItem(id);
@@ -280,6 +280,20 @@ function Thread({ id, now }: { id: number; now: number }) {
       <AskCard what={isArticle ? 'article' : 'thread'} />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        {/* An article is read here, in the reading size the RSS screen uses. */}
+        {it.paragraphs.length > 0 && (
+          <div className="flex flex-col gap-12 pb-12">
+            {it.paragraphs.map((text, n) => (
+              <p
+                key={n}
+                className="text-read leading-read text-pretty"
+                {...highlightable({ src: it.source, title: it.title, from: it.origin })}
+              >
+                <Marked text={text} quotes={quotes} />
+              </p>
+            ))}
+          </div>
+        )}
         {it.comments.map((c, n) => (
           <div
             key={n}
