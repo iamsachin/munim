@@ -6,9 +6,9 @@ Last updated: 2026-11-14
 
 ## Now
 
-On branch `milestone-2-keyboard` (pull request #4). Built, passing all gates, **waiting for the owner's approval** (`pnpm dev`): keyboard navigation, the command palette, the shortcut list and the Keyboard settings card.
+Approved and merged so far in milestone 2: every designed screen, the AI screen, on-demand summaries, first run, sign-in, lock, security settings, the loading, error and empty states, keyboard navigation and the command palette.
 
-Then: the disabled-reply state and highlighting by selecting text, which finish milestone 2.
+In progress, the last two pieces of milestone 2: the disabled-reply state and highlighting by selecting text.
 
 ## 0. Preparation
 
@@ -56,7 +56,7 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] On-demand summaries in place of automatic ones (approved)
 - [x] First-run setup, sign-in, lock screen (design gap, approved)
 - [x] Loading, error and empty states: patterns and wording (design gap, approved; wired in milestone 3)
-- [ ] Keyboard navigation, command palette, shortcut help (design gap; built, awaiting approval)
+- [x] Keyboard navigation, command palette, shortcut help (design gap, approved)
 - [ ] Disabled-reply state for sources without an official write API (design gap)
 - [ ] Highlight by selecting text, with a note
 - [ ] **Approved by owner**
