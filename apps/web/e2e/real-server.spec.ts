@@ -214,9 +214,12 @@ test('a fresh install, from set-up to the admin, against the real server', async
 
     await page.getByRole('button', { name: 'Unread', exact: true }).click();
     await expect(rows).toHaveCount(2);
+    // Opened, it is read, but stays on screen until the filter is left.
     await year.click();
-    // Once read it leaves the Unread list, which now has nothing in it.
-    await expect(year).toHaveCount(0);
+    await expect(year).not.toHaveClass(/font-semibold/);
+    await expect(rows).toHaveCount(2);
+    await page.getByRole('button', { name: 'All', exact: true }).click();
+    await page.getByRole('button', { name: 'Unread', exact: true }).click();
     await expect(page.getByText('Nothing matches this filter.')).toBeVisible();
     // Read state is the server's: still read after a reload.
     await page.reload();

@@ -189,8 +189,20 @@ test('stream: opening an item marks it read; the default row is left alone', asy
   await expect(rows(page)).toHaveCount(6); // header + the five still unread
   // Opening the Unread list does not read its way down it.
   await expect(row(/^What finally got you/)).toHaveClass(/font-semibold/);
+
+  // An item opened here is read, but stays in the list and in the pane while the filter is on.
   await row(/^Show HN: A local-first/).click();
+  await expect(row(/^Show HN: A local-first/)).not.toHaveClass(/font-semibold/);
+  await expect(rows(page)).toHaveCount(6);
+  await expect(page.getByRole('complementary', { name: 'Thread' }).getByRole('heading')).toHaveText(
+    /^Show HN/,
+  );
+
+  // Leaving the filter and coming back shows what is unread now.
+  await page.getByRole('button', { name: 'All', exact: true }).click();
+  await page.getByRole('button', { name: 'Unread', exact: true }).click();
   await expect(rows(page)).toHaveCount(5);
+  await expect(row(/^Show HN: A local-first/)).toHaveCount(0);
 });
 
 test('stream: an empty stream, a failed one, and a failed item each say so', async ({ page }) => {
@@ -938,6 +950,8 @@ test('command palette: actions change the theme, open the shortcut list, and loc
 
 /** Selects the first occurrence of `text` on the page, as dragging over it would. */
 async function selectText(page: Page, text: string) {
+  // The text may still be on its way from the server.
+  await expect(page.getByText(text).first()).toBeVisible();
   await page.evaluate((wanted) => {
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     while (walker.nextNode()) {
