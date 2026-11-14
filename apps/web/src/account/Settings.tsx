@@ -1,11 +1,16 @@
+import { useOutletContext } from 'react-router';
 import { useTheme } from '../settings';
 import { ScreenHeader } from '../shell/ScreenHeader';
+import type { ShellContext } from '../shell/Shell';
+import { MOD } from '../shell/shortcuts';
 import { ACCENTS, DENSITIES, THEMES } from '../theme';
 import { SectionLabel } from '../ui/atoms';
 import { Card } from '../ui/Card';
+import { Button } from '../ui/Button';
 import { Chip } from '../ui/Chip';
 import { Swatch } from '../ui/Swatch';
-import { DataCard, DevicesCard, SignInCard } from './SecurityCards';
+import { Toggle } from '../ui/Toggle';
+import { DataCard, DevicesCard, Row, SignInCard } from './SecurityCards';
 
 const keys = <T extends object>(o: T) => Object.keys(o) as (keyof T)[];
 
@@ -15,6 +20,7 @@ const keys = <T extends object>(o: T) => Object.keys(o) as (keyof T)[];
  */
 export function Settings() {
   const { theme, setTheme } = useTheme();
+  const { showShortcuts } = useOutletContext<ShellContext>();
 
   return (
     <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
@@ -80,6 +86,25 @@ export function Settings() {
           </div>
         </Card>
         <DataCard />
+        <Card className="gap-4">
+          <SectionLabel as="h2" className="pb-4">
+            Keyboard
+          </SectionLabel>
+          <Row name="Single-key shortcuts" note="j and k to move, g then a letter to go to a view">
+            <Toggle
+              on={theme.shortcuts === 'On'}
+              label="Single-key shortcuts"
+              onChange={(on) => {
+                setTheme({ shortcuts: on ? 'On' : 'Off' });
+              }}
+            />
+          </Row>
+          <Row name="Shortcut list" note={`Press ? anywhere, or ${MOD} K for commands`}>
+            <Button size="md" onClick={showShortcuts}>
+              Show
+            </Button>
+          </Row>
+        </Card>
       </div>
     </main>
   );

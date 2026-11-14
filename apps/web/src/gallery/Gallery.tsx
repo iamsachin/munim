@@ -4,6 +4,7 @@ import { ACCENTS, DENSITIES, THEMES } from '../theme';
 import {
   AiBadge,
   Highlight,
+  Kbd,
   MediaThumb,
   SaveDot,
   SectionLabel,
@@ -328,6 +329,10 @@ export function Gallery() {
             </span>
             <MediaThumb kind="Video" onClick={() => undefined} />
             <MediaThumb kind="Image" onClick={() => undefined} />
+            <span className="flex gap-4">
+              <Kbd>g</Kbd>
+              <Kbd>s</Kbd>
+            </span>
           </div>
           <div>
             <Highlight>

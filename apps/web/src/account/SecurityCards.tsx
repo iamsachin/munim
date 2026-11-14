@@ -17,7 +17,15 @@ import {
   type LockAfter,
 } from './auth';
 
-function Row({ name, note, children }: { name: string; note: ReactNode; children?: ReactNode }) {
+export function Row({
+  name,
+  note,
+  children,
+}: {
+  name: string;
+  note: ReactNode;
+  children?: ReactNode;
+}) {
   return (
     <div className="flex items-center gap-12 border-b border-rule py-6">
       <div className="min-w-0 flex-1">

@@ -148,6 +148,12 @@ export function withoutLater(s: ReaderState, row: LaterRow): Partial<ReaderState
     : { laterAdded: s.laterAdded.filter((x) => x !== row.item) };
 }
 
+/** The state change that queues an item, or takes it out if it is already queued. */
+export function laterToggled(s: ReaderState, index: number): Partial<ReaderState> {
+  const row = laterRowFor(s, index);
+  return row ? withoutLater(s, row) : { laterAdded: [index, ...s.laterAdded] };
+}
+
 /** "6 items · 1 h 30 min". Reading time is unknown for freshly queued items and counts as zero. */
 export function laterTotal(rows: readonly LaterRow[]) {
   const mins = rows.reduce((n, r) => n + r.mins, 0);

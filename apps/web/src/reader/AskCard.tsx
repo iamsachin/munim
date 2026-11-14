@@ -36,6 +36,7 @@ export function AskCard({ what }: { what: 'thread' | 'article' }) {
         }}
       >
         <Input
+          id="item-ask"
           size="md"
           tone="ai"
           className="flex-1"
