@@ -1,4 +1,14 @@
+from django.contrib.postgres.indexes import GinIndex
+from django.contrib.postgres.search import SearchVector, SearchVectorField
 from django.db import models
+from django.db.models.functions import Left
+
+# The dictionary search words are reduced with: "protocols" also finds "protocol".
+# shortcut: English only, choose per feed if feeds in other languages need their own stemming.
+SEARCH_LANGUAGE = "english"
+# Postgres refuses to index more than a megabyte of words, which would stop an enormous article
+# from being stored at all. shortcut: text past this point is kept and shown but not searched.
+SEARCHED_CHARACTERS = 250_000
 
 
 class Feed(models.Model):
@@ -72,9 +82,18 @@ class Item(models.Model):
     read_at = models.DateTimeField(null=True, blank=True)
     saved_at = models.DateTimeField(null=True, blank=True)
     later_at = models.DateTimeField(null=True, blank=True)
+    # The words of the title and the text, kept by Postgres itself whenever either changes. A
+    # word in the title counts for more than one in the text.
+    search = models.GeneratedField(
+        expression=SearchVector("title", weight="A", config=SEARCH_LANGUAGE)
+        + SearchVector(Left("body", SEARCHED_CHARACTERS), weight="B", config=SEARCH_LANGUAGE),
+        output_field=SearchVectorField(),
+        db_persist=True,
+    )
 
     class Meta:
         ordering = ["-published_at", "-id"]
+        indexes = [GinIndex(fields=["search"], name="item_search")]
         constraints = [
             models.UniqueConstraint(fields=["feed", "guid"], name="one_article_per_feed_entry"),
             models.UniqueConstraint(

@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.postgres",  # full-text search
     "ninja",  # for its export_openapi_schema command
     "procrastinate.contrib.django",  # the job queue, in Postgres
     "account",

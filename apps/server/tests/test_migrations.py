@@ -55,3 +55,11 @@ def test_articles_stored_before_the_rename_are_still_there_as_items() -> None:
 
     # Leave the database as every other test expects it: fully migrated.
     MigrationExecutor(connection).migrate(MigrationExecutor(connection).loader.graph.leaf_nodes())
+
+    # Fully migrated, the article stored at the very beginning can be found by its words.
+    from django.contrib.postgres.search import SearchQuery
+
+    from reader.models import Item
+
+    found = Item.objects.filter(search=SearchQuery("feed", config="english"))
+    assert [item.title for item in found] == ["A year of running my own feed reader"]

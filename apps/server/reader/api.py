@@ -3,6 +3,7 @@
 from datetime import datetime
 from typing import Annotated, Any, Literal
 
+from django.contrib.postgres.search import SearchQuery
 from django.db import transaction
 from django.db.models import Count, Q
 from django.http import HttpRequest, HttpResponse
@@ -13,7 +14,7 @@ from procrastinate.exceptions import AlreadyEnqueued
 
 from account.auth import Open
 from reader import feeds, images, tasks
-from reader.models import Connection, Feed, Item, Source
+from reader.models import SEARCH_LANGUAGE, Connection, Feed, Item, Source
 
 router = Router(tags=["reader"], auth=Open())
 
@@ -225,8 +226,13 @@ def list_items(
     if feed is not None:
         items = items.filter(feed_id=feed)
     if q.strip():
-        # shortcut: a plain substring match, replace with Postgres full-text search with Ask.
-        items = items.filter(Q(title__icontains=q.strip()) | Q(feed__title__icontains=q.strip()))
+        # Whole words anywhere in the title or the text, in any form ("protocols" finds
+        # "protocol"), with "quoted phrases", OR and -exclusions. The part of a word typed so
+        # far still finds titles and feeds, so the list narrows while the owner types.
+        words = SearchQuery(q.strip(), search_type="websearch", config=SEARCH_LANGUAGE)
+        items = items.filter(
+            Q(search=words) | Q(title__icontains=q.strip()) | Q(feed__title__icontains=q.strip())
+        )
     return [ItemOut(**_row(item)) for item in items[:MAX_ITEMS]]
 
 

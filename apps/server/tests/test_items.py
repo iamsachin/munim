@@ -80,6 +80,47 @@ def test_an_opened_item_has_its_text_and_address(stream: Client) -> None:
     assert stream.get("/api/items/999999").status_code == 404
 
 
+def test_search_looks_inside_the_text_and_understands_word_forms(stream: Client) -> None:
+    # "Sync" has the text "First paragraph. Second paragraph."; nothing else says "paragraph".
+    assert titles(stream, "?q=paragraph") == ["Sync"]
+    assert titles(stream, "?q=paragraphs") == ["Sync"]
+    assert titles(stream, "?q=protocol") == ["Sync"]
+    assert titles(stream, "?q=reads") == ["Reading"]
+    assert titles(stream, "?q=nothing-says-this") == []
+
+
+def test_search_takes_phrases_alternatives_and_exclusions(stream: Client) -> None:
+    assert titles(stream, '?q="second paragraph"') == ["Sync"]
+    assert titles(stream, '?q="second first"') == []
+    assert titles(stream, "?q=encryption or evening") == ["Encryption", "Reading"]
+    assert titles(stream, "?q=text -encryption") == ["Reading"]
+
+
+def test_part_of_a_word_still_finds_titles_while_typing(stream: Client) -> None:
+    assert titles(stream, "?q=encr") == ["Encryption"]
+    assert titles(stream, "?q=eveni") == ["Reading"]
+
+
+@pytest.mark.parametrize("typed", ['"unclosed', "a & | ! b", "(((", "-", ":*", "'", "%", "\\"])
+def test_anything_typed_into_search_is_safe(stream: Client, typed: str) -> None:
+    response = stream.get("/api/items", {"q": typed})
+    assert response.status_code == 200
+
+
+def test_an_enormous_article_is_stored_and_its_start_is_searchable(stream: Client) -> None:
+    feed = Feed.objects.first()
+    words = " ".join(f"w{n}" for n in range(200_000))
+    Item.objects.create(
+        feed=feed,
+        guid="huge",
+        title="Enormous",
+        body=f"needle {words} haystackend",
+        published_at=BASE,
+    )
+    assert titles(stream, "?q=needle") == ["Enormous"]
+    assert titles(stream, "?q=haystackend") == []
+
+
 def test_items_narrow_by_source_feed_and_search(stream: Client) -> None:
     wire = Feed.objects.get(title="Wire Notes").pk
     assert titles(stream, f"?feed={wire}") == ["Sync", "Reading"]
