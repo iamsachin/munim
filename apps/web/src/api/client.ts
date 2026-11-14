@@ -4,6 +4,8 @@ type Schemas = components['schemas'];
 export type SessionState = Schemas['SessionOut']['state'];
 export type Device = Schemas['DeviceOut'];
 export type LockMinutes = Schemas['LockSettings']['minutes'];
+export type Feed = Schemas['FeedOut'];
+export type Article = Schemas['ArticleOut'];
 
 /** The server answered, and the answer was no. `waitSeconds` is set when it said to try later. */
 export class Refused extends Error {
@@ -58,6 +60,9 @@ export const api = {
   devices: () => call<Device[]>('GET', 'devices'),
   revokeDevice: (id: number) => call<undefined>('DELETE', `devices/${String(id)}`),
   lockSettings: () => call<Schemas['LockSettings']>('GET', 'lock-settings'),
+  feeds: () => call<Feed[]>('GET', 'feeds'),
+  addFeed: (url: string) => call<Feed>('POST', 'feeds', { url } satisfies Schemas['FeedIn']),
+  articles: (feedId: number) => call<Article[]>('GET', `feeds/${String(feedId)}/articles`),
   setLockSettings: (minutes: LockMinutes) =>
     call<Schemas['LockSettings']>('PUT', 'lock-settings', {
       minutes,

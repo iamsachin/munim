@@ -373,19 +373,69 @@ test('watches: add one, refuse a duplicate, switch one off', async ({ page }) =>
   expect(await axeFailures(page)).toEqual([]);
 });
 
-test('rss: choosing a feed and adding one', async ({ page }) => {
+test('rss: choosing a feed and an article', async ({ page }) => {
   await open(page, '/rss');
+  // Feeds are listed by title, and the first one is open.
+  await expect(page.getByRole('heading', { level: 2 })).toHaveText(
+    'Designing a calendar that does less',
+  );
+  await expect(page.getByRole('link', { name: /^RSS/ })).toHaveText(/7$/);
   await page.getByRole('button', { name: /^Wire Notes/ }).click();
   await expect(page.getByRole('heading', { level: 2 })).toHaveText(
     'The case for boring sync protocols',
   );
   await page.getByRole('button', { name: /What a retry budget is/ }).click();
   await expect(page.getByRole('heading', { level: 2 })).toHaveText('What a retry budget is');
+  await expect(page.getByText('Wire Notes · 2d · 4 min')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Open original' })).toHaveAttribute(
+    'href',
+    'https://feeds.example/52',
+  );
+});
 
-  await page.getByLabel('Feed URL').fill('https://example.com/feed.xml');
+test('rss: adding a feed opens it; an address that is not a feed says so', async ({ page }) => {
+  await open(page, '/rss');
+  const field = page.getByLabel('Feed URL');
+  await field.fill('https://example.com/a-page');
   await page.getByRole('button', { name: 'Add' }).click();
-  await expect(page.getByRole('heading', { level: 2 })).toHaveText('https://example.com/feed.xml');
-  await expect(page.getByText('No articles fetched yet.')).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveText('That address is not an RSS or Atom feed.');
+  await expect(page).toHaveScreenshot('rss-add-problem-dark.png');
+  expect(await axeFailures(page)).toEqual([]);
+
+  await field.fill('https://example.com/feed.xml');
+  await expect(page.getByRole('alert')).toBeHidden();
+  await page.getByRole('button', { name: 'Add' }).click();
+  await expect(page.getByRole('heading', { level: 2 })).toHaveText('The first example');
+  await expect(page.getByRole('button', { name: /^Example Feed/ })).toHaveAttribute(
+    'aria-current',
+    'true',
+  );
+  await expect(field).toHaveValue('');
+  await expect(page.getByRole('link', { name: /^RSS/ })).toHaveText(/8$/);
+
+  await field.fill('https://example.com/feed.xml');
+  await page.getByRole('button', { name: 'Add' }).click();
+  await expect(page.getByRole('alert')).toHaveText('That feed is already here.');
+});
+
+test('rss: with no feeds, and when the server fails, the screen says so', async ({ page }) => {
+  await fakeServer(page);
+  await page.route('**/api/feeds', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }),
+  );
+  await page.goto('/rss');
+  await expect(page.getByText('No feeds yet. Add one below.')).toBeVisible();
+  await expect(page.getByText('Add a feed by its address to start reading.')).toBeVisible();
+  await expect(page).toHaveScreenshot('rss-empty-dark.png');
+
+  await page.unroute('**/api/feeds');
+  await page.route('**/api/feeds', (route) => route.fulfill({ status: 500, body: '' }));
+  await page.reload();
+  await expect(page.getByRole('alert')).toContainText('Could not load your feeds.');
+  await expect(page).toHaveScreenshot('rss-failed-dark.png');
+  await page.unroute('**/api/feeds');
+  await page.getByRole('button', { name: 'Try again' }).click();
+  await expect(page.getByRole('button', { name: /^Wire Notes/ })).toBeVisible();
 });
 
 test('connections: disconnect and reconnect', async ({ page }) => {
@@ -691,6 +741,9 @@ test('keyboard: the last row scrolls into view, and "g s" does not also save', a
 test('keyboard: / focuses the ask bar; rss moves with j and k', async ({ page }) => {
   await open(page, '/rss');
   await page.getByRole('button', { name: /^Wire Notes/ }).click();
+  await expect(page.getByRole('heading', { level: 2 })).toHaveText(
+    'The case for boring sync protocols',
+  );
   await page.keyboard.press('j');
   await expect(page.getByRole('heading', { level: 2 })).toHaveText('What a retry budget is');
   await page.keyboard.press('j'); // stops at the last article
@@ -884,6 +937,8 @@ test('highlights: the h key works; text outside an article or comment cannot be 
   page,
 }) => {
   await open(page, '/rss');
+  await page.getByRole('button', { name: /^Low Tech Notes/ }).click();
+  await expect(page.getByText('I stopped polling every fifteen minutes')).toBeVisible();
   await selectText(page, 'I stopped polling every fifteen minutes');
   await page.keyboard.press('h');
   await expect(page.locator('mark', { hasText: 'I stopped polling' })).toBeVisible();

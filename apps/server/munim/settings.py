@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "ninja",  # for its export_openapi_schema command
     "account",
+    "reader",
 ]
 
 MIDDLEWARE = [
@@ -93,6 +94,10 @@ AUTH_PASSWORD_VALIDATORS = [
         "OPTIONS": {"min_length": 12},
     },
 ]
+
+# Feeds on private networks (a service on the same LAN, say) are refused unless this is set,
+# because a feed address can also be used to make the server reach things only it can reach.
+ALLOW_PRIVATE_FEEDS = env("ALLOW_PRIVATE_FEEDS", "0") == "1"
 
 # Sessions last 30 days. Cookies are sent over HTTPS only, unless an install on a private network
 # without HTTPS opts out, accepting that anyone on that network can then read the session cookie.

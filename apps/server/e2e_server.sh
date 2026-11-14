@@ -3,7 +3,8 @@
 # every start, on port 8001. Used by apps/web/playwright.config.ts. Needs `pnpm db`.
 set -e
 cd "$(dirname "$0")"
-export MUNIM_DEBUG=1 MUNIM_DB_NAME=munim_e2e
+# The feed in real-server.spec.ts is served from this machine, which counts as a private network.
+export MUNIM_DEBUG=1 MUNIM_DB_NAME=munim_e2e MUNIM_ALLOW_PRIVATE_FEEDS=1
 
 uv run python - <<'PY'
 import os

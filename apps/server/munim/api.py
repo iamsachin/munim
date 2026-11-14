@@ -8,9 +8,11 @@ from django.http import HttpRequest
 from ninja import NinjaAPI, Schema, Status
 
 from account.api import router as account_router
+from reader.api import router as reader_router
 
 api = NinjaAPI(title="Munim", version="0.1.0")
 api.add_router("", account_router)
+api.add_router("", reader_router)
 
 
 class Health(Schema):

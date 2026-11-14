@@ -1,14 +1,5 @@
 // Mock data from design/handoff/Atrium.dc.html. Replaced by server data in milestone 3.
-import type {
-  Digest,
-  Feed,
-  HighlightEntry,
-  Item,
-  LaterEntry,
-  Match,
-  SavedItem,
-  Watch,
-} from './types';
+import type { Digest, HighlightEntry, Item, LaterEntry, Match, SavedItem, Watch } from './types';
 
 export const ITEMS: Item[] = [
   {
@@ -373,69 +364,6 @@ export const SAVED: SavedItem[] = [
     from: '290 points',
     parsed: '201 comments',
     when: 'Thu',
-  },
-];
-
-export const FEEDS: Feed[] = [
-  {
-    name: 'Low Tech Notes',
-    articles: [
-      {
-        title: 'A year of running my own feed reader',
-        meta: '6h · 12 min',
-        body: 'I started the year with 130 feeds and a habit of opening the reader whenever I was bored. By March the unread count had become a second inbox. What fixed it was not a feature. I stopped polling every fifteen minutes, moved to twice a day, and deleted any feed I had skipped ten times in a row.',
-      },
-      {
-        title: 'Reading in the evening, a short essay',
-        meta: '1d · 5 min',
-        body: 'There is a particular quiet to reading things after they have stopped being new. Most of what felt urgent at noon has resolved itself by nine.',
-      },
-    ],
-  },
-  {
-    name: 'Plain Crypto',
-    articles: [
-      {
-        title: 'Notes on end-to-end encryption for small apps',
-        meta: '10h · 9 min',
-        body: 'Before choosing a cipher, write down what the server is allowed to know. For most small apps the honest answer includes sizes, timestamps and who talks to whom. Decide whether that is acceptable, then design recovery, because recovery is where most schemes quietly give the server a copy of the key.',
-      },
-    ],
-  },
-  {
-    name: 'Wire Notes',
-    articles: [
-      {
-        title: 'The case for boring sync protocols',
-        meta: '12h · 7 min',
-        body: 'Incremental sync is fast until it is wrong, and when it is wrong it is wrong silently. A periodic full comparison with checksums is slow, predictable, and tells you when something drifted.',
-      },
-      {
-        title: 'What a retry budget is',
-        meta: '2d · 4 min',
-        body: 'A retry budget caps the share of requests that may be retries. Ten percent is a common starting point.',
-      },
-    ],
-  },
-  {
-    name: 'Field Notes',
-    articles: [
-      {
-        title: 'Designing a calendar that does less',
-        meta: '19h · 8 min',
-        body: 'Most calendar views answer a question nobody asked: what does the whole month look like. The question people ask is what is next, and how long until it starts.',
-      },
-    ],
-  },
-  {
-    name: 'Release notes',
-    articles: [
-      {
-        title: 'Reader 4.2: faster full-text search',
-        meta: '1d · 2 min',
-        body: 'This release rebuilds the search index. Existing libraries are migrated in the background on first launch.',
-      },
-    ],
   },
 ];
 

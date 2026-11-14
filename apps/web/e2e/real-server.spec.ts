@@ -1,4 +1,6 @@
 import { execSync } from 'node:child_process';
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { expect, test, type Page } from '@playwright/test';
 
 /*
@@ -19,6 +21,34 @@ function forgetWrongPassphrases() {
       '"from account.models import Throttle; Throttle.objects.all().delete()"',
     { cwd: '../server', stdio: 'ignore' },
   );
+}
+
+const FEED = `<?xml version="1.0"?>
+<rss version="2.0"><channel>
+  <title>Low Tech Notes</title><link>https://lowtech.example/</link>
+  <item><title>A year of running my own feed reader</title>
+    <link>https://lowtech.example/year</link><guid>year</guid>
+    <pubDate>Sat, 14 Nov 2026 06:00:00 GMT</pubDate>
+    <description><![CDATA[<p>I started the year with <b>130 feeds</b>.</p>
+      <script>document.title = 'hacked'</script><p>By March it was a second inbox.</p>]]></description>
+  </item>
+  <item><title>Reading in the evening</title>
+    <link>https://lowtech.example/evening</link><guid>evening</guid>
+    <pubDate>Fri, 13 Nov 2026 20:00:00 GMT</pubDate>
+    <description>A short case for reading once a day.</description>
+  </item>
+</channel></rss>`;
+
+/** A web site on this machine with one feed and one ordinary page, for the server to fetch. */
+async function feedSite() {
+  const site = createServer((request, response) => {
+    const isFeed = request.url === '/feed.xml';
+    response.writeHead(200, { 'Content-Type': isFeed ? 'application/rss+xml' : 'text/html' });
+    response.end(isFeed ? FEED : '<html><body>Just a page</body></html>');
+  });
+  await new Promise<void>((resolve) => site.listen(0, '127.0.0.1', resolve));
+  const { port } = site.address() as AddressInfo;
+  return { url: `http://127.0.0.1:${String(port)}`, close: () => site.close() };
 }
 
 const heading = (page: Page, name: string) => page.getByRole('heading', { name });
@@ -132,6 +162,43 @@ test('a fresh install, from set-up to the admin, against the real server', async
     await expect(page.getByRole('alert')).toHaveText('That passphrase is not right.');
     await enter(page, NEW_PASSPHRASE, 'Sign in');
     await expect(heading(page, 'Security and settings')).toBeVisible();
+  });
+
+  await test.step('a feed is fetched by the server, stored, and read as plain text', async () => {
+    const site = await feedSite();
+    try {
+      await page.goto('/rss');
+      await expect(page.getByText('No feeds yet. Add one below.')).toBeVisible();
+      const field = page.getByLabel('Feed URL');
+
+      await field.fill(`${site.url}/a-page`);
+      await page.getByRole('button', { name: 'Add' }).click();
+      await expect(page.getByRole('alert')).toHaveText('That address is not an RSS or Atom feed.');
+
+      await field.fill(`${site.url}/feed.xml`);
+      await page.getByRole('button', { name: 'Add' }).click();
+      await expect(page.getByRole('button', { name: /^Low Tech Notes/ })).toBeVisible();
+      await expect(heading(page, 'A year of running my own feed reader')).toBeVisible();
+      await expect(page.getByRole('link', { name: /^RSS/ })).toHaveText(/2$/);
+      // The feed's HTML arrives as text: tags gone, paragraphs kept, and its script never runs.
+      await expect(page.getByText('I started the year with 130 feeds.')).toBeVisible();
+      await expect(page.getByText('By March it was a second inbox.')).toBeVisible();
+      await expect(page).toHaveTitle('RSS · Munim');
+      await expect(page.getByRole('link', { name: 'Open original' })).toHaveAttribute(
+        'href',
+        'https://lowtech.example/year',
+      );
+
+      await page.getByRole('button', { name: /Reading in the evening/ }).click();
+      await expect(page.getByText('A short case for reading once a day.')).toBeVisible();
+
+      // Stored on the server: still there after a reload, with the site that served it gone.
+      site.close();
+      await page.reload();
+      await expect(heading(page, 'A year of running my own feed reader')).toBeVisible();
+    } finally {
+      site.close();
+    }
   });
 
   await test.step('the admin opens for a signed-in owner, and sends anyone else to sign in', async () => {

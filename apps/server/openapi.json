@@ -287,6 +287,119 @@
         },
         "security": [{ "Open": [] }]
       }
+    },
+    "/api/feeds": {
+      "get": {
+        "operationId": "reader_api_list_feeds",
+        "summary": "List Feeds",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/FeedOut" },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["reader"],
+        "security": [{ "Open": [] }]
+      },
+      "post": {
+        "operationId": "reader_api_add_feed",
+        "summary": "Add Feed",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/FeedOut" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          }
+        },
+        "description": "Fetches the feed first; it is only added if it can be read.",
+        "tags": ["reader"],
+        "requestBody": {
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/FeedIn" } }
+          },
+          "required": true
+        },
+        "security": [{ "Open": [] }]
+      }
+    },
+    "/api/feeds/{feed_id}/refresh": {
+      "post": {
+        "operationId": "reader_api_refresh_feed",
+        "summary": "Refresh Feed",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "feed_id",
+            "schema": { "title": "Feed Id", "type": "integer" },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/FeedOut" } }
+            }
+          }
+        },
+        "description": "Fetches the feed again. If that fails, the reason is in `problem`.",
+        "tags": ["reader"],
+        "security": [{ "Open": [] }]
+      }
+    },
+    "/api/feeds/{feed_id}/articles": {
+      "get": {
+        "operationId": "reader_api_list_articles",
+        "summary": "List Articles",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "feed_id",
+            "schema": { "title": "Feed Id", "type": "integer" },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/ArticleOut" },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "description": "The feed's newest articles, newest first.",
+        "tags": ["reader"],
+        "security": [{ "Open": [] }]
+      }
     }
   },
   "components": {
@@ -363,6 +476,37 @@
         },
         "required": ["minutes"],
         "title": "LockSettings",
+        "type": "object"
+      },
+      "FeedOut": {
+        "properties": {
+          "id": { "title": "Id", "type": "integer" },
+          "title": { "title": "Title", "type": "string" },
+          "url": { "title": "Url", "type": "string" },
+          "articles": { "title": "Articles", "type": "integer" },
+          "problem": { "title": "Problem", "type": "string" }
+        },
+        "required": ["id", "title", "url", "articles", "problem"],
+        "title": "FeedOut",
+        "type": "object"
+      },
+      "FeedIn": {
+        "properties": { "url": { "maxLength": 1000, "title": "Url", "type": "string" } },
+        "required": ["url"],
+        "title": "FeedIn",
+        "type": "object"
+      },
+      "ArticleOut": {
+        "properties": {
+          "id": { "title": "Id", "type": "integer" },
+          "title": { "title": "Title", "type": "string" },
+          "url": { "title": "Url", "type": "string" },
+          "published_at": { "format": "date-time", "title": "Published At", "type": "string" },
+          "minutes": { "title": "Minutes", "type": "integer" },
+          "paragraphs": { "items": { "type": "string" }, "title": "Paragraphs", "type": "array" }
+        },
+        "required": ["id", "title", "url", "published_at", "minutes", "paragraphs"],
+        "title": "ArticleOut",
         "type": "object"
       }
     },

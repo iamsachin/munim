@@ -103,6 +103,9 @@ Baselines are recorded on macOS Chromium and are platform-specific; other platfo
 - Never hard-code model names or lists. Read them from the provider's models endpoint. Consult the `claude-api` skill before writing any Anthropic code.
 - Secrets never reach the browser, logs, error messages or test fixtures.
 - Every migration must be safe to run on a stranger's existing data.
+- Anything the server fetches because of an address someone typed (feeds now, more sources later) goes through `download()` in `reader/feeds.py` or the same checks: http(s) only, private networks refused at every redirect, size and time capped. `MUNIM_ALLOW_PRIVATE_FEEDS=1` is the only way round it.
+- Content from outside is stored and shown as plain text. Nothing a feed sends is rendered as HTML.
+- Server data in the web app is read with TanStack Query (`apps/web/src/api/queries.tsx`); each screen shows `LoadingRows`, `ErrorState` and `EmptyState` for its own reads.
 - An install reached through a reverse proxy must list its public address in `MUNIM_TRUSTED_ORIGINS`, or Django refuses its calls as cross-site.
 - Everything an install can change is a `MUNIM_*` environment variable read through `env()` in `munim/settings.py`. A secret has no default outside development mode (`MUNIM_DEBUG=1`): the server must fail to start rather than run on a guessable value.
 - Server tests treat warnings as errors. Fix a deprecation when it appears.

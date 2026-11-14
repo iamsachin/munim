@@ -1,7 +1,7 @@
 import { createContext, use, useState, type ReactNode } from 'react';
 import { AI_INITIAL, type AiState } from '../account/ai';
 import type { Source } from '../ui/atoms';
-import { FEEDS, HIGHLIGHTS, ITEMS, LATER, SAVED, WATCHES } from './fixtures';
+import { HIGHLIGHTS, ITEMS, LATER, SAVED, WATCHES } from './fixtures';
 import type { HighlightEntry, Item, SavedItem, Watch } from './types';
 
 export const SCOPES = ['Everything', 'Saved', 'This week', 'Open item'] as const;
@@ -16,7 +16,6 @@ export interface ReaderState {
   laterDone: ReadonlySet<string>;
   watchOff: ReadonlySet<string>;
   watchNew: readonly string[];
-  extraFeeds: readonly string[];
   scope: Scope;
   asks: readonly { q: string; scope: Scope }[];
   disconnected: ReadonlySet<string>;
@@ -35,7 +34,6 @@ export const INITIAL: ReaderState = {
   laterDone: new Set(),
   watchOff: new Set(),
   watchNew: [],
-  extraFeeds: [],
   scope: 'Everything',
   asks: [],
   disconnected: new Set(),
@@ -76,8 +74,6 @@ export function itemAt(index: number): Item {
 }
 
 export const sourceCount = (src: Source) => ITEMS.filter((i) => i.src === src).length;
-
-export const articleCount = () => FEEDS.reduce((n, f) => n + f.articles.length, 0);
 
 /**
  * The Saved list: items saved from the stream this session first, then the stored list minus any
