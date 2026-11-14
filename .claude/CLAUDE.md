@@ -21,9 +21,9 @@ The quality bar is the point of this project. Prefer a smaller thing finished pr
 | Audience | Open-source self-host. One owner account per install. |
 | Platform | Web app, desktop width (min 920px). No phone layout yet. |
 | Stack | React + Vite + TypeScript front end. Python backend. Postgres. |
-| Backend | FastAPI. One app process serves the built web app, the API and runs background jobs, next to Postgres. |
-| API | REST with JSON, validated by Pydantic, with a published OpenAPI document. The front end's types and client are generated from that document, never written by hand. |
-| Database | SQLAlchemy 2 (async) with Alembic migrations. |
+| Backend | Django with Django Ninja. One app process serves the built web app, the API and runs background jobs, next to Postgres. Use what Django provides (ORM, migrations, auth, sessions, admin) before writing or adding anything. |
+| API | REST with JSON through Django Ninja, validated by Pydantic, with a published OpenAPI document. The front end's types and client are generated from that document, never written by hand. |
+| Database | Django ORM and Django migrations. |
 | Jobs | Queued and scheduled in Postgres (polling, transcripts, summaries, digests). No Redis. Jobs survive restarts and run with nobody signed in. |
 | AI clients | The official `openai` and `anthropic` Python SDKs behind one small interface of our own. No LiteLLM, no agent framework. |
 | Search | Postgres full-text search first. The schema leaves room for pgvector embeddings later; none are computed yet. |
@@ -36,11 +36,11 @@ The quality bar is the point of this project. Prefer a smaller thing finished pr
 | Saving | Full text, whole comment thread, video transcript and chapters, image thumbnails. Never download video files. |
 | AI | OpenAI and Anthropic, each with an owner-supplied key set in the UI. Each AI feature (summary, digest, Ask, and any new one) has its own provider and model setting. Settings show usage per provider, model and feature. |
 | Encryption | Source tokens and AI keys are encrypted by the app with a master key. The key is a file generated on first run in the data folder, or supplied as an environment variable; it is not derived from the passphrase. Content is plain in Postgres so search and Ask work. Disk encryption is the self-hoster's job. |
-| Sign-in | One passphrase, server-side sessions. The device list is the session list, with working Revoke and idle lock. Passkeys and two-step come later. |
+| Sign-in | One passphrase, server-side sessions, built on Django's auth and session framework. The device list is the session list, with working Revoke and idle lock. Passkeys and two-step come later. |
 | Distribution | Docker Compose: app container plus Postgres. `docker compose up` is the whole install. |
 | Licence | AGPL-3.0. |
 
-Chosen by Claude, not yet confirmed by the owner (change freely if told otherwise): pnpm workspace with `apps/web` (exists) and `apps/server` (the Python project, created in milestone 3); uv for Python dependencies; ruff, mypy in strict mode and pytest, matching the owner's duhview project; Procrastinate as the Postgres job queue (check it still fits before adopting it); `openapi-typescript` to generate the front end's types; the page polls for new items at first, server-sent events later if polling proves too slow; Vitest and Playwright on the front end.
+Chosen by Claude, not yet confirmed by the owner (change freely if told otherwise): pnpm workspace with `apps/web` (exists) and `apps/server` (the Python project, created in milestone 3); uv for Python dependencies; ruff, mypy in strict mode and pytest, matching the owner's duhview project; for the Postgres job queue, Django's own tasks framework if its database backend is ready, otherwise Procrastinate's Django integration (check both before adopting one); `openapi-typescript` to generate the front end's types; the page polls for new items at first, server-sent events later if polling proves too slow; Vitest and Playwright on the front end.
 
 Version pins with a reason: TypeScript stays on 6.0 until typescript-eslint supports 7. ESLint is 10 with a peer allowance for eslint-plugin-jsx-a11y in `pnpm-workspace.yaml`.
 
@@ -72,7 +72,7 @@ A piece of work is done only when all of these pass, and the result has been loo
 
 - `tsc` strict, ESLint and Prettier clean.
 - Front end: Vitest unit tests for logic and the data layer.
-- Server (from milestone 3): ruff, mypy strict, and pytest with unit tests for parsers and logic and integration tests for routes, source connectors and jobs against a real Postgres.
+- Server (from milestone 3): ruff, mypy strict with django-stubs, and pytest (pytest-django) with unit tests for parsers and logic and integration tests for routes, source connectors and jobs against a real Postgres.
 - Playwright visual regression against approved baselines for every component and screen touched. A changed baseline needs the owner's approval, never a silent update.
 - Accessibility: real buttons, links and inputs; full keyboard operation; visible themed focus; axe checks pass; contrast holds in both themes and every accent.
 
