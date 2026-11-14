@@ -49,11 +49,11 @@ Version pins with a reason: TypeScript stays on 6.0 until typescript-eslint supp
 - The security copy in the prototype is false for this architecture ("End-to-end encrypted", "Keys stay on your devices", "Encrypted · keys on device", "the server cannot read your saved items"). Never ship it. The screen must describe what the app actually does; rewriting it is a design gap.
 - No control may look functional when it is not. Unbuilt features are disabled and say why.
 - AI output is always marked with the AI badge and, where it makes claims, cites the items it drew on.
-- Until a security feature is real, the UI says nothing about it. The handoff's encryption lines in the sidebar, Saved and Connections are left out for now and return, worded truthfully, when milestone 3 builds the feature.
+- Until a security feature is real, the UI says nothing about it. The Encryption card on Security and settings and the line on the AI screen say only what this install does (wording approved by the owner, 2026-11-15); any change to them, or any new security claim, needs the owner's approval. The handoff's sidebar status button is not coming back (its slot is the Commands button); its Saved line ("Stored encrypted") stays out because content is not encrypted; its Connections note returns when a source first stores a token.
 
 ## Design gaps (need a design before code)
 
-The Encryption card on Security and settings (waits for milestone 3, when its claims become true). Anything else the handoff does not show.
+Anything the handoff does not show.
 
 ## Build order
 
