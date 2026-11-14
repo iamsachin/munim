@@ -785,13 +785,31 @@ test('highlights: selected comment text can be highlighted, is marked in place, 
   await expect(page.getByRole('link', { name: /^Highlights/ })).toHaveText(/6$/);
   expect(await axeFailures(page)).toEqual([]);
 
-  // The same words again are not stored twice.
-  await selectText(page, 'Saving was the thing.');
-  await page.keyboard.press('h');
-  await expect(page.getByRole('link', { name: /^Highlights/ })).toHaveText(/6$/);
+  // Text that is already highlighted, or part of it, offers nothing and cannot be stored again.
+  for (const again of ['Saving was the thing.', 'was the']) {
+    await selectText(page, again);
+    await expect(button).toHaveCount(0);
+    await page.keyboard.press('h');
+    await expect(page.getByRole('link', { name: /^Highlights/ })).toHaveText(/6$/);
+  }
+  // Text that runs from a highlight into plain text is a new, longer highlight.
+  await page.evaluate(() => {
+    const mark = document.querySelector('aside mark');
+    const after = mark?.nextSibling;
+    if (!mark?.firstChild || !after) throw new Error('expected a mark followed by text');
+    const range = document.createRange();
+    range.setStart(mark.firstChild, 0);
+    range.setEnd(after, ' Once everything'.length);
+    getSelection()?.removeAllRanges();
+    getSelection()?.addRange(range);
+  });
+  await expect(button).toBeVisible();
+  await button.click();
+  await expect(page.locator('aside mark')).toHaveText('Saving was the thing. Once everything');
+  await expect(page.getByRole('link', { name: /^Highlights/ })).toHaveText(/7$/);
 
   await page.getByRole('link', { name: /^Highlights/ }).click();
-  const first = page.locator('section').filter({ hasText: 'Saving was the thing.' });
+  const first = page.locator('section').filter({ hasText: 'Saving was the thing.' }).last();
   await expect(first).toContainText('What finally got you to move your feeds');
   await expect(first).toContainText('Now');
 });

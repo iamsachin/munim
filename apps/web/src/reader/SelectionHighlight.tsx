@@ -23,10 +23,12 @@ export function SelectionHighlight() {
     const quote = selection?.toString().trim() ?? '';
     const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
     const node = range?.commonAncestorContainer;
-    // The whole selection must sit inside one highlightable element.
-    const home = (node instanceof Element ? node : node?.parentElement)?.closest<HTMLElement>(
-      '[data-highlight-title]',
-    );
+    const within = node instanceof Element ? node : node?.parentElement;
+    // The whole selection must sit inside one highlightable element, and not inside text that is
+    // already highlighted: that would store a second, redundant highlight.
+    const home = within?.closest('mark')
+      ? null
+      : within?.closest<HTMLElement>('[data-highlight-title]');
     const { highlightSrc: src, highlightTitle: title, highlightFrom: from } = home?.dataset ?? {};
     if (!quote || !range || !src || !Object.hasOwn(SOURCES, src) || title === undefined) {
       setFound(null);
