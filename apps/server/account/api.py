@@ -60,8 +60,8 @@ class SecurityOut(Schema):
     """What the Security screen says about encryption. Facts, read from this install."""
 
     # Where the master key that seals secrets comes from: MUNIM_MASTER_KEY, or a file in the
-    # data folder made on first use.
-    master_key: Literal["environment", "file"]
+    # data folder, which is made when the first secret is sealed ("unmade" until then).
+    master_key: Literal["environment", "file", "unmade"]
     # How many secrets are sealed with it now (API keys so far).
     sealed: int
 

@@ -42,8 +42,11 @@ def _key() -> bytes:
 
 
 def kept_in() -> str:
-    """Where the master key comes from: the install's own setting, or the file made here."""
-    return "environment" if settings.MASTER_KEY else "file"
+    """Where the master key comes from: the install's own setting, or the file made here, which
+    does not exist until the first secret is sealed."""
+    if settings.MASTER_KEY:
+        return "environment"
+    return "file" if (Path(settings.DATA_DIR) / KEY_FILE).exists() else "unmade"
 
 
 def seal(secret: str) -> str:
