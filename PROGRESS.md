@@ -6,11 +6,9 @@ Last updated: 2026-11-14
 
 ## Now
 
-On branch `milestone-2-states` (pull request #3). Built, passing all gates, **waiting for the owner's approval**: loading, error and empty states, shown on the gallery page (`/gallery`, bottom) with the wording for every list.
+Approved and merged so far in milestone 2: every designed screen, the AI screen, on-demand summaries, first run, sign-in, lock, security settings, and the loading, error and empty states.
 
-Per the owner's decision the states are only designed now. They are wired into the screens in milestone 3, when data really loads and fails.
-
-Then: keyboard navigation and the command palette; the disabled-reply state; highlighting by selecting text.
+In progress: keyboard navigation and the command palette. Then the disabled-reply state and highlighting by selecting text.
 
 ## 0. Preparation
 
@@ -57,7 +55,7 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] AI settings: keys, per-feature model, monthly limit, usage (design gap, approved)
 - [x] On-demand summaries in place of automatic ones (approved)
 - [x] First-run setup, sign-in, lock screen (design gap, approved)
-- [ ] Loading, error and empty states: patterns and wording (design gap; built, awaiting approval)
+- [x] Loading, error and empty states: patterns and wording (design gap, approved; wired in milestone 3)
 - [ ] Keyboard navigation, command palette, shortcut help (design gap)
 - [ ] Disabled-reply state for sources without an official write API (design gap)
 - [ ] Highlight by selecting text, with a note
