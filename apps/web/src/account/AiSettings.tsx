@@ -1,4 +1,6 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { api, reason } from '../api/client';
 import { useReader } from '../reader/store';
 import { ScreenHeader } from '../shell/ScreenHeader';
 import { AiBadge, SectionLabel, StatusDot } from '../ui/atoms';
@@ -6,11 +8,13 @@ import { Button } from '../ui/Button';
 import { Chip } from '../ui/Chip';
 import { focusOnMount, Input } from '../ui/Input';
 import { Select } from '../ui/Select';
+import { ErrorState, LoadingRows } from '../ui/States';
 import { Cell, Table, TableHeader, TableRow, Th } from '../ui/Table';
 import { Toggle } from '../ui/Toggle';
 import {
   aiPaused,
   FEATURES,
+  modelFor,
   MODELS,
   PERIODS,
   PROVIDERS,
@@ -18,8 +22,6 @@ import {
   usableProviders,
   USAGE,
   usd,
-  withKey,
-  withoutKey,
   type AiState,
   type Feature,
   type Period,
@@ -46,13 +48,27 @@ export function AiSettings() {
   const [limitText, setLimitText] = useState(String(ai.limit ?? 10));
   const [period, setPeriod] = useState<Period>('This month');
 
-  const month = totalCents(USAGE['This month']);
-  const usable = usableProviders(ai);
-  const usage = USAGE[period];
+  // The keys are the server's: it seals them, asks the provider about them, and tells the
+  // browser only each one's last four characters and whether it was accepted.
+  const queries = useQueryClient();
+  const stored = useQuery({ queryKey: ['ai-keys'], queryFn: api.aiKeys });
   const stopEditing = () => {
     setEditing(null);
     setPasted('');
   };
+  const again = () => queries.invalidateQueries({ queryKey: ['ai-keys'] });
+  const save = useMutation({
+    mutationFn: api.setAiKey,
+    onSuccess: () => {
+      stopEditing();
+      return again();
+    },
+  });
+  const remove = useMutation({ mutationFn: api.removeAiKey, onSuccess: again });
+
+  const month = totalCents(USAGE['This month']);
+  const usable = usableProviders(stored.data ?? []);
+  const usage = USAGE[period];
 
   return (
     <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
@@ -88,9 +104,13 @@ export function AiSettings() {
             <span className="sr-only">Actions</span>
           </Th>
         </TableHeader>
-        {keys(PROVIDERS).map((p) => {
+        {stored.isPending && <LoadingRows what="providers" rows={2} />}
+        {stored.isError && (
+          <ErrorState what="the providers" onRetry={() => void stored.refetch()} />
+        )}
+        {stored.data?.map(({ provider: p, tail, ok }) => {
           const { name, code } = PROVIDERS[p];
-          const key = ai.keys[p];
+          const key = tail === null ? null : { tail, ok };
           const form = `key-${p}`;
           return (
             <TableRow key={p} pad={6} hover={false} className={`${KEY_COLS} items-center`}>
@@ -102,9 +122,7 @@ export function AiSettings() {
                     id={form}
                     onSubmit={(e) => {
                       e.preventDefault();
-                      if (!pasted.trim()) return;
-                      setAi((a) => withKey(a, p, pasted));
-                      stopEditing();
+                      if (pasted.trim()) save.mutate({ provider: p, key: pasted });
                     }}
                   >
                     <Input
@@ -119,6 +137,10 @@ export function AiSettings() {
                         setPasted(e.target.value);
                       }}
                     />
+                    {/* Why it was not saved: the provider could not be asked, or it is no key. */}
+                    <div role="alert" className="pt-4 text-note text-a3 empty:hidden">
+                      {save.isError ? reason(save.error) : null}
+                    </div>
                   </form>
                 ) : (
                   <span className="font-mono text-sm text-mute">
@@ -133,7 +155,7 @@ export function AiSettings() {
               <Cell className="flex justify-end gap-6">
                 {editing === p ? (
                   <>
-                    <Button type="submit" form={form} size="md">
+                    <Button type="submit" form={form} size="md" disabled={save.isPending}>
                       Save
                     </Button>
                     <Button size="md" onClick={stopEditing}>
@@ -147,6 +169,7 @@ export function AiSettings() {
                       aria-label={`${key ? 'Replace' : 'Add'} key for ${name}`}
                       onClick={() => {
                         setPasted('');
+                        save.reset();
                         setEditing(p);
                       }}
                     >
@@ -156,8 +179,9 @@ export function AiSettings() {
                       <Button
                         size="md"
                         aria-label={`Remove key for ${name}`}
+                        disabled={remove.isPending}
                         onClick={() => {
-                          setAi((a) => withoutKey(a, p));
+                          remove.mutate(p);
                         }}
                       >
                         Remove key
@@ -180,45 +204,48 @@ export function AiSettings() {
           <Th>Model</Th>
           <Th className="text-right">This month</Th>
         </TableHeader>
-        {keys(FEATURES).map((f: Feature) => {
-          const { name, note } = FEATURES[f];
-          const model = ai.models[f];
-          const spent = totalCents(USAGE['This month'].filter((r) => r.feature === f));
-          return (
-            <TableRow key={f} pad={6} hover={false} className={`${MODEL_COLS} items-center`}>
-              <Cell>
-                <div className="font-medium">{name}</div>
-                <div className="text-note text-mute">{note}</div>
-                {model === null && (
-                  <div className="text-note text-a3">No model chosen, so this is off.</div>
-                )}
-              </Cell>
-              <Cell>
-                <Select
-                  className="w-full"
-                  aria-label={`Model for ${name}`}
-                  disabled={usable.length === 0}
-                  value={model ?? ''}
-                  onChange={(e) => {
-                    setAi((a) => ({ ...a, models: { ...a.models, [f]: e.target.value } }));
-                  }}
-                >
-                  <option value="" disabled>
-                    {usable.length === 0 ? 'Add a key first' : 'Choose a model'}
-                  </option>
-                  {usable.map((p) => (
-                    <optgroup key={p} label={PROVIDERS[p].name}>
-                      {MODELS[p].map((m) => (
-                        <option key={m}>{m}</option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </Select>
-              </Cell>
-              <Cell className={`${META} text-right`}>{usd(spent)}</Cell>
-            </TableRow>
-          );
-        })}
+        {/* Which models can be chosen depends on the keys, so this waits for them. */}
+        {stored.isPending && <LoadingRows what="models" rows={3} />}
+        {stored.data &&
+          keys(FEATURES).map((f: Feature) => {
+            const { name, note } = FEATURES[f];
+            const model = modelFor(ai, f, usable);
+            const spent = totalCents(USAGE['This month'].filter((r) => r.feature === f));
+            return (
+              <TableRow key={f} pad={6} hover={false} className={`${MODEL_COLS} items-center`}>
+                <Cell>
+                  <div className="font-medium">{name}</div>
+                  <div className="text-note text-mute">{note}</div>
+                  {model === null && (
+                    <div className="text-note text-a3">No model chosen, so this is off.</div>
+                  )}
+                </Cell>
+                <Cell>
+                  <Select
+                    className="w-full"
+                    aria-label={`Model for ${name}`}
+                    disabled={usable.length === 0}
+                    value={model ?? ''}
+                    onChange={(e) => {
+                      setAi((a) => ({ ...a, models: { ...a.models, [f]: e.target.value } }));
+                    }}
+                  >
+                    <option value="" disabled>
+                      {usable.length === 0 ? 'Add a key first' : 'Choose a model'}
+                    </option>
+                    {usable.map((p) => (
+                      <optgroup key={p} label={PROVIDERS[p].name}>
+                        {MODELS[p].map((m) => (
+                          <option key={m}>{m}</option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </Select>
+                </Cell>
+                <Cell className={`${META} text-right`}>{usd(spent)}</Cell>
+              </TableRow>
+            );
+          })}
       </Table>
 
       <SectionLabel as="h2" className={HEADING}>

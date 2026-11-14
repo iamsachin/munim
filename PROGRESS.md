@@ -8,9 +8,11 @@ Last updated: 2026-11-14
 
 Milestone 3 in progress. Merged: the Django scaffold (#6), the account API (#8), the web app signing in against the server (#9), RSS (#10), background polling (#11), the Stream on real items (#12), feed articles readable in the thread pane (#13), rich text as blocks with images fetched through the server (#14), and Hacker News with its discussions (#15).
 
-Still on sample data in the browser: highlights, watches, digest, Ask, AI settings, and every Connections row except Hacker News.
+Open: encrypted storage, with the AI provider keys on the server.
 
-Next: encrypted storage for source tokens and AI keys, which YouTube needs; then YouTube, once the owner has chosen between an API key and OAuth.
+Still on sample data in the browser: highlights, watches, digest, Ask, every Connections row except Hacker News, and on the AI screen the models, usage and limit (the provider keys are real).
+
+Next: YouTube, once the owner has chosen between an API key and OAuth.
 
 ## 0. Preparation
 
@@ -76,7 +78,7 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [ ] Loading, error and empty states wired into every screen (`ui/States.tsx`, wording in `reader/copy.ts`); done for RSS and the device list
 - [x] Postgres job queue, scheduler and worker (Procrastinate); `pnpm dev` runs the worker
 - [ ] Docker Compose: one app container serving web, API and the job worker, plus Postgres
-- [ ] Master key file, generated on first run
+- [x] Master key file, generated on first use (or `MUNIM_MASTER_KEY`)
 - [x] Server: passphrase sign-in, sessions, device list with Revoke, lock and idle lock, change passphrase (Django auth and sessions)
 - [x] Server-side rate limiting on every passphrase check, with growing waits, counted in the database; tested by attempting a brute force from one address and from many
 - [ ] Delete-all, when it exists, must confirm the passphrase through the same check
@@ -85,7 +87,8 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [ ] Idle lock: watch it happen for real once (15 minutes in a browser); so far proven by unit tests and by the server's tests
 - [ ] Encryption card on Security and settings, designed once the claims are true
 - [ ] Export and delete-all (buttons are disabled until the server stores data; the approved passphrase confirmation for delete-all returns with it)
-- [ ] Encrypted storage for source tokens and AI keys; then restore the sidebar status button and the Connections note with truthful wording
+- [x] Encrypted storage for secrets (`munim/vault.py`), first used by the AI provider keys, which the server checks with the provider and stores sealed
+- [ ] Restore the sidebar status button and the Connections note with truthful wording, now that secrets are sealed (needs the owner's approval of the wording)
 - [x] RSS: add a feed, fetch and parse it safely, read its articles; every feed is polled every fifteen minutes
 - [ ] RSS: remove a feed from the app (only possible in the admin now; needs a design)
 - [x] RSS articles in the Stream, with unread state

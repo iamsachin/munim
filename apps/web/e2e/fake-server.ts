@@ -66,6 +66,10 @@ export async function fakeServer(page: Page, start: State = 'open') {
   let wrong = 0;
   let minutes: number | null = 15;
   const ago = (ms: number) => new Date(NOW - ms).toISOString();
+  const aiKeys: Record<string, { tail: string; ok: boolean } | null> = {
+    openai: { tail: '4f2a', ok: true },
+    anthropic: null,
+  };
   let hackerNews = { enabled: true, synced_at: ago(2 * 60_000), problem: '' };
   let devices = [
     { id: 1, name: 'Chrome on macOS', last_seen: ago(0), current: true },
@@ -177,6 +181,30 @@ export async function fakeServer(page: Page, start: State = 'open') {
     if (call === 'PUT lock-settings') {
       minutes = body.minutes as number | null;
       return reply(200, { minutes });
+    }
+    if (call === 'GET ai/keys') {
+      return reply(
+        200,
+        Object.entries(aiKeys).map(([provider, key]) => ({
+          provider,
+          tail: key?.tail ?? null,
+          ok: key?.ok ?? false,
+        })),
+      );
+    }
+    const [, keyCall, provider = ''] =
+      /^(PUT|DELETE) ai\/keys\/(openai|anthropic)$/.exec(call) ?? [];
+    if (keyCall === 'DELETE') {
+      aiKeys[provider] = null;
+      return reply(204);
+    }
+    if (keyCall === 'PUT') {
+      const key = String(body.key).trim();
+      if (key.length < 8) return refuse(422, 'That is too short to be an API key.');
+      // Stands in for asking the provider: real keys are long.
+      const saved = { tail: key.slice(-4), ok: key.length >= 20 };
+      aiKeys[provider] = saved;
+      return reply(200, { provider, ...saved });
     }
     if (call === 'GET sources/hacker-news') return reply(200, hackerNews);
     if (call === 'PUT sources/hacker-news') {

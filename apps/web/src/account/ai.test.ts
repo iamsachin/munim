@@ -2,16 +2,13 @@ import { expect, test } from 'vitest';
 import {
   AI_INITIAL,
   aiPaused,
+  modelFor,
   providerOf,
   totalCents,
   usableProviders,
   USAGE,
   usd,
-  withKey,
-  withoutKey,
 } from './ai';
-
-const LONG_KEY = 'sk-test-0123456789abcdefWXYZ';
 
 test('costs are summed in cents and shown as dollars', () => {
   expect(totalCents(USAGE['This month'])).toBe(420);
@@ -34,25 +31,26 @@ test('a model belongs to the provider that lists it', () => {
   expect(providerOf('unknown')).toBeUndefined();
 });
 
-test('a pasted key keeps only its last four characters and makes the provider usable', () => {
-  const ai = withKey(AI_INITIAL, 'anthropic', `  ${LONG_KEY}  `);
-  expect(ai.keys.anthropic).toEqual({ tail: 'WXYZ', ok: true });
-  expect(JSON.stringify(ai)).not.toContain(LONG_KEY);
-  expect(usableProviders(ai)).toEqual(['openai', 'anthropic']);
-  expect(withKey(AI_INITIAL, 'anthropic', '   ')).toBe(AI_INITIAL);
+test('only providers whose key was accepted can be chosen from', () => {
+  expect(usableProviders([])).toEqual([]);
+  expect(
+    usableProviders([
+      { provider: 'openai', tail: 'hort', ok: false },
+      { provider: 'anthropic', tail: 'WXYZ', ok: true },
+    ]),
+  ).toEqual(['anthropic']);
+  expect(usableProviders([{ provider: 'openai', tail: null, ok: false }])).toEqual([]);
 });
 
-test('a rejected or removed key switches off the features that used that provider', () => {
-  const rejected = withKey(AI_INITIAL, 'openai', 'short');
-  expect(rejected.keys.openai).toEqual({ tail: 'hort', ok: false });
-  expect(rejected.models).toEqual({ digest: null, ask: null, watch: null });
-  expect(usableProviders(rejected)).toEqual([]);
-
-  const mixed = { ...withKey(AI_INITIAL, 'anthropic', LONG_KEY) };
-  mixed.models = { ...mixed.models, ask: 'claude-sonnet-5-5' };
-  expect(withoutKey(mixed, 'openai').models).toEqual({
-    digest: null,
-    ask: 'claude-sonnet-5-5',
-    watch: null,
-  });
+test('a feature is off while the provider of its model has no working key', () => {
+  const ai = {
+    ...AI_INITIAL,
+    models: { digest: 'gpt-5.4-mini', ask: 'claude-sonnet-5-5', watch: null },
+  };
+  expect(modelFor(ai, 'digest', ['openai', 'anthropic'])).toBe('gpt-5.4-mini');
+  expect(modelFor(ai, 'digest', ['anthropic'])).toBeNull();
+  expect(modelFor(ai, 'ask', ['anthropic'])).toBe('claude-sonnet-5-5');
+  expect(modelFor(ai, 'watch', ['openai', 'anthropic'])).toBeNull();
+  // The choice is kept, so it returns with the key.
+  expect(modelFor(ai, 'digest', ['openai'])).toBe('gpt-5.4-mini');
 });
