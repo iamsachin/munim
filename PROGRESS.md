@@ -6,12 +6,11 @@ Last updated: 2026-11-14
 
 ## Now
 
-Milestone 3 in progress. Two pull requests are open, the second stacked on the first:
+Milestone 3 in progress. Merged: the Django scaffold (#6) and the account API with rate-limited passphrase checks (#8, which replaced #7).
 
-- #6 `milestone-3-server`: the Django scaffold, health endpoint, OpenAPI document, development database.
-- #7 `milestone-3-sign-in`: the account API (first run, sign-in and out, lock and unlock, idle lock, devices, change passphrase) with server-side rate limiting on every passphrase check. Critical, so a duhview review was requested.
+The web app still runs on sample data. Next: generate the front-end client from the OpenAPI document and wire setup, sign-in, the lock screen with an idle timer, devices, lock settings and change passphrase to the server.
 
-The web app still runs on sample data. Next: generate the front-end client from the OpenAPI document and wire setup, sign-in, lock, devices and settings to the server.
+Lesson for stacked pull requests: merge the base without deleting its branch, retarget the next one to `main`, then delete. Deleting the base branch closes the pull request stacked on it.
 
 ## 0. Preparation
 
