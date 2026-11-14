@@ -1,7 +1,7 @@
 import { createContext, use, useState, type ReactNode } from 'react';
 import type { Source } from '../ui/atoms';
 import { FEEDS, ITEMS, LATER, SAVED, WATCHES } from './fixtures';
-import type { Item, Watch } from './types';
+import type { Item, SavedItem, Watch } from './types';
 
 export const SCOPES = ['Everything', 'Saved', 'This week', 'Open thread'] as const;
 export type Scope = (typeof SCOPES)[number];
@@ -21,9 +21,12 @@ export interface ReaderState {
   disconnected: ReadonlySet<string>;
 }
 
+const STORED_TITLES = new Set(SAVED.map((s) => s.title));
+
 export const INITIAL: ReaderState = {
   selected: 0,
-  saved: new Set([0, 2, 5, 10]),
+  // Every stream item that is also in the stored saved list starts out saved.
+  saved: new Set(ITEMS.flatMap((item, i) => (STORED_TITLES.has(item.title) ? [i] : []))),
   replies: {},
   laterAdded: [],
   laterDone: new Set(),
@@ -71,8 +74,35 @@ export const sourceCount = (src: Source) => ITEMS.filter((i) => i.src === src).l
 
 export const articleCount = () => FEEDS.reduce((n, f) => n + f.articles.length, 0);
 
-/** The four items saved from the stream at the start are already part of SAVED. */
-export const savedCount = (s: ReaderState) => s.saved.size + SAVED.length - INITIAL.saved.size;
+/**
+ * The Saved list: items saved from the stream this session first, then the stored list minus any
+ * stream item that has since been unsaved.
+ */
+export function savedRows(s: ReaderState): SavedItem[] {
+  const fresh = [...s.saved]
+    .map(itemAt)
+    .filter((item) => !STORED_TITLES.has(item.title))
+    .map((item): SavedItem => ({
+      kind:
+        item.media === 'Video'
+          ? 'Video'
+          : item.src === 'RSS'
+            ? 'Article'
+            : item.src === 'X'
+              ? 'Post'
+              : 'Thread',
+      src: item.src,
+      title: item.title,
+      from: item.from,
+      parsed: 'Processing',
+      when: 'Now',
+    }));
+  const stored = SAVED.filter((row) => {
+    const i = ITEMS.findIndex((item) => item.title === row.title);
+    return i < 0 || s.saved.has(i);
+  });
+  return [...fresh, ...stored];
+}
 
 export interface LaterRow {
   key: string;

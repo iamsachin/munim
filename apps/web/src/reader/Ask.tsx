@@ -66,9 +66,7 @@ export function Ask() {
       <div className="flex min-h-0 max-w-820 flex-1 flex-col gap-14 overflow-y-auto px-16 py-20">
         {log.map((m, n) => (
           <div key={n} className="flex flex-col gap-10">
-            <div className="max-w-[80%] self-end rounded-8 bg-card px-12 py-8 text-prose">
-              {m.q}
-            </div>
+            <div className="max-w-4/5 self-end rounded-8 bg-card px-12 py-8 text-prose">{m.q}</div>
             <Card tone="ai" className="gap-8">
               <div className="flex items-center gap-8">
                 <AiBadge />
