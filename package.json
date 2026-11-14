@@ -16,7 +16,9 @@
     "db": "docker compose up -d --wait db",
     "gen:api": "pnpm --filter web gen:api",
     "api:check": "pnpm gen:api && git diff --exit-code -- apps/server/openapi.json apps/web/src/api/schema.d.ts",
-    "dev:web": "pnpm --filter web dev"
+    "dev:web": "pnpm --filter web dev",
+    "test-stack:server": "./apps/server/e2e_server.sh",
+    "test-stack:web": "MUNIM_SERVER=http://127.0.0.1:8001 pnpm --filter web exec vite --port 4173 --strictPort"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -83,12 +83,17 @@ A piece of work is done only when all of these pass, and the result has been loo
 - `pnpm db`: start the development Postgres (Docker, port 5433) and wait until it is healthy. Everything below needs it.
 - `pnpm dev`: the web app at http://localhost:5173, the Django server at http://localhost:8000 and the job worker, together. The web app proxies `/api` and `/admin` to the server and shows "Munim is not answering" without it. The design-system gallery is at `/gallery`; API docs at `/api/docs`.
 - `pnpm dev:web`, `pnpm dev:server`: either one on its own.
+- `pnpm test-stack:server` and `pnpm test-stack:web`: a second copy of the app for trying things by hand, at http://localhost:4173, on its own database (`munim_e2e`) that is emptied each time the server starts.
 - `pnpm gen:api`: regenerate `apps/server/openapi.json` and the web app's types (`apps/web/src/api/schema.d.ts`) from the server's code. Run it after changing any endpoint or schema; `pnpm check` fails if they are stale.
 - `pnpm check`: for the web app, types, lint, format, unit tests, then a production build with Playwright visual regression and axe; for the server, mypy, ruff and pytest; and that the generated API types are current. Playwright also starts the real server on its own database (`munim_e2e`) for `real-server.spec.ts`.
 - `pnpm format`: apply Prettier.
 - `pnpm --filter web exec playwright test --update-snapshots`: re-record baselines. Only for a change the owner has approved; look at every changed image first.
 
 Baselines are recorded on macOS Chromium and are platform-specific; other platforms need their own.
+
+## The owner's data
+
+The development database (`munim`, behind `pnpm dev` on ports 5173 and 8000) is the owner's own install: their passphrase, feeds and reading state. Never flush it, seed it, sign in to it or change its rows. Reading it to diagnose something is fine. Anything you try by hand, including every agent-browser test, runs on the test stack (`pnpm test-stack:server`, `pnpm test-stack:web`), whose database is disposable. Migrating the development database is the one change allowed, because the owner's `pnpm dev` does it anyway.
 
 ## Git
 
