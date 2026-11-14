@@ -36,7 +36,7 @@ The quality bar is the point of this project. Prefer a smaller thing finished pr
 | Saving | Full text, whole comment thread, video transcript and chapters, image thumbnails. Never download video files. |
 | AI | OpenAI and Anthropic, each with an owner-supplied key set in the UI. Three features call a model, each with its own provider and model setting: Digest, Ask, Watch matching. Nothing is summarised automatically: a summary is an Ask the owner sends ("Summarize this thread"), to save tokens. A monthly spend limit pauses all AI when reached. Settings show usage per feature and model. |
 | Encryption | Source tokens and AI keys are encrypted by the app with a master key. The key is a file generated on first run in the data folder, or supplied as an environment variable; it is not derived from the passphrase. Content is plain in Postgres so search and Ask work. Disk encryption is the self-hoster's job. |
-| Sign-in | One passphrase, server-side sessions, built on Django's auth and session framework. The device list is the session list, with working Revoke and idle lock. Passkeys and two-step come later. |
+| Sign-in | One passphrase, server-side sessions, built on Django's auth and session framework. The device list is the session list, with working Revoke and idle lock. Every place a passphrase is checked (sign-in, unlock, change passphrase, delete-all confirmation) is rate limited on the server so it cannot be brute forced; the wait shown in the browser is only the display of that. Passkeys and two-step come later. |
 | Distribution | Docker Compose: app container plus Postgres. `docker compose up` is the whole install. |
 | Licence | AGPL-3.0. |
 

@@ -78,7 +78,8 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [ ] Docker Compose: one app container serving web, API and jobs, plus Postgres
 - [ ] Master key file, generated on first run
 - [ ] Passphrase sign-in, sessions, device list with Revoke, idle lock (Django auth and sessions)
-- [ ] Idle timer in the browser, with the server refusing requests while locked and after too many wrong passphrases
+- [ ] Server-side rate limiting on every passphrase check (sign-in, unlock, change passphrase, delete-all), with growing waits, counted on the server so reloading or scripting cannot skip it; tested by attempting a brute force
+- [ ] Idle timer in the browser, with the server refusing requests while locked
 - [ ] Encryption card on Security and settings, designed once the claims are true
 - [ ] Change passphrase, export and delete-all wired to the server (the mock says it did nothing)
 - [ ] Encrypted storage for source tokens and AI keys; then restore the sidebar status button and the Connections note with truthful wording
