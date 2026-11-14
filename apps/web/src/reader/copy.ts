@@ -5,6 +5,7 @@ export const EMPTY = {
   newItems: 'Nothing new since yesterday.',
   repliesToYou: 'No replies to you.',
   replies: 'No replies yet.',
+  youtubeComments: 'YouTube comments are not fetched.',
   later: 'The queue is empty.',
   saved: 'Nothing saved yet.',
   highlights: 'No highlights yet.',

@@ -155,10 +155,14 @@ def test_the_security_screen_is_told_facts_not_secrets(
     owner_client: Client, provider: Any, settings: Any
 ) -> None:
     # Nothing has been sealed yet, so no key file has been made.
-    assert owner_client.get("/api/security").json() == {"master_key": "unmade", "sealed": 0}
+    assert owner_client.get("/api/security").json() == {
+        "master_key": "unmade",
+        "sealed": 0,
+        "sign_ins": 0,
+    }
     put(owner_client, "openai", OPENAI_KEY)
     told = owner_client.get("/api/security")
-    assert told.json() == {"master_key": "file", "sealed": 1}
+    assert told.json() == {"master_key": "file", "sealed": 1, "sign_ins": 0}
     assert OPENAI_KEY not in told.content.decode()
 
     from cryptography.fernet import Fernet

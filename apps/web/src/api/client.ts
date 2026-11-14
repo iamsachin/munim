@@ -10,6 +10,8 @@ export type ItemDetail = Schemas['ItemDetail'];
 export type ItemPatch = Schemas['ItemPatch'];
 export type Counts = Schemas['Counts'];
 export type Connection = Schemas['ConnectionOut'];
+/** Where the YouTube connection stands: set up or not, signed in or not. No secrets. */
+export type YouTube = Schemas['YouTubeOut'];
 /** A passage the owner marked, with its note and what it was taken from. */
 export type Highlight = Schemas['HighlightOut'];
 /** What the browser knows of a provider's key: its last four characters and whether it works. */
@@ -108,6 +110,10 @@ export const api = {
   setAiKey: ({ provider, key }: { provider: AiKey['provider']; key: string }) =>
     call<AiKey>('PUT', `ai/keys/${provider}`, { key } satisfies Schemas['KeyIn']),
   removeAiKey: (provider: AiKey['provider']) => call<undefined>('DELETE', `ai/keys/${provider}`),
+  youtube: () => call<YouTube>('GET', 'sources/youtube'),
+  setYouTubeCredentials: (credentials: Schemas['YouTubeCredentials']) =>
+    call<YouTube>('PUT', 'sources/youtube/credentials', credentials),
+  disconnectYouTube: () => call<YouTube>('DELETE', 'sources/youtube'),
   hackerNews: () => call<Connection>('GET', 'sources/hacker-news'),
   setHackerNews: (enabled: boolean) =>
     call<Connection>('PUT', 'sources/hacker-news', {

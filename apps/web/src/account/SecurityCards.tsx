@@ -8,7 +8,15 @@ import { Chip } from '../ui/Chip';
 import { focusOnMount, Input } from '../ui/Input';
 import { ErrorState, LoadingRows } from '../ui/States';
 import { Toggle } from '../ui/Toggle';
-import { connection, lastSeen, LOCK_AFTER, lockNote, passphraseProblem, waitMessage } from './auth';
+import {
+  connection,
+  lastSeen,
+  LOCK_AFTER,
+  lockNote,
+  passphraseProblem,
+  sealedNow,
+  waitMessage,
+} from './auth';
 import { useSession } from './session';
 
 export function Row({
@@ -398,32 +406,25 @@ export function EncryptionCard() {
   const facts = useQuery({ queryKey: ['security'], queryFn: api.security });
   const unknown = facts.isError ? 'Could not load' : 'Checking';
   const link = connection(window.location.protocol, window.location.hostname);
-  const sealed = facts.data?.sealed;
 
   return (
     <Card className="gap-8">
       <SectionLabel as="h2">Encryption</SectionLabel>
       <div className="flex items-center gap-8 font-semibold">
         <StatusDot tone="ok" />
-        API keys are sealed
+        Secrets are sealed
       </div>
       <p className="text-pretty text-mute">
-        Keys you give Munim are encrypted with this install&apos;s master key before they are
-        stored, and are never sent back to the browser. What you read, save and highlight is kept as
-        plain text in the database, so that search and Ask can work. Encrypting the disk it sits on
-        is up to whoever runs this server.
+        API keys and sign-ins to sources are encrypted with this install&apos;s master key before
+        they are stored, and are never sent back to the browser. What you read, save and highlight
+        is kept as plain text in the database, so that search and Ask can work. Encrypting the disk
+        it sits on is up to whoever runs this server.
       </p>
       <dl className="grid grid-cols-[120px_minmax(0,1fr)] gap-x-12 gap-y-4 text-note">
         <dt className="text-mute">Master key</dt>
         <dd>{facts.data ? MASTER_KEY[facts.data.master_key] : unknown}</dd>
         <dt className="text-mute">Sealed now</dt>
-        <dd>
-          {sealed === undefined
-            ? unknown
-            : sealed === 0
-              ? 'Nothing yet'
-              : `${String(sealed)} API ${sealed === 1 ? 'key' : 'keys'}`}
-        </dd>
+        <dd>{facts.data ? sealedNow(facts.data.sealed, facts.data.sign_ins) : unknown}</dd>
         <dt className="text-mute">Passphrase</dt>
         <dd>Kept only as a hash, never as written</dd>
         <dt className="text-mute">Connection</dt>

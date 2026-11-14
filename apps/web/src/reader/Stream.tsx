@@ -413,7 +413,9 @@ function Thread({ id, now, q }: { id: number; now: number; q: string }) {
             ))}
             {/* A feed article has no replies to wait for, so it does not say "none yet". */}
             {it.comments.length === 0 && !isArticle && (
-              <EmptyState compact>{EMPTY.replies}</EmptyState>
+              <EmptyState compact>
+                {it.source === 'YT' ? EMPTY.youtubeComments : EMPTY.replies}
+              </EmptyState>
             )}
           </div>
         </div>

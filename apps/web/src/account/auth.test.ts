@@ -1,5 +1,13 @@
 import { expect, test } from 'vitest';
-import { connection, idleStep, lastSeen, lockNote, passphraseProblem, waitMessage } from './auth';
+import {
+  connection,
+  idleStep,
+  lastSeen,
+  lockNote,
+  passphraseProblem,
+  sealedNow,
+  waitMessage,
+} from './auth';
 
 test('a new passphrase needs twelve characters and a matching repeat', () => {
   expect(passphraseProblem('short', 'short')).toBe('Use at least 12 characters.');
@@ -65,4 +73,12 @@ test('the connection is described by the address the app was opened at', () => {
     says: 'Not encrypted (http): others on the network can read it',
     plain: true,
   });
+});
+
+test('what is sealed is counted in plain words', () => {
+  expect(sealedNow(0, 0)).toBe('Nothing yet');
+  expect(sealedNow(1, 0)).toBe('1 API key');
+  expect(sealedNow(2, 0)).toBe('2 API keys');
+  expect(sealedNow(0, 1)).toBe('1 source sign-in');
+  expect(sealedNow(1, 2)).toBe('1 API key, 2 source sign-ins');
 });

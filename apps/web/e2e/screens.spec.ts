@@ -753,6 +753,75 @@ test('connections: disconnect and reconnect', async ({ page }) => {
   ).toBeDisabled();
 });
 
+test('connections: YouTube is disconnected, and can be connected again with one click', async ({
+  page,
+}) => {
+  await open(page, '/connections');
+  const row = page.getByRole('row').filter({ hasText: 'YouTube' });
+  await expect(row).toContainText('Your subscriptions');
+  await expect(row).toContainText('9 min ago');
+  await expect(row).toContainText('Connected');
+  await expect(page.getByRole('region', { name: 'YouTube setup' })).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Disconnect YouTube' }).click();
+  await expect(row).toContainText('Ready to connect');
+  await expect(row).toContainText('Disconnected');
+  // The client ID and secret stay, so connecting again is a link to Google's sign-in.
+  await expect(page.getByRole('link', { name: 'Connect YouTube' })).toHaveAttribute(
+    'href',
+    '/api/sources/youtube/start',
+  );
+  await expect(page.getByRole('region', { name: 'YouTube setup' })).toContainText(
+    'The client ID and secret are saved.',
+  );
+});
+
+for (const theme of ['Dark', 'Light'] as const) {
+  test(`connections: YouTube is set up with a Google client ID and secret (${theme})`, async ({
+    page,
+  }) => {
+    const server = await open(page, '/connections', theme);
+    server.youtubeFresh();
+    await page.reload();
+    const row = page.getByRole('row').filter({ hasText: 'YouTube' });
+    await expect(row).toContainText('Not set up');
+    await page.getByRole('button', { name: 'Set up YouTube' }).click();
+
+    const setup = page.getByRole('region', { name: 'YouTube setup' });
+    // The address the owner must give Google is shown to be copied.
+    await expect(setup).toContainText('http://localhost:4173/api/sources/youtube/callback');
+    await expect(setup).toContainText('Google ends the sign-in after 7 days');
+    await expect(page).toHaveScreenshot(`connections-youtube-setup-${theme.toLowerCase()}.png`);
+    expect(await axeFailures(page)).toEqual([]);
+
+    await setup.getByLabel('Client ID').fill('short');
+    await setup.getByLabel('Client secret').fill('short');
+    await setup.getByRole('button', { name: 'Save' }).click();
+    await expect(setup.getByRole('alert')).toHaveText(
+      'That is too short to be a client ID and secret.',
+    );
+
+    await setup.getByLabel('Client ID').fill('1234567890-abc.apps.googleusercontent.com');
+    await setup.getByLabel('Client secret').fill('a-made-up-client-secret');
+    await setup.getByRole('button', { name: 'Save' }).click();
+    await expect(row).toContainText('Ready to connect');
+    await expect(page.getByRole('link', { name: 'Connect YouTube' })).toBeVisible();
+    // Neither value is shown again.
+    await expect(page.getByText('a-made-up-client-secret')).toHaveCount(0);
+    await expect(setup.getByLabel('Client secret')).toHaveCount(0);
+  });
+}
+
+test('connections: a sign-in to Google that failed says why', async ({ page }) => {
+  const server = await open(page, '/connections');
+  server.youtubeFresh('Google sign-in was cancelled.');
+  await page.reload();
+  await expect(page.getByRole('region', { name: 'YouTube setup' }).getByRole('status')).toHaveText(
+    'Google sign-in was cancelled.',
+  );
+  await expect(page.getByRole('link', { name: 'Connect YouTube' })).toBeVisible();
+});
+
 test('connections: Hacker News is switched off and on at the server', async ({ page }) => {
   await open(page, '/connections');
   const row = page.getByRole('row').filter({ hasText: 'Hacker News' });
@@ -779,10 +848,10 @@ test('connections: Hacker News is switched off and on at the server', async ({ p
 test('settings: the Encryption card says what this install does, and no more', async ({ page }) => {
   await open(page, '/settings');
   const card = page.locator('section').filter({ hasText: 'Encryption' }).first();
-  await expect(card).toContainText('API keys are sealed');
+  await expect(card).toContainText('Secrets are sealed');
   await expect(card).toContainText('kept as plain text in the database');
   await expect(card).toContainText('A file in the data folder, master.key');
-  await expect(card).toContainText('1 API key');
+  await expect(card).toContainText('1 API key, 1 source sign-in');
   await expect(card).toContainText('Kept only as a hash, never as written');
   // The tests reach the app over http on this machine, and the card says exactly that.
   await expect(card).toContainText('Not encrypted, and it never leaves this machine');

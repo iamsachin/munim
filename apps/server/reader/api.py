@@ -1,18 +1,20 @@
 """The reader's API: feeds, and the items in the stream."""
 
+import secrets
 from datetime import datetime
 from typing import Annotated, Any, Literal
 
+import httpx
 from django.db import transaction
 from django.db.models import Count, Q
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from ninja import Field, Router, Schema, Status
 from procrastinate.exceptions import AlreadyEnqueued
 
 from account.auth import Open
-from reader import feeds, images, search, tasks
+from reader import feeds, images, search, tasks, youtube
 from reader.models import Connection, Feed, Highlight, Item, Source
 
 router = Router(tags=["reader"], auth=Open())
@@ -187,6 +189,29 @@ class ConnectionIn(Schema):
     enabled: bool
 
 
+class YouTubeOut(Schema):
+    """Where the YouTube connection stands. Nothing here is a secret."""
+
+    # The Google Cloud project's client ID and secret have been given.
+    configured: bool
+    # The owner has signed in to Google, and Munim holds lasting access.
+    connected: bool
+    # Whose account it is, to show.
+    account: str
+    synced_at: datetime | None
+    # Why the last fetch or sign-in failed, or empty.
+    problem: str
+    # The address Google sends the owner back to after signing in. It must be listed, exactly,
+    # in the Google Cloud project; Google accepts only https addresses or this machine.
+    redirect_uri: str
+    redirect_ok: bool
+
+
+class YouTubeCredentials(Schema):
+    client_id: str = Field(min_length=10, max_length=300)
+    client_secret: str = Field(min_length=10, max_length=300)
+
+
 class Counts(Schema):
     stream: int
     later: int
@@ -203,14 +228,14 @@ def _row(item: Item) -> dict[str, Any]:
         "title": item.title,
         # A feed article follows its feed's title, so a renamed feed renames its articles.
         "origin": item.feed.title if item.feed else item.origin,
-        "sub": "",
+        "sub": item.sub,
         "replies": item.replies,
         "published_at": item.published_at,
         "minutes": feeds.minutes(item.body),
         "unread": item.read_at is None,
         "saved_at": item.saved_at,
         "later_at": item.later_at,
-        "media": None,
+        "media": item.media or None,
     }
 
 
@@ -482,6 +507,101 @@ def set_hacker_news(request: HttpRequest, body: ConnectionIn) -> ConnectionOut:
         except AlreadyEnqueued:
             pass
     return _connection(connection)
+
+
+def _return_address(request: HttpRequest) -> str:
+    return request.build_absolute_uri("/api/sources/youtube/callback")
+
+
+def _youtube(request: HttpRequest) -> YouTubeOut:
+    found = youtube.connection()
+    secrets = youtube.secrets_of(found)
+    address = _return_address(request)
+    host = request.get_host().split(":")[0]
+    return YouTubeOut(
+        configured=bool(secrets.get("client_id") and secrets.get("client_secret")),
+        connected=bool(secrets.get("refresh_token")),
+        account=found.account,
+        synced_at=found.synced_at,
+        problem=found.problem,
+        redirect_uri=address,
+        redirect_ok=address.startswith("https://") or host in ("localhost", "127.0.0.1"),
+    )
+
+
+@router.get("/sources/youtube", response=YouTubeOut)
+def youtube_state(request: HttpRequest) -> YouTubeOut:
+    return _youtube(request)
+
+
+@router.put("/sources/youtube/credentials", response=YouTubeOut)
+def set_youtube_credentials(request: HttpRequest, body: YouTubeCredentials) -> YouTubeOut:
+    """Stores the Google Cloud project's client ID and secret, sealed. A sign-in made with other
+    credentials is of no use with these, so it is forgotten."""
+    found = youtube.connection()
+    youtube.keep(
+        found,
+        client_id=body.client_id.strip(),
+        client_secret=body.client_secret.strip(),
+        refresh_token=None,
+    )
+    found.enabled = False
+    found.account = ""
+    found.problem = ""
+    found.save()
+    return _youtube(request)
+
+
+_STATE = "youtube_state"
+
+
+@router.get("/sources/youtube/start", include_in_schema=False)
+def start_youtube(request: HttpRequest) -> HttpResponse:
+    """Sends the owner to Google to sign in. Google sends them back to the callback below."""
+    client_id = youtube.secrets_of(youtube.connection()).get("client_id")
+    if not client_id:
+        return HttpResponseRedirect("/connections")
+    # Google hands this back; a callback without it did not start here.
+    state = secrets.token_urlsafe(32)
+    request.session[_STATE] = state
+    return HttpResponseRedirect(youtube.authorize_url(client_id, _return_address(request), state))
+
+
+@router.get("/sources/youtube/callback", include_in_schema=False)
+def finish_youtube(
+    request: HttpRequest, code: str = "", state: str = "", error: str = ""
+) -> HttpResponse:
+    """Where Google sends the owner back. Whatever happened is shown on Connections."""
+    found = youtube.connection()
+    expected = request.session.pop(_STATE, None)
+    if not expected or not secrets.compare_digest(state, str(expected)):
+        found.problem = "That sign-in did not start here. Connect YouTube again."
+    elif error or not code:
+        found.problem = "Google sign-in was cancelled."
+    else:
+        try:
+            youtube.connect(found, code, _return_address(request))
+        except youtube.Problem as problem:
+            found.problem = str(problem)[:300]
+        except httpx.HTTPError:
+            found.problem = "Google could not be reached."
+        else:
+            # Fetched now by the worker, not on its next hour and not inside this request.
+            try:
+                with transaction.atomic():
+                    tasks.poll_youtube.defer(timestamp=0)  # type: ignore[call-arg]
+            except AlreadyEnqueued:
+                pass
+            return HttpResponseRedirect("/connections")
+    found.save(update_fields=["problem"])
+    return HttpResponseRedirect("/connections")
+
+
+@router.delete("/sources/youtube", response=YouTubeOut)
+def disconnect_youtube(request: HttpRequest) -> YouTubeOut:
+    """Forgets the Google sign-in. Videos already fetched stay."""
+    youtube.disconnect(youtube.connection())
+    return _youtube(request)
 
 
 @router.get("/counts", response=Counts)

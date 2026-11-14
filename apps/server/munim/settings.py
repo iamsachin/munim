@@ -128,6 +128,10 @@ except ValueError:
     raise ImproperlyConfigured("MUNIM_TRUSTED_PROXIES is a whole number, such as 1.") from None
 if TRUSTED_PROXIES < 0:
     raise ImproperlyConfigured("MUNIM_TRUSTED_PROXIES cannot be negative.")
+# A proxy that ends https says so in this header, so the addresses Munim builds for itself (the
+# one Google sends the owner back to) are https too. Believed only when there is a proxy.
+if TRUSTED_PROXIES:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # Feeds on private networks (a service on the same LAN, say) are refused unless this is set,
 # because a feed address can also be used to make the server reach things only it can reach.

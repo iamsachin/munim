@@ -14,7 +14,7 @@ from django.utils.text import slugify
 
 from account.models import Preferences
 from ai.models import ProviderKey
-from reader.models import Connection, Feed, Highlight, Item
+from reader.models import Channel, Connection, Feed, Highlight, Item
 
 ABOUT = """\
 Everything Munim held when this archive was made.
@@ -25,8 +25,8 @@ highlights.json   your highlights and notes, each with the id of its item
 settings.json     the settings kept on the server
 saved/            the text of each item you saved, as a plain file
 
-Not here: the API keys you gave Munim, your passphrase, and the pictures in articles (those are
-fetched again from where they were published).
+Not here: the API keys and source sign-ins you gave Munim, your passphrase, and the pictures in
+articles (those are fetched again from where they were published).
 """
 
 
@@ -100,5 +100,6 @@ def delete_all() -> None:
         Item.objects.all().delete()
         Feed.objects.all().delete()
         Connection.objects.all().delete()
+        Channel.objects.all().delete()
         ProviderKey.objects.all().delete()
     shutil.rmtree(Path(settings.DATA_DIR) / "images", ignore_errors=True)
