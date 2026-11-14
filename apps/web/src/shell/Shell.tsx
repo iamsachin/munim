@@ -1,6 +1,7 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { Outlet, useNavigate } from 'react-router';
 import { LockScreen } from '../account/LockScreen';
+import { SelectionHighlight } from '../reader/SelectionHighlight';
 import { useReader } from '../reader/store';
 import { useTheme } from '../settings';
 import { AskBar } from './AskBar';
@@ -96,6 +97,7 @@ export function Shell() {
           <Outlet context={context} />
         </div>
       </div>
+      {!state.locked && <SelectionHighlight />}
       {state.locked && <LockScreen />}
       {!state.locked && overlay === 'palette' && <Palette onClose={close} onHelp={showShortcuts} />}
       {!state.locked && overlay === 'help' && <ShortcutHelp onClose={close} />}

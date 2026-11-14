@@ -120,7 +120,7 @@ test('stream: source, filter and search narrow the list', async ({ page }) => {
   await expect(rows(page)).toHaveCount(2); // the search is kept: header + the SQLite thread
 });
 
-test('stream: selecting, saving, queueing and replying update the thread and the counts', async ({
+test('stream: selecting, saving and queueing update the thread and the counts', async ({
   page,
 }) => {
   await open(page, '/stream');
@@ -138,12 +138,26 @@ test('stream: selecting, saving, queueing and replying update the thread and the
 
   await thread.getByRole('button', { name: 'Read later' }).click();
   await expect(page.getByRole('link', { name: /^Read later/ })).toHaveText(/7$/);
+});
 
-  await thread.getByLabel('Reply on X').fill('Per-field merges sound right.');
+test('replies: a Reddit thread can be replied to; other sources say why not', async ({ page }) => {
+  await open(page, '/stream');
+  const thread = page.getByRole('complementary', { name: 'Thread' });
+  await thread.getByLabel('Reply on Reddit').fill('Search is what did it for me.');
   await thread.getByRole('button', { name: 'Reply' }).click();
-  await expect(thread.getByText('Per-field merges sound right.')).toBeVisible();
-  await expect(thread.getByLabel('Reply on X')).toHaveValue('');
-  await expect(rows(page).filter({ hasText: 'Shipped offline sync' })).toContainText('38');
+  await expect(thread.getByText('Search is what did it for me.')).toBeVisible();
+  await expect(thread.getByLabel('Reply on Reddit')).toHaveValue('');
+  await expect(rows(page).filter({ hasText: 'What finally got you' })).toContainText('215');
+
+  await page.getByRole('button', { name: /^Show HN/ }).click();
+  await expect(thread.getByText('Hacker News has no official way to reply')).toBeVisible();
+  await expect(thread.getByRole('button', { name: 'Reply' })).toHaveCount(0);
+  await expect(thread.getByRole('button', { name: 'Open original' })).toBeDisabled();
+  await expect(page).toHaveScreenshot('stream-no-reply-dark.png');
+  expect(await axeFailures(page)).toEqual([]);
+
+  await page.getByRole('button', { name: /^A year of running my own feed reader/ }).click();
+  await expect(thread.getByText('Feeds have no replies.')).toBeVisible();
 });
 
 test('saved: an item saved in the stream is listed, an unsaved one is not', async ({ page }) => {
@@ -582,14 +596,16 @@ test('keyboard: j and k move through the stream, and s, l, a, r act on the selec
   await page.keyboard.press('k'); // stops at the first row
   await expect(threadHeading(page)).toHaveText(/^What finally got you/);
 
+  await page.keyboard.press('r');
+  await expect(page.getByLabel('Reply on Reddit')).toBeFocused();
+  await page.getByLabel('Reply on Reddit').blur();
   await page.keyboard.press('j');
   await page.keyboard.press('s');
   await expect(page.getByRole('link', { name: /^Saved/ })).toHaveText(/14$/);
   await page.keyboard.press('l');
   await expect(page.getByRole('link', { name: /^Read later/ })).toHaveText(/7$/);
-  await page.keyboard.press('r');
-  await expect(page.getByLabel('Reply on X')).toBeFocused();
-  await page.getByLabel('Reply on X').blur();
+  await page.keyboard.press('r'); // X has no reply box, so nothing takes the focus
+  await expect(page.locator('input:focus')).toHaveCount(0);
   await page.keyboard.press('a');
   await expect(page.getByLabel('Ask about this thread')).toBeFocused();
 });
@@ -733,4 +749,100 @@ test('command palette: actions change the theme, open the shortcut list, and loc
   await field.fill('lock');
   await field.press('Enter');
   await expect(page.getByRole('heading', { name: 'Locked' })).toBeVisible();
+});
+
+/** Selects the first occurrence of `text` on the page, as dragging over it would. */
+async function selectText(page: Page, text: string) {
+  await page.evaluate((wanted) => {
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      const at = node.textContent?.indexOf(wanted) ?? -1;
+      if (at < 0) continue;
+      const range = document.createRange();
+      range.setStart(node, at);
+      range.setEnd(node, at + wanted.length);
+      const selection = getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      return;
+    }
+    throw new Error(`"${wanted}" is not on the page`);
+  }, text);
+}
+
+test('highlights: selected comment text can be highlighted, is marked in place, and is listed', async ({
+  page,
+}) => {
+  await open(page, '/stream');
+  await selectText(page, 'Saving was the thing.');
+  const button = page.getByRole('button', { name: 'Highlight', exact: true });
+  await expect(button).toBeVisible();
+  await expect(page).toHaveScreenshot('highlight-selection-dark.png');
+  await button.click();
+  await expect(button).toHaveCount(0);
+  await expect(page.locator('mark', { hasText: 'Saving was the thing.' })).toBeVisible();
+  await expect(page.getByRole('link', { name: /^Highlights/ })).toHaveText(/6$/);
+  expect(await axeFailures(page)).toEqual([]);
+
+  // The same words again are not stored twice.
+  await selectText(page, 'Saving was the thing.');
+  await page.keyboard.press('h');
+  await expect(page.getByRole('link', { name: /^Highlights/ })).toHaveText(/6$/);
+
+  await page.getByRole('link', { name: /^Highlights/ }).click();
+  const first = page.locator('section').filter({ hasText: 'Saving was the thing.' });
+  await expect(first).toContainText('What finally got you to move your feeds');
+  await expect(first).toContainText('Now');
+});
+
+test('highlights: the h key works; text outside an article or comment cannot be highlighted', async ({
+  page,
+}) => {
+  await open(page, '/rss');
+  await selectText(page, 'I stopped polling every fifteen minutes');
+  await page.keyboard.press('h');
+  await expect(page.locator('mark', { hasText: 'I stopped polling' })).toBeVisible();
+  await expect(page.getByRole('link', { name: /^Highlights/ })).toHaveText(/6$/);
+
+  await selectText(page, 'A year of running my own feed reader');
+  await expect(page.getByRole('button', { name: 'Highlight', exact: true })).toHaveCount(0);
+});
+
+test('highlights: a stored quote is marked where it appears in the article', async ({ page }) => {
+  await open(page, '/rss');
+  await page.getByRole('button', { name: /^Plain Crypto/ }).click();
+  await expect(
+    page.locator('article mark', { hasText: 'recovery is where most schemes quietly give' }),
+  ).toBeVisible();
+});
+
+test('highlights: notes can be added and edited, and a highlight removed, down to none', async ({
+  page,
+}) => {
+  await open(page, '/highlights');
+  await page.getByRole('button', { name: /^Add note: Chunking by reply tree/ }).click();
+  await expect(page.getByRole('textbox', { name: 'Note' })).toBeFocused();
+  await page.getByRole('textbox', { name: 'Note' }).fill('Try this on the digest.');
+  await page.getByRole('button', { name: 'Save note' }).click();
+  await expect(page.getByText('Note: Try this on the digest.')).toBeVisible();
+
+  await page.getByRole('button', { name: /^Edit note: Chunking by reply tree/ }).click();
+  await expect(page.getByRole('textbox', { name: 'Note' })).toHaveValue('Try this on the digest.');
+  await expect(page).toHaveScreenshot('highlights-editing-dark.png');
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await expect(page.getByText('Note: Try this on the digest.')).toBeVisible();
+
+  for (let left = 5; left > 0; left--) {
+    await expect(page.getByRole('link', { name: /^Highlights/ })).toHaveText(
+      new RegExp(`${String(left)}$`),
+    );
+    await page
+      .getByRole('button', { name: /^Remove:/ })
+      .first()
+      .click();
+  }
+  await expect(page.getByText('No highlights yet.')).toBeVisible();
+  await page.getByRole('link', { name: /^Today/ }).click();
+  await expect(page.getByText('No highlights yet.')).toBeVisible();
 });

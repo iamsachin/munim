@@ -35,6 +35,7 @@ export const HELP: { title: string; rows: { keys: string[]; what: string }[] }[]
       { keys: ['j'], what: 'Next item' },
       { keys: ['k'], what: 'Previous item' },
       { keys: ['a'], what: 'Ask about it' },
+      { keys: ['h'], what: 'Highlight selected text' },
       { keys: ['s'], what: 'Save or unsave (Stream)' },
       { keys: ['l'], what: 'Read later (Stream)' },
       { keys: ['r'], what: 'Reply (Stream)' },

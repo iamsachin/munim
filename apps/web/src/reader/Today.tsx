@@ -4,7 +4,9 @@ import { ScreenHeader } from '../shell/ScreenHeader';
 import { AiBadge, Highlight, SectionLabel, SourceTag, SOURCES, type Source } from '../ui/atoms';
 import { buttonClass } from '../ui/Button';
 import { Card } from '../ui/Card';
-import { DIGESTS, HIGHLIGHTS, ITEMS } from './fixtures';
+import { EmptyState } from '../ui/States';
+import { EMPTY } from './copy';
+import { DIGESTS, ITEMS } from './fixtures';
 import { laterRows, sourceCount, useReader, watchRows } from './store';
 
 const SOURCE_ORDER: Source[] = ['RD', 'X', 'IG', 'HN', 'YT', 'RSS'];
@@ -139,7 +141,8 @@ export function Today() {
           </Section>
 
           <Section label="Recent highlights" to="/highlights" action="All highlights">
-            {HIGHLIGHTS.slice(0, 2).map((h) => (
+            {state.highlights.length === 0 && <EmptyState compact>{EMPTY.highlights}</EmptyState>}
+            {state.highlights.slice(0, 2).map((h) => (
               <div key={h.quote} className="p-6">
                 <Highlight>{h.quote}</Highlight>
                 <div className="pt-3 font-mono text-code text-mute">
