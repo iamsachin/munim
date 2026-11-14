@@ -36,7 +36,7 @@ export function Sidebar({ onCommands }: { onCommands: () => void }) {
           <NavRow name="Stream" count={counts?.stream} to="/stream" />
           <NavRow name="Read later" count={counts?.later} to="/later" />
           <NavRow name="Saved" count={counts?.saved} to="/saved" />
-          <NavRow name="Highlights" count={state.highlights.length} to="/highlights" />
+          <NavRow name="Highlights" count={counts?.highlights} to="/highlights" />
           <NavRow name="RSS" count={feeds.data?.reduce((n, f) => n + f.articles, 0)} to="/rss" />
           <NavRow name="Digest" to="/digest" />
           <NavRow name="Watches" count={matchCount(state)} to="/watches" />

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from reader.models import Connection, Feed, Item
+from reader.models import Connection, Feed, Highlight, Item
 
 
 @admin.register(Feed)
@@ -17,3 +17,8 @@ class ItemAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 @admin.register(Connection)
 class ConnectionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = ["source", "enabled", "synced_at", "problem"]
+
+
+@admin.register(Highlight)
+class HighlightAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    list_display = ["quote", "item", "note", "created_at"]

@@ -1173,7 +1173,7 @@ test('highlights: selected comment text can be highlighted, is marked in place, 
   await page.getByRole('link', { name: /^Highlights/ }).click();
   const first = page.locator('section').filter({ hasText: 'Saving was the thing.' }).last();
   await expect(first).toContainText('What finally got you to move your feeds');
-  await expect(first).toContainText('Now');
+  await expect(first).toContainText('Today');
 });
 
 test('highlights: the h key works; text outside an article or comment cannot be highlighted', async ({
@@ -1189,6 +1189,35 @@ test('highlights: the h key works; text outside an article or comment cannot be 
 
   await selectText(page, 'A year of running my own feed reader');
   await expect(page.getByRole('button', { name: 'Highlight', exact: true })).toHaveCount(0);
+});
+
+test('highlights: a highlight can cross italic text, and is still there after a reload', async ({
+  page,
+}) => {
+  await open(page, '/rss');
+  await expect(page.getByText('nobody asked')).toBeVisible();
+  // "question nobody asked: what" starts in plain text, crosses the italic words and ends in
+  // plain text again.
+  await page.evaluate(() => {
+    const italic = [...document.querySelectorAll('article span')].find(
+      (span) => span.textContent === 'nobody asked',
+    );
+    const before = italic?.previousSibling;
+    const after = italic?.nextSibling;
+    if (!before?.textContent || !after) throw new Error('expected text around the italic words');
+    const range = document.createRange();
+    range.setStart(before, before.textContent.indexOf('question'));
+    range.setEnd(after, ': what'.length);
+    getSelection()?.removeAllRanges();
+    getSelection()?.addRange(range);
+  });
+  await page.keyboard.press('h');
+  const marks = page.locator('article mark');
+  await expect(marks).toHaveText(['question ', 'nobody asked', ': what']);
+  await expect(page.getByRole('link', { name: /^Highlights/ })).toHaveText(/6$/);
+  await page.reload();
+  await expect(marks).toHaveText(['question ', 'nobody asked', ': what']);
+  expect(await axeFailures(page)).toEqual([]);
 });
 
 test('highlights: a stored quote is marked where it appears in the article', async ({ page }) => {

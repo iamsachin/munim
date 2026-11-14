@@ -1,6 +1,7 @@
 import {
   useEffect,
   useEffectEvent,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
@@ -21,9 +22,9 @@ import { AskCard } from './AskCard';
 import { Blocks } from './Blocks';
 import { EMPTY } from './copy';
 import { NO_REPLY } from './marks';
+import { marksFor } from './units';
 import { MediaPreview } from './MediaPreview';
 import { age, useChangeItem, useItem, useItems } from './queries';
-import { useReader } from './store';
 
 const COLS = 'grid-cols-[34px_minmax(0,1fr)_40px_30px_16px]';
 const FILTERS = ['All', 'Unread', 'Saved', 'Video'] as const;
@@ -292,7 +293,6 @@ function useFoundMarks(
 
 /** The open item: a question field, its text and replies, and where to go next. Keyed by item. */
 function Thread({ id, now, q }: { id: number; now: number; q: string }) {
-  const { state } = useReader();
   const item = useItem(id, q);
   const scroller = useRef<HTMLDivElement>(null);
   const text = useRef<HTMLDivElement>(null);
@@ -302,6 +302,13 @@ function Thread({ id, now, q }: { id: number; now: number; q: string }) {
     text,
     `${String(id)} ${JSON.stringify(item.data?.found)}`,
   );
+  // What to mark in the text and in each reply: highlights, and what the search matched.
+  const marks = useMemo(() => {
+    const opened = item.data;
+    if (!opened) return [];
+    const parts = [opened.blocks, ...opened.comments.map((comment) => comment.blocks)];
+    return marksFor(parts, opened.highlights, opened.found);
+  }, [item.data]);
   const change = useChangeItem();
   const frame = 'flex min-h-0 min-w-0 flex-col gap-12 border-l border-line bg-panel p-14';
 
@@ -317,7 +324,6 @@ function Thread({ id, now, q }: { id: number; now: number; q: string }) {
     );
   }
   const it = item.data;
-  const quotes = state.highlights.filter((h) => h.title === it.title).map((h) => h.quote);
   const isArticle = it.source === 'RSS';
 
   return (
@@ -384,9 +390,8 @@ function Thread({ id, now, q }: { id: number; now: number; q: string }) {
             {it.blocks.length > 0 && (
               <Blocks
                 blocks={it.blocks}
-                item={{ src: it.source, title: it.title, from: it.origin }}
-                quotes={quotes}
-                found={it.found}
+                where={{ item: it.id, reply: null }}
+                marks={marks[0]}
                 className="pb-12"
               />
             )}
@@ -401,8 +406,8 @@ function Thread({ id, now, q }: { id: number; now: number; q: string }) {
                 <Blocks
                   compact
                   blocks={c.blocks}
-                  item={{ src: it.source, title: it.title, from: it.origin }}
-                  quotes={quotes}
+                  where={{ item: it.id, reply: n }}
+                  marks={marks[n + 1]}
                 />
               </div>
             ))}

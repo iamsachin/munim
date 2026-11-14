@@ -220,6 +220,44 @@ test('a fresh install, from set-up to the admin, against the real server', async
       site.close();
       await page.reload();
       await expect(heading(page, 'A year of running my own feed reader')).toBeVisible();
+
+      // A highlight is kept by where it is, so it can run from plain text into bold. "with 130
+      // feeds" starts in one run of the paragraph and ends in the next.
+      await expect(page.getByText('130 feeds', { exact: true })).toBeVisible();
+      await page.evaluate(() => {
+        const bold = [...document.querySelectorAll('article span')].find(
+          (span) => span.textContent === '130 feeds',
+        );
+        const before = bold?.previousSibling;
+        if (!bold?.firstChild || !before?.textContent) throw new Error('expected bold text');
+        const range = document.createRange();
+        range.setStart(before, before.textContent.indexOf('with'));
+        range.setEnd(bold.firstChild, '130 feeds'.length);
+        getSelection()?.removeAllRanges();
+        getSelection()?.addRange(range);
+      });
+      await page.getByRole('button', { name: 'Highlight', exact: true }).click();
+      const marks = page.locator('article mark');
+      await expect(marks).toHaveText(['with ', '130 feeds']);
+      await expect(page.getByRole('link', { name: /^Highlights/ })).toHaveText(/1$/);
+      await page.reload();
+      await expect(marks).toHaveText(['with ', '130 feeds']);
+
+      await page.getByRole('link', { name: /^Highlights/ }).click();
+      await expect(page.getByText('with 130 feeds')).toBeVisible();
+      await expect(
+        page.getByText('A year of running my own feed reader · Low Tech Notes'),
+      ).toBeVisible();
+      await page.getByRole('button', { name: /^Add note:/ }).click();
+      await page.getByRole('textbox', { name: 'Note' }).fill('That was too many.');
+      await page.getByRole('button', { name: 'Save note' }).click();
+      await page.reload();
+      await expect(page.getByText('Note: That was too many.')).toBeVisible();
+      await page.getByRole('button', { name: /^Remove:/ }).click();
+      await expect(page.getByText('No highlights yet.')).toBeVisible();
+      await page.goto('/rss');
+      await expect(heading(page, 'A year of running my own feed reader')).toBeVisible();
+      await expect(marks).toHaveCount(0);
     } finally {
       site.close();
     }

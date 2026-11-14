@@ -43,27 +43,51 @@ export function findMatches(
   );
 }
 
-/** Cuts already-cut pieces of a text again at the ranges, flagging what falls inside one. */
-export function withFound<T extends { text: string }>(
+/** The ranges in order, with any that overlap or touch joined into one. */
+export function union(ranges: readonly Range[]): Range[] {
+  const out: [number, number][] = [];
+  for (const [from, to] of [...ranges].sort((a, b) => a[0] - b[0])) {
+    const last = out.at(-1);
+    if (last && from <= last[1]) last[1] = Math.max(last[1], to);
+    else out.push([from, to]);
+  }
+  return out;
+}
+
+/** The part of each range that falls inside [from, from + length), counted from `from`. */
+export function within(ranges: readonly Range[], from: number, length: number): Range[] {
+  return ranges
+    .map(([a, b]): Range => [Math.max(a, from) - from, Math.min(b, from + length) - from])
+    .filter(([a, b]) => a < b);
+}
+
+/**
+ * Cuts pieces of a text at the ranges and sets `key` on each: true for what falls inside a
+ * range. Pieces that were already cut (and flagged) for something else keep those flags.
+ */
+export function flagged<T extends { text: string }, K extends string>(
   pieces: readonly T[],
   ranges: readonly Range[],
-): (T & { found: boolean })[] {
-  const out: (T & { found: boolean })[] = [];
+  key: K,
+): (T & Record<K, boolean>)[] {
+  const out: (T & Record<K, boolean>)[] = [];
+  const add = (piece: T, text: string, on: boolean) => {
+    if (text) out.push({ ...piece, text, [key]: on } as T & Record<K, boolean>);
+  };
+  const wanted = union(ranges);
   let offset = 0;
   for (const piece of pieces) {
     const end = offset + piece.text.length;
     let at = offset;
-    for (const [from, to] of ranges) {
+    for (const [from, to] of wanted) {
       const start = Math.max(from, at);
       const stop = Math.min(to, end);
       if (start >= stop) continue;
-      if (start > at) {
-        out.push({ ...piece, text: piece.text.slice(at - offset, start - offset), found: false });
-      }
-      out.push({ ...piece, text: piece.text.slice(start - offset, stop - offset), found: true });
+      add(piece, piece.text.slice(at - offset, start - offset), false);
+      add(piece, piece.text.slice(start - offset, stop - offset), true);
       at = stop;
     }
-    if (at < end) out.push({ ...piece, text: piece.text.slice(at - offset), found: false });
+    add(piece, piece.text.slice(at - offset), false);
     offset = end;
   }
   return out;

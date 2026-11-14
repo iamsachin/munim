@@ -1,44 +1,58 @@
 import { useEffect, useEffectEvent, useState } from 'react';
 import { useTheme } from '../settings';
 import { useKeys } from '../shell/keys';
-import { SOURCES, type Source } from '../ui/atoms';
 import { buttonClass } from '../ui/Button';
-import { withHighlight } from './marks';
-import { useReader } from './store';
-import type { HighlightEntry } from './types';
+import { useAddHighlight } from './queries';
 
-type Pending = Omit<HighlightEntry, 'note' | 'when'>;
+type Pending = Parameters<ReturnType<typeof useAddHighlight>['mutate']>[0];
+
+const elementOf = (node: Node | null | undefined) =>
+  node instanceof Element ? node : (node?.parentElement ?? null);
 
 /**
- * A "Highlight" button that appears above text selected inside a highlightable element.
- * Pressing it, or the h key, saves the selection as a highlight.
+ * A "Highlight" button that appears above text selected inside one unit of an item's text (a
+ * paragraph, a heading, a list item). Pressing it, or the h key, saves the selection as a
+ * highlight, by where it is: the item, the unit, and the characters within the unit.
  */
 export function SelectionHighlight() {
-  const { update } = useReader();
+  const add = useAddHighlight();
   const { theme } = useTheme();
   const [found, setFound] = useState<{ top: number; left: number; entry: Pending } | null>(null);
 
   const read = useEffectEvent(() => {
     const selection = document.getSelection();
-    const quote = selection?.toString().trim() ?? '';
     const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
-    const node = range?.commonAncestorContainer;
-    const within = node instanceof Element ? node : node?.parentElement;
-    // The whole selection must sit inside one highlightable element, and not inside text that is
-    // already highlighted: that would store a second, redundant highlight.
-    const home = within?.closest('mark:not([data-found])')
-      ? null
-      : within?.closest<HTMLElement>('[data-highlight-title]');
-    const { highlightSrc: src, highlightTitle: title, highlightFrom: from } = home?.dataset ?? {};
-    if (!quote || !range || !src || !Object.hasOwn(SOURCES, src) || title === undefined) {
+    const selected = range?.toString() ?? '';
+    const quote = selected.trim();
+    const unit = elementOf(range?.startContainer)?.closest<HTMLElement>('[data-unit]');
+    const text = unit?.closest<HTMLElement>('[data-highlight-item]');
+    // The whole selection must sit inside one unit, and not inside text that is already
+    // highlighted: that would store a second, redundant highlight.
+    const inOneUnit = elementOf(range?.endContainer)?.closest('[data-unit]') === unit;
+    const inHighlight = elementOf(range?.commonAncestorContainer)?.closest(
+      'mark:not([data-found])',
+    );
+    if (!range || !quote || !unit || !text || !inOneUnit || inHighlight) {
       setFound(null);
       return;
     }
+    // How far into the unit the selection starts: the length of the text before it.
+    const before = document.createRange();
+    before.selectNodeContents(unit);
+    before.setEnd(range.startContainer, range.startOffset);
+    const start = before.toString().length + (selected.length - selected.trimStart().length);
     const box = range.getBoundingClientRect();
     setFound({
       top: box.top,
       left: box.left + box.width / 2,
-      entry: { quote, src: src as Source, title, from: from ?? '' },
+      entry: {
+        item: Number(text.dataset.highlightItem),
+        reply: text.dataset.highlightReply ? Number(text.dataset.highlightReply) : null,
+        unit: Number(unit.dataset.unit),
+        start,
+        end: start + quote.length,
+        quote,
+      },
     });
   });
 
@@ -54,7 +68,7 @@ export function SelectionHighlight() {
 
   const save = () => {
     if (!found) return;
-    update((s) => ({ highlights: withHighlight(s.highlights, found.entry) }));
+    add.mutate(found.entry);
     document.getSelection()?.removeAllRanges();
     setFound(null);
   };

@@ -70,6 +70,66 @@ export async function fakeServer(page: Page, start: State = 'open') {
     openai: { tail: '4f2a', ok: true },
     anthropic: null,
   };
+  // The design's sample highlights. Their places are unknown, so each is found by its words,
+  // as a highlight is when the text it was made in has changed.
+  const sample = (
+    quote: string,
+    note: string,
+    source: string,
+    title: string,
+    origin: string,
+    hoursAgo: number,
+  ) => ({ quote, note, source, title, origin, created_at: ago(hoursAgo * 3_600_000) });
+  let highlights = [
+    sample(
+      'Recovery is where most schemes quietly give the server a copy of the key.',
+      'Check this against our own recovery flow.',
+      'RSS',
+      'Notes on end-to-end encryption for small apps',
+      'Plain Crypto',
+      2,
+    ),
+    sample(
+      'Chunking by reply tree beats chunking by length.',
+      '',
+      'RD',
+      'Summarizing 400-comment threads: what actually works',
+      'r/LocalLLaMA',
+      26,
+    ),
+    sample(
+      'Incremental sync is fast until it is wrong, and when it is wrong it is wrong silently.',
+      'Good argument for a weekly full check.',
+      'RSS',
+      'The case for boring sync protocols',
+      'Wire Notes',
+      120,
+    ),
+    sample(
+      'Export should be the first feature, not the last.',
+      '',
+      'X',
+      'Small thing: export should be the first feature',
+      '@lena_builds',
+      121,
+    ),
+    sample(
+      'The airflow section at 9:40 is the part most people skip.',
+      'Rewatch before ordering fans.',
+      'YT',
+      'Building a home server rack from scratch',
+      'Bench Hours',
+      144,
+    ),
+  ].map((highlight, n) => ({
+    ...highlight,
+    id: n + 1,
+    item_id: FAKE_ITEMS.find((item) => item.title === highlight.title)?.id ?? 0,
+    reply: null as number | null,
+    unit: 0,
+    start: 0,
+    end: 0,
+  }));
   let hackerNews = { enabled: true, synced_at: ago(2 * 60_000), problem: '' };
   let devices = [
     { id: 1, name: 'Chrome on macOS', last_seen: ago(0), current: true },
@@ -182,6 +242,49 @@ export async function fakeServer(page: Page, start: State = 'open') {
       minutes = body.minutes as number | null;
       return reply(200, { minutes });
     }
+    if (call === 'GET highlights') {
+      return reply(
+        200,
+        [...highlights].sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id - a.id),
+      );
+    }
+    const [, itemId] = /^POST items\/(\d+)\/highlights$/.exec(call) ?? [];
+    if (itemId) {
+      const item = items.find((candidate) => candidate.id === Number(itemId));
+      if (!item) return refuse(404, 'Not Found');
+      const made = {
+        id: Math.max(0, ...highlights.map((highlight) => highlight.id)) + 1,
+        item_id: item.id,
+        source: item.source,
+        title: item.title,
+        origin: item.origin,
+        note: '',
+        created_at: ago(0),
+        reply: (body.reply ?? null) as number | null,
+        unit: Number(body.unit),
+        start: Number(body.start),
+        end: Number(body.end),
+        quote: String(body.quote),
+      };
+      highlights = [...highlights, made];
+      return reply(201, made);
+    }
+    const [, verb, highlightId] = /^(PATCH|DELETE) highlights\/(\d+)$/.exec(call) ?? [];
+    if (verb === 'DELETE') {
+      highlights = highlights.filter((highlight) => highlight.id !== Number(highlightId));
+      return reply(204);
+    }
+    if (verb === 'PATCH') {
+      highlights = highlights.map((highlight) =>
+        highlight.id === Number(highlightId)
+          ? { ...highlight, note: String(body.note).trim() }
+          : highlight,
+      );
+      return reply(
+        200,
+        highlights.find((highlight) => highlight.id === Number(highlightId)),
+      );
+    }
     if (call === 'GET ai/keys') {
       return reply(
         200,
@@ -273,6 +376,7 @@ export async function fakeServer(page: Page, start: State = 'open') {
         stream: items.length,
         later: items.filter((item) => item.laterAt).length,
         saved: items.filter((item) => item.savedAt).length,
+        highlights: highlights.length,
         sources,
       });
     }
@@ -303,6 +407,7 @@ export async function fakeServer(page: Page, start: State = 'open') {
           ...comment,
           blocks: [paragraph(said)],
         })),
+        highlights: highlights.filter((highlight) => highlight.item_id === item.id),
         // The real server knows other forms of a word; here each word stands for itself.
         found: (
           (new URL(request.url()).searchParams.get('q') ?? '')

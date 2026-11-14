@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { findMatches, withFound } from './found';
+import { findMatches, flagged, union, within } from './found';
 
 const marked = (texts: string[], found: string[][]) =>
   findMatches(texts, found).map((ranges, i) => ranges.map(([a, b]) => texts[i]?.slice(a, b)));
@@ -40,19 +40,57 @@ test('punctuation between the words does not part them; another word does', () =
   ]);
 });
 
-test('pieces already cut for highlights are cut again around a match', () => {
-  const pieces = [
+test('a text is cut at ranges, and pieces already cut keep what they were flagged with', () => {
+  const marked = flagged([{ text: 'The movement of data is here' }], [[8, 18]], 'marked');
+  expect(marked).toEqual([
     { text: 'The move', marked: false },
     { text: 'ment of da', marked: true },
     { text: 'ta is here', marked: false },
-  ];
+  ]);
   // "movement of data" starts in the first piece and ends in the third.
-  expect(withFound(pieces, [[4, 20]])).toEqual([
+  expect(flagged(marked, [[4, 20]], 'found')).toEqual([
     { text: 'The ', marked: false, found: false },
     { text: 'move', marked: false, found: true },
     { text: 'ment of da', marked: true, found: true },
     { text: 'ta', marked: false, found: true },
     { text: ' is here', marked: false, found: false },
   ]);
-  expect(withFound(pieces, [])).toEqual(pieces.map((p) => ({ ...p, found: false })));
+  expect(flagged([{ text: 'all of it' }], [], 'found')).toEqual([
+    { text: 'all of it', found: false },
+  ]);
+  expect(flagged([{ text: 'all of it' }], [[0, 9]], 'found')).toEqual([
+    { text: 'all of it', found: true },
+  ]);
+});
+
+test('ranges that overlap or touch are one range', () => {
+  expect(
+    union([
+      [10, 20],
+      [0, 5],
+      [15, 30],
+      [5, 6],
+    ]),
+  ).toEqual([
+    [0, 6],
+    [10, 30],
+  ]);
+  // Two highlights that overlap are drawn as one mark.
+  expect(
+    flagged(
+      [{ text: 'Saving was the thing. Once everything' }],
+      [
+        [0, 21],
+        [0, 37],
+      ],
+      'marked',
+    ),
+  ).toEqual([{ text: 'Saving was the thing. Once everything', marked: true }]);
+});
+
+test("a unit's ranges are handed to each of its runs, counted from the run's start", () => {
+  // A unit of two runs, "movement " and "of data"; one range crosses from the first to the second.
+  expect(within([[4, 12]], 0, 9)).toEqual([[4, 9]]);
+  expect(within([[4, 12]], 9, 7)).toEqual([[0, 3]]);
+  expect(within([[4, 12]], 16, 5)).toEqual([]);
 });
