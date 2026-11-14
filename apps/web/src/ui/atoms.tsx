@@ -1,4 +1,4 @@
-import type { ComponentProps } from 'react';
+import { useState, type ComponentProps } from 'react';
 import { cx } from './cx';
 
 export type Tone = 'accent' | 'ink' | 'a2' | 'a3' | 'a4' | 'ok' | 'line';
@@ -122,17 +122,41 @@ export function SaveDot({ saved, onToggle }: { saved: boolean; onToggle: () => v
   );
 }
 
-/** Striped placeholder until real thumbnails exist. Sits above a row's stretched RowButton. */
-export function MediaThumb({ kind, onClick }: { kind: 'Video' | 'Image'; onClick: () => void }) {
+/**
+ * The small picture in a row: the item's own still if it has one, and a striped placeholder
+ * naming its kind if it has none or it cannot be loaded. Sits above a row's stretched RowButton.
+ */
+export function MediaThumb({
+  kind,
+  src,
+  onClick,
+}: {
+  kind: 'Video' | 'Image';
+  src?: string | null;
+  onClick: () => void;
+}) {
+  const [failed, setFailed] = useState(false);
   return (
     <button
       type="button"
       onClick={onClick}
-      className="stripes relative z-1 flex h-28 w-40 flex-none cursor-zoom-in items-center justify-center rounded-4 border border-line hover:border-accent"
+      className="stripes relative z-1 flex h-28 w-40 flex-none cursor-zoom-in items-center justify-center overflow-hidden rounded-4 border border-line hover:border-accent"
     >
-      <span aria-hidden="true" className="rounded-2 bg-bg px-3 font-mono text-micro text-mute">
-        {kind === 'Video' ? 'VID' : 'IMG'}
-      </span>
+      {src && !failed ? (
+        <img
+          src={src}
+          alt=""
+          loading="lazy"
+          onError={() => {
+            setFailed(true);
+          }}
+          className="size-full object-cover"
+        />
+      ) : (
+        <span aria-hidden="true" className="rounded-2 bg-bg px-3 font-mono text-micro text-mute">
+          {kind === 'Video' ? 'VID' : 'IMG'}
+        </span>
+      )}
       <span className="sr-only">Preview {kind.toLowerCase()}</span>
     </button>
   );

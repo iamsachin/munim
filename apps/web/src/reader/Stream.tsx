@@ -8,6 +8,7 @@ import {
   type RefObject,
 } from 'react';
 import { Navigate, useParams } from 'react-router';
+import type { Item } from '../api/client';
 import { useTheme } from '../settings';
 import { focusId, useKeys } from '../shell/keys';
 import { ScreenHeader } from '../shell/ScreenHeader';
@@ -39,7 +40,12 @@ export function Stream() {
   const [filter, setFilter] = useState<Filter>('All');
   const [query, setQuery] = useState('');
   const [chosen, setChosen] = useState<number | undefined>(undefined);
-  const [zoom, setZoom] = useState<number | null>(null);
+  // The item shown large. `play` starts its video at once: choosing a card is choosing to watch.
+  const [zoom, setZoom] = useState<{ id: number; play: boolean } | null>(null);
+  // YouTube is looked at as much as read, so its page opens as cards of stills. The choice
+  // between that and the list is kept in this browser.
+  const [view, setView] = useState<View>(storedView);
+  const cards = source === 'YT' && view === 'Cards';
   // Ages are worked out against one moment, so they do not change while the screen is open.
   const [now] = useState(() => Date.now());
 
@@ -57,7 +63,7 @@ export function Stream() {
   );
   // The open item is the one chosen, if it is in the list on screen; otherwise the first row.
   const current = rows.find((item) => item.id === chosen) ?? rows[0];
-  const zoomed = rows.find((item) => item.id === zoom);
+  const zoomed = rows.find((item) => item.id === zoom?.id);
 
   /**
    * Opens an item and marks it read. Only a deliberate choice does this: the row shown by
@@ -95,9 +101,7 @@ export function Stream() {
   );
   // Keep the selected row in view when it is moved with the keyboard.
   useEffect(() => {
-    document
-      .querySelector('[role="row"][aria-current="true"]')
-      ?.scrollIntoView({ block: 'nearest' });
+    document.querySelector('main [aria-current="true"]')?.scrollIntoView({ block: 'nearest' });
   }, [current?.id]);
 
   // An address like /stream/mastodon names no source we have.
@@ -119,6 +123,26 @@ export function Stream() {
               {f}
             </Chip>
           ))}
+          {source === 'YT' && (
+            <div role="group" aria-label="View" className="ml-auto flex gap-6">
+              {VIEWS.map((v) => (
+                <Chip
+                  key={v}
+                  on={view === v}
+                  onClick={() => {
+                    setView(v);
+                    try {
+                      localStorage.setItem(VIEW_KEY, v);
+                    } catch {
+                      // Storage can be switched off; the choice then lasts until the page is left.
+                    }
+                  }}
+                >
+                  {v}
+                </Chip>
+              ))}
+            </div>
+          )}
           <Input
             aria-label="Search the stream"
             placeholder="Search the stream"
@@ -126,89 +150,127 @@ export function Stream() {
             onChange={(e) => {
               setQuery(e.target.value);
             }}
-            className="ml-auto max-w-220 flex-[1_1_100px]"
+            className={cx('max-w-220 flex-[1_1_100px]', source !== 'YT' && 'ml-auto')}
           />
         </ScreenHeader>
-        <Table label="Stream" className="flex min-h-0 flex-1 flex-col">
-          <TableHeader className={COLS}>
-            <Th>Src</Th>
-            <Th>Item</Th>
-            <Th className="text-right">Repl</Th>
-            <Th className="text-right">Age</Th>
-            <Th>
-              <span className="sr-only">Saved</span>
-            </Th>
-          </TableHeader>
-          <TableBody className="min-h-0 flex-1 overflow-y-auto">
+        {cards ? (
+          <div
+            role="list"
+            aria-label="Stream"
+            className="grid min-h-0 flex-1 auto-rows-max grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-16 overflow-y-auto p-16"
+          >
             {rows.map((item) => (
-              <TableRow
+              <VideoCard
                 key={item.id}
+                item={item}
+                now={now}
                 selected={item.id === current?.id}
-                className={cx(COLS, 'min-h-44 items-center')}
-              >
-                <Cell>
-                  <SourceTag src={item.source} />
-                </Cell>
-                <Cell className="flex min-w-0 items-center gap-10">
-                  {item.media && (
-                    <MediaThumb
-                      kind={item.media}
+                onOpen={() => {
+                  // Opened like a row (it is the one in the thread pane, and is read), and
+                  // shown large to be watched.
+                  open(item.id);
+                  setZoom({ id: item.id, play: true });
+                }}
+                onSave={() => {
+                  change.mutate({ id: item.id, saved: !item.saved_at });
+                }}
+              />
+            ))}
+            <div className="col-span-full empty:hidden">
+              {items.isPending && <LoadingRows what="the stream" />}
+              {items.isError && (
+                <ErrorState what="the stream" onRetry={() => void items.refetch()} />
+              )}
+              {items.isSuccess && rows.length === 0 && (
+                <p className="py-8 text-mute">
+                  {filter === 'All' && !query.trim() ? EMPTY.stream : EMPTY.filter}
+                </p>
+              )}
+            </div>
+          </div>
+        ) : (
+          <Table label="Stream" className="flex min-h-0 flex-1 flex-col">
+            <TableHeader className={COLS}>
+              <Th>Src</Th>
+              <Th>Item</Th>
+              <Th className="text-right">Repl</Th>
+              <Th className="text-right">Age</Th>
+              <Th>
+                <span className="sr-only">Saved</span>
+              </Th>
+            </TableHeader>
+            <TableBody className="min-h-0 flex-1 overflow-y-auto">
+              {rows.map((item) => (
+                <TableRow
+                  key={item.id}
+                  selected={item.id === current?.id}
+                  className={cx(COLS, 'min-h-44 items-center')}
+                >
+                  <Cell>
+                    <SourceTag src={item.source} />
+                  </Cell>
+                  <Cell className="flex min-w-0 items-center gap-10">
+                    {item.media && (
+                      <MediaThumb
+                        kind={item.media}
+                        src={item.thumb}
+                        onClick={() => {
+                          setZoom({ id: item.id, play: false });
+                        }}
+                      />
+                    )}
+                    <RowButton
                       onClick={() => {
-                        setZoom(item.id);
+                        open(item.id);
+                      }}
+                      className={cx('min-w-0 flex-1 truncate', item.unread && 'font-semibold')}
+                    >
+                      {item.title}{' '}
+                      <span className="pl-6 font-mono text-meta font-normal text-mute">
+                        {[item.origin, item.sub].filter(Boolean).join(' · ')}
+                      </span>
+                    </RowButton>
+                  </Cell>
+                  <Cell className="text-right font-mono text-meta text-mute">
+                    {item.replies || ''}
+                  </Cell>
+                  <Cell className="text-right font-mono text-meta text-mute">
+                    {age(item.published_at, now)}
+                  </Cell>
+                  <Cell>
+                    <SaveDot
+                      saved={item.saved_at !== null}
+                      onToggle={() => {
+                        change.mutate({ id: item.id, saved: !item.saved_at });
                       }}
                     />
-                  )}
-                  <RowButton
-                    onClick={() => {
-                      open(item.id);
-                    }}
-                    className={cx('min-w-0 flex-1 truncate', item.unread && 'font-semibold')}
-                  >
-                    {item.title}{' '}
-                    <span className="pl-6 font-mono text-meta font-normal text-mute">
-                      {[item.origin, item.sub].filter(Boolean).join(' · ')}
-                    </span>
-                  </RowButton>
-                </Cell>
-                <Cell className="text-right font-mono text-meta text-mute">
-                  {item.replies || ''}
-                </Cell>
-                <Cell className="text-right font-mono text-meta text-mute">
-                  {age(item.published_at, now)}
-                </Cell>
-                <Cell>
-                  <SaveDot
-                    saved={item.saved_at !== null}
-                    onToggle={() => {
-                      change.mutate({ id: item.id, saved: !item.saved_at });
-                    }}
-                  />
-                </Cell>
-              </TableRow>
-            ))}
-            {items.isPending && (
-              <div role="row">
-                <Cell>
-                  <LoadingRows what="the stream" />
-                </Cell>
-              </div>
-            )}
-            {items.isError && (
-              <div role="row">
-                <Cell>
-                  <ErrorState what="the stream" onRetry={() => void items.refetch()} />
-                </Cell>
-              </div>
-            )}
-            {items.isSuccess && rows.length === 0 && (
-              <div role="row">
-                <Cell className="px-16 py-24 text-mute">
-                  {filter === 'All' && !query.trim() ? EMPTY.stream : EMPTY.filter}
-                </Cell>
-              </div>
-            )}
-          </TableBody>
-        </Table>
+                  </Cell>
+                </TableRow>
+              ))}
+              {items.isPending && (
+                <div role="row">
+                  <Cell>
+                    <LoadingRows what="the stream" />
+                  </Cell>
+                </div>
+              )}
+              {items.isError && (
+                <div role="row">
+                  <Cell>
+                    <ErrorState what="the stream" onRetry={() => void items.refetch()} />
+                  </Cell>
+                </div>
+              )}
+              {items.isSuccess && rows.length === 0 && (
+                <div role="row">
+                  <Cell className="px-16 py-24 text-mute">
+                    {filter === 'All' && !query.trim() ? EMPTY.stream : EMPTY.filter}
+                  </Cell>
+                </div>
+              )}
+            </TableBody>
+          </Table>
+        )}
       </main>
 
       {current ? (
@@ -220,6 +282,7 @@ export function Stream() {
       {zoomed && (
         <MediaPreview
           item={zoomed}
+          play={zoom?.play ?? false}
           now={now}
           onOpenThread={() => {
             open(zoomed.id);
@@ -230,6 +293,83 @@ export function Stream() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+const VIEWS = ['Cards', 'List'] as const;
+type View = (typeof VIEWS)[number];
+const VIEW_KEY = 'munim.youtube-view';
+/** The view chosen last time in this browser. Anything else found there means the default. */
+function storedView(): View {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'List' ? 'List' : 'Cards';
+  } catch {
+    return 'Cards';
+  }
+}
+
+/**
+ * A video as a card: its still with its length, its title, and who posted it when. Choosing it
+ * opens it large, playing.
+ */
+function VideoCard({
+  item,
+  now,
+  selected,
+  onOpen,
+  onSave,
+}: {
+  item: Item;
+  now: number;
+  selected: boolean;
+  onOpen: () => void;
+  onSave: () => void;
+}) {
+  const [noStill, setNoStill] = useState(false);
+  // "video 18:24" in a row; on a still, just the length.
+  const length = item.sub.replace(/^video\s*/, '');
+  return (
+    <div role="listitem" className="flex min-w-0 flex-col gap-4">
+      <button
+        type="button"
+        aria-current={selected || undefined}
+        onClick={onOpen}
+        className="group flex cursor-pointer flex-col gap-6 text-left"
+      >
+        <span
+          className={cx(
+            'stripes relative block aspect-video overflow-hidden rounded-6 border',
+            selected ? 'border-accent' : 'border-line group-hover:border-accent',
+          )}
+        >
+          {item.thumb && !noStill && (
+            <img
+              src={item.thumb}
+              alt=""
+              loading="lazy"
+              onError={() => {
+                setNoStill(true);
+              }}
+              className="size-full object-cover"
+            />
+          )}
+          {length && (
+            <span className="absolute right-4 bottom-4 rounded-4 bg-scrim px-4 font-mono text-code text-ink">
+              {length}
+            </span>
+          )}
+        </span>
+        <span className={cx('line-clamp-2 text-pretty', item.unread && 'font-semibold')}>
+          {item.title}
+        </span>
+      </button>
+      <div className="flex items-center gap-6 font-mono text-meta text-mute">
+        <span className="min-w-0 flex-1 truncate">
+          {item.origin} · {age(item.published_at, now)}
+        </span>
+        <SaveDot saved={item.saved_at !== null} onToggle={onSave} />
+      </div>
     </div>
   );
 }

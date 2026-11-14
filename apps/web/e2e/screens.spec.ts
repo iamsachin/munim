@@ -436,6 +436,86 @@ test("video: nothing reaches YouTube until Play is pressed, then it plays in You
   await expect(dialog).toBeHidden();
 });
 
+for (const theme of ['Dark', 'Light'] as const) {
+  test(`youtube: the page opens as cards of stills (${theme})`, async ({ page }) => {
+    await open(page, '/stream/yt', theme);
+    const cards = page.getByRole('list', { name: 'Stream' }).getByRole('listitem');
+    await expect(cards).toHaveCount(3);
+    const first = cards.first();
+    // A card has the video's still, its length on it, its title, and who posted it when.
+    await expect
+      .poll(() => first.locator('img').evaluate((img: HTMLImageElement) => img.naturalWidth))
+      .toBe(320);
+    await expect(first).toContainText('18:24');
+    await expect(first).toContainText('Building a home server rack from scratch');
+    await expect(first).toContainText('Bench Hours · 5h');
+    await expect(page.getByRole('table', { name: 'Stream' })).toHaveCount(0);
+    await expect(page).toHaveScreenshot(`youtube-cards-${theme.toLowerCase()}.png`);
+    expect(await axeFailures(page)).toEqual([]);
+  });
+}
+
+test('youtube: a card opens its video large and playing; the list is one press away', async ({
+  page,
+}) => {
+  // Stands in for YouTube, and notes everything that is asked of it.
+  const asked: string[] = [];
+  await page.route(/youtube/, (route) => {
+    asked.push(route.request().url());
+    return route.fulfill({ status: 200, contentType: 'text/html', body: '<title>player</title>' });
+  });
+  await open(page, '/stream/yt');
+  const cards = page.getByRole('list', { name: 'Stream' }).getByRole('listitem');
+  const pane = page.getByRole('complementary', { name: 'Thread' });
+  const dialog = page.getByRole('dialog', { name: 'Media preview' });
+  // Looking at the cards asks nothing of YouTube.
+  await expect(cards).toHaveCount(3);
+  expect(asked).toEqual([]);
+
+  // Choosing a card is choosing to watch: it opens large, already playing.
+  await cards
+    .nth(1)
+    .getByRole('button', { name: /Conflict-free sync explained in 12 minutes/ })
+    .click();
+  await expect(dialog.locator('iframe')).toHaveAttribute(
+    'src',
+    'https://www.youtube-nocookie.com/embed/munimsample?autoplay=1&rel=0',
+  );
+  await expect(dialog).toContainText('Conflict-free sync explained in 12 minutes');
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  // It is also the one in the thread pane now, with its description.
+  await expect(pane.getByRole('heading', { level: 2 })).toHaveText(
+    'Conflict-free sync explained in 12 minutes',
+  );
+  // j and k move through the cards as they do through rows, without opening anything.
+  await page.keyboard.press('j');
+  await expect(pane.getByRole('heading', { level: 2 })).toHaveText(
+    'Kiln firing schedules, a full walkthrough',
+  );
+  await expect(dialog).toBeHidden();
+  // Saving works from a card.
+  await cards.first().getByRole('button', { name: 'Save' }).click();
+  await expect(cards.first().getByRole('button', { name: 'Save' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+
+  // The list, as on every other source's page; and it is still the list after a reload.
+  await page.getByRole('group', { name: 'View' }).getByRole('button', { name: 'List' }).click();
+  await expect(rows(page)).toHaveCount(4);
+  await expect(page.getByRole('list', { name: 'Stream' })).toHaveCount(0);
+  await page.reload();
+  await expect(rows(page)).toHaveCount(4);
+  await page.getByRole('group', { name: 'View' }).getByRole('button', { name: 'Cards' }).click();
+  await expect(cards).toHaveCount(3);
+
+  // Other sources have no such switch: their pages are lists.
+  await page.goto('/stream/rd');
+  await expect(page.getByRole('group', { name: 'View' })).toHaveCount(0);
+  await expect(rows(page)).toHaveCount(5);
+});
+
 test('ask bar: a question opens Ask with an honest placeholder answer; blank does nothing', async ({
   page,
 }) => {

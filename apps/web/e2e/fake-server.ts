@@ -171,6 +171,8 @@ export async function fakeServer(page: Page, start: State = 'open') {
     saved_at: item.savedAt,
     later_at: item.laterAt,
     media: item.media,
+    // A YouTube video has its still; the other samples have none, as before.
+    thumb: item.source === 'YT' ? `/api/items/${String(item.id)}/images/0` : null,
   });
   const newest = (key: 'savedAt' | 'laterAt') => (a: Stored, b: Stored) =>
     (b[key] ?? '').localeCompare(a[key] ?? '');

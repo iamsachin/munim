@@ -66,6 +66,7 @@ def test_the_stream_lists_items_newest_first(stream: Client) -> None:
         "saved_at": None,
         "later_at": None,
         "media": None,
+        "thumb": None,
     }
 
 
