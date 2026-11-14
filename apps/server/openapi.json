@@ -288,6 +288,23 @@
         "security": [{ "Open": [] }]
       }
     },
+    "/api/security": {
+      "get": {
+        "operationId": "account_api_security",
+        "summary": "Security",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/SecurityOut" } }
+            }
+          }
+        },
+        "tags": ["account"],
+        "security": [{ "Open": [] }]
+      }
+    },
     "/api/feeds": {
       "get": {
         "operationId": "reader_api_list_feeds",
@@ -801,6 +818,20 @@
         },
         "required": ["minutes"],
         "title": "LockSettings",
+        "type": "object"
+      },
+      "SecurityOut": {
+        "description": "What the Security screen says about encryption. Facts, read from this install.",
+        "properties": {
+          "master_key": {
+            "enum": ["environment", "file"],
+            "title": "Master Key",
+            "type": "string"
+          },
+          "sealed": { "title": "Sealed", "type": "integer" }
+        },
+        "required": ["master_key", "sealed"],
+        "title": "SecurityOut",
         "type": "object"
       },
       "FeedOut": {

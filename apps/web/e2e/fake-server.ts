@@ -245,6 +245,10 @@ export async function fakeServer(page: Page, start: State = 'open') {
     if (call === 'POST active') return reply(204);
     if (call === 'GET devices') return reply(200, devices);
     if (call === 'GET lock-settings') return reply(200, { minutes });
+    if (call === 'GET security') {
+      const sealed = Object.values(aiKeys).filter(Boolean).length;
+      return reply(200, { master_key: 'file', sealed });
+    }
     if (call === 'PUT lock-settings') {
       minutes = body.minutes as number | null;
       return reply(200, { minutes });

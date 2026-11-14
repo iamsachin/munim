@@ -776,6 +776,28 @@ test('connections: Hacker News is switched off and on at the server', async ({ p
   await expect(page.getByRole('button', { name: 'Connect Hacker News' })).toBeDisabled();
 });
 
+test('settings: the Encryption card says what this install does, and no more', async ({ page }) => {
+  await open(page, '/settings');
+  const card = page.locator('section').filter({ hasText: 'Encryption' }).first();
+  await expect(card).toContainText('API keys are sealed');
+  await expect(card).toContainText('kept as plain text in the database');
+  await expect(card).toContainText('A file in the data folder, master.key');
+  await expect(card).toContainText('1 API key');
+  await expect(card).toContainText('Kept only as a hash, never as written');
+  // The tests reach the app over http on this machine, and the card says exactly that.
+  await expect(card).toContainText('Not encrypted, and it never leaves this machine');
+  // None of the handoff's claims, which are false for this app.
+  for (const claim of ['End-to-end', 'Keys stay on your devices', 'cannot read']) {
+    await expect(page.getByText(claim)).toHaveCount(0);
+  }
+
+  // If the facts cannot be read, it says so instead of guessing.
+  await page.route('**/api/security', (route) => route.fulfill({ status: 500, body: '' }));
+  await page.reload();
+  await expect(card).toContainText('Could not load');
+  await expect(card).toContainText('Kept only as a hash');
+});
+
 test('settings: appearance applies at once and survives a reload', async ({ page }) => {
   // Not open(): its init script would reset the saved theme on reload.
   await fakeServer(page);

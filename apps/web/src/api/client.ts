@@ -83,6 +83,7 @@ export const api = {
   devices: () => call<Device[]>('GET', 'devices'),
   revokeDevice: (id: number) => call<undefined>('DELETE', `devices/${String(id)}`),
   lockSettings: () => call<Schemas['LockSettings']>('GET', 'lock-settings'),
+  security: () => call<Schemas['SecurityOut']>('GET', 'security'),
   feeds: () => call<Feed[]>('GET', 'feeds'),
   addFeed: (url: string) => call<Feed>('POST', 'feeds', { url } satisfies Schemas['FeedIn']),
   removeFeed: (id: number) => call<undefined>('DELETE', `feeds/${String(id)}`),

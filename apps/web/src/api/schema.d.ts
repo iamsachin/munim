@@ -228,6 +228,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/security': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Security */
+    get: operations['account_api_security'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/feeds': {
     parameters: {
       query?: never;
@@ -518,6 +535,19 @@ export interface components {
     LockSettings: {
       /** Minutes */
       minutes: (5 | 15 | 60) | null;
+    };
+    /**
+     * SecurityOut
+     * @description What the Security screen says about encryption. Facts, read from this install.
+     */
+    SecurityOut: {
+      /**
+       * Master Key
+       * @enum {string}
+       */
+      master_key: 'environment' | 'file';
+      /** Sealed */
+      sealed: number;
     };
     /** FeedOut */
     FeedOut: {
@@ -1233,6 +1263,26 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['LockSettings'];
+        };
+      };
+    };
+  };
+  account_api_security: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SecurityOut'];
         };
       };
     };

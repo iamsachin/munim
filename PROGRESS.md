@@ -8,6 +8,8 @@ Last updated: 2026-11-14
 
 Milestone 3 in progress. Merged: the Django scaffold (#6), the account API (#8), the web app signing in against the server (#9), RSS (#10), background polling (#11), the Stream on real items (#12), feed articles readable in the thread pane (#13), rich text as blocks with images fetched through the server (#14), Hacker News with its discussions (#15), sealed storage for secrets with the AI provider keys on the server (#16), the Docker Compose install (#17), full-text search in the Stream (#18), search matches marked in the open article (#19), highlights on the server (#20), and removing a feed (#21).
 
+Open for the owner's approval: the Encryption card and the note on the AI screen.
+
 Still on sample data in the browser: watches, digest, Ask, every Connections row except Hacker News, and on the AI screen the models, usage and limit (the provider keys are real).
 
 Next: YouTube, once the owner has chosen between an API key and OAuth.
@@ -83,10 +85,10 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [ ] Trusted reverse-proxy setting, so the limit sees real client addresses behind a proxy
 - [x] Web app wired to the account API: setup, sign-in, lock screen with an idle timer, devices, lock settings, change passphrase
 - [ ] Idle lock: watch it happen for real once (15 minutes in a browser); so far proven by unit tests and by the server's tests
-- [ ] Encryption card on Security and settings, designed once the claims are true
+- [ ] Encryption card on Security and settings, saying what this install does; and a line on the AI screen about how keys are kept (built; waits for the owner's approval of the wording)
 - [ ] Export and delete-all (buttons are disabled until the server stores data; the approved passphrase confirmation for delete-all returns with it)
 - [x] Encrypted storage for secrets (`munim/vault.py`), first used by the AI provider keys, which the server checks with the provider and stores sealed
-- [ ] Restore the sidebar status button and the Connections note with truthful wording, now that secrets are sealed (needs the owner's approval of the wording)
+- [ ] The Connections note about stored tokens returns when a source stores one (YouTube or Reddit); the sidebar's status slot stays the Commands button
 - [x] RSS: add a feed, fetch and parse it safely, read its articles; every feed is polled every fifteen minutes
 - [x] RSS: remove a feed from the app; what the owner saved, queued or highlighted stays (approved)
 - [x] RSS articles in the Stream, with unread state
