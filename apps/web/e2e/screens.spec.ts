@@ -416,6 +416,9 @@ test('rss: adding a feed opens it; an address that is not a feed says so', async
   await field.fill('https://example.com/feed.xml');
   await page.getByRole('button', { name: 'Add' }).click();
   await expect(page.getByRole('alert')).toHaveText('That feed is already here.');
+  // The complaint goes away when another feed is chosen.
+  await page.getByRole('button', { name: /^Wire Notes/ }).click();
+  await expect(page.getByRole('alert')).toBeHidden();
 });
 
 test('rss: with no feeds, and when the server fails, the screen says so', async ({ page }) => {

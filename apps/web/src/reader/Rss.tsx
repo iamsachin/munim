@@ -75,6 +75,8 @@ export function Rss() {
               onClick={() => {
                 setChosen(f.id);
                 setArticleIndex(0);
+                // A complaint about the last address typed has nothing to do with this feed.
+                add.reset();
               }}
               className={cx(
                 'flex cursor-pointer justify-between gap-6 rounded-5 px-8 py-dn-3 text-left hover:bg-card',
