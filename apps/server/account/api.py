@@ -83,6 +83,12 @@ def _weak(passphrase: str) -> Status[Error] | None:
     try:
         validate_password(passphrase)
     except ValidationError as problems:
+        # Django's own wording says "password"; Munim says passphrase, and says it briefly.
+        short = next((e for e in problems.error_list if e.code == "password_too_short"), None)
+        if short is not None and short.params:
+            return Status(
+                422, Error(detail=f"Use at least {short.params['min_length']} characters.")
+            )
         return Status(422, Error(detail=" ".join(problems.messages)))
     return None
 
@@ -165,7 +171,11 @@ def change_passphrase(
     user.set_password(body.new)
     user.save()
     # Keeps this session signed in; every other session no longer matches the new passphrase.
+    # It also gives this session a new key, so this browser's device entry must follow it, or it
+    # would be taken for another device below and dropped.
+    before = request.session.session_key
     update_session_auth_hash(request, user)
+    Device.objects.filter(session_key=before).update(session_key=request.session.session_key)
     for device in Device.objects.exclude(session_key=request.session.session_key):
         devices.revoke(device)
     return Status(204, None)
