@@ -60,6 +60,8 @@ class ItemOut(Schema):
     saved_at: datetime | None
     later_at: datetime | None
     media: Literal["Video", "Image"] | None
+    # Where its still or picture is, at Munim, for the small box in a row. Null if it has none.
+    thumb: str | None
 
 
 class Span(Schema):
@@ -233,6 +235,16 @@ class Counts(Schema):
     sources: dict[str, int]
 
 
+def _thumb(item: Item) -> str | None:
+    """The item's first picture, for a video or an image post. It is asked for from this server
+    like any picture in an item.
+
+    shortcut: the full-size still, shown small; keep a small one too if lists get slow to load.
+    """
+    pictures = (b for b in item.blocks if b["type"] in ("image", "video") and b.get("src"))
+    return f"/api/items/{item.pk}/images/0" if item.media and next(pictures, None) else None
+
+
 def _row(item: Item) -> dict[str, Any]:
     return {
         "id": item.pk,
@@ -248,6 +260,7 @@ def _row(item: Item) -> dict[str, Any]:
         "saved_at": item.saved_at,
         "later_at": item.later_at,
         "media": item.media or None,
+        "thumb": _thumb(item),
     }
 
 

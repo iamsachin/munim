@@ -6,10 +6,21 @@ const ID = /^[A-Za-z0-9_-]{4,32}$/;
 /**
  * A video, played where it is in YouTube's own player. Until the owner chooses to play it only
  * its still is shown, and that is fetched through Munim: nothing reaches YouTube before then.
- * Nothing of the video is ever downloaded or kept.
+ * `start` says they have already chosen (they opened it to watch it). Nothing of the video is
+ * ever downloaded or kept.
  */
-export function Player({ src, alt, video }: { src: string; alt: string; video: string }) {
-  const [playing, setPlaying] = useState(false);
+export function Player({
+  src,
+  alt,
+  video,
+  start = false,
+}: {
+  src: string;
+  alt: string;
+  video: string;
+  start?: boolean;
+}) {
+  const [playing, setPlaying] = useState(start);
   const [still, setStill] = useState(true);
 
   if (playing && ID.test(video)) {

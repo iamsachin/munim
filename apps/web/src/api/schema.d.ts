@@ -668,6 +668,8 @@ export interface components {
       later_at: string | null;
       /** Media */
       media: ('Video' | 'Image') | null;
+      /** Thumb */
+      thumb: string | null;
     };
     /** Code */
     Code: {
@@ -778,6 +780,8 @@ export interface components {
       later_at: string | null;
       /** Media */
       media: ('Video' | 'Image') | null;
+      /** Thumb */
+      thumb: string | null;
       /** Url */
       url: string;
       /** Blocks */

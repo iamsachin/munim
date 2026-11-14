@@ -278,6 +278,8 @@ def test_new_videos_arrive_from_subscribed_channels(connected: Client, google: G
         "Video",
     )
     assert videos["Video 3"]["sub"] == "video 1:02:03"
+    # The row has the video's still, fetched through Munim like the one in the item itself.
+    assert first["thumb"] == f"/api/items/{first['id']}/images/0"
 
     opened = connected.get(f"/api/items/{first['id']}").json()
     assert opened["url"] == "https://www.youtube.com/watch?v=vid1"
