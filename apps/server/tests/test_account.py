@@ -47,7 +47,7 @@ def test_a_fresh_install_asks_for_setup_then_setup_signs_in(client: Client) -> N
 def test_setup_refuses_a_short_passphrase(client: Client) -> None:
     response = post(client, "setup", {"passphrase": "elevenchars"})
     assert response.status_code == 422
-    assert "12 characters" in response.json()["detail"]
+    assert response.json() == {"detail": "Use at least 12 characters."}
     assert not User.objects.exists()
 
 
@@ -280,6 +280,8 @@ def test_changing_the_passphrase_signs_other_devices_out(owner_client: Client) -
 
     assert state(owner_client) == "open"
     assert state(other) == "signed_out"
+    # This browser keeps its place in the device list, although its session key has changed.
+    assert [d["current"] for d in owner_client.get("/api/devices").json()] == [True]
     assert sign_in(PASSPHRASE)[1] == 401
     assert sign_in(new)[1] == 200
 
