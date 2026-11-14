@@ -18,7 +18,7 @@ The owner chose "I design, you approve". Nothing undesigned is built on until th
    - AI content: the AI badge and AI card, nothing else;
    - anything before the app is open (first run, sign-in, lock): `account/AuthCard.tsx`;
    - an action only the server can perform, while the app runs on sample data: do the checks, then show `SAMPLE_ONLY` from `account/auth.ts`;
-   - empty states: one line of muted text, as in "Nothing matches this filter."
+   - loading, failed and empty lists: `LoadingRows`, `ErrorState` and `EmptyState` in `ui/States.tsx` (approved), with every empty line's wording in `reader/copy.ts`;
    A new component is a last resort and is itself part of what gets approved.
 4. **Build it for real, with mock data**, in the app, not as a separate mockup. Include every state: empty, loading, error, disabled, long content, each density.
 5. **Show it.** Give the owner the route to open, say what is new compared with the handoff, and list the decisions you made for them. Screenshots only if they ask.
