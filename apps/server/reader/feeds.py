@@ -257,3 +257,9 @@ def refresh(feed: Feed, *, client: httpx.Client | None = None) -> None:
     except FeedProblem as problem:
         feed.problem = str(problem)[:300]
         feed.save(update_fields=["problem"])
+
+
+def refresh_all(*, client: httpx.Client | None = None) -> None:
+    """Fetches every feed again, one after another. One feed failing does not stop the rest."""
+    for feed in Feed.objects.all():
+        refresh(feed, client=client)

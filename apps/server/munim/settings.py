@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "ninja",  # for its export_openapi_schema command
+    "procrastinate.contrib.django",  # the job queue, in Postgres
     "account",
     "reader",
 ]
@@ -94,6 +95,9 @@ AUTH_PASSWORD_VALIDATORS = [
         "OPTIONS": {"min_length": 12},
     },
 ]
+
+# Finished jobs are deleted, so the queue's tables hold only what is waiting or has failed.
+PROCRASTINATE_WORKER_DEFAULTS = {"delete_jobs": "successful"}
 
 # Feeds on private networks (a service on the same LAN, say) are refused unless this is set,
 # because a feed address can also be used to make the server reach things only it can reach.

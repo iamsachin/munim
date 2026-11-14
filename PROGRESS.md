@@ -6,11 +6,11 @@ Last updated: 2026-11-14
 
 ## Now
 
-Milestone 3 in progress. Merged: the Django scaffold (#6), the account API (#8), the web app signing in against the server (#9).
+Milestone 3 in progress. Merged: the Django scaffold (#6), the account API (#8), the web app signing in against the server (#9), RSS as the first real source (#10).
 
-On branch `milestone-3-rss` (pull request #10): RSS is the first real source. A feed is fetched and parsed by the server, stored as plain text, and read on the RSS screen. Every other reader screen still runs on sample data, and the Stream does not show feed articles yet.
+On branch `milestone-3-polling` (pull request #11): the job queue and worker; feeds are polled every fifteen minutes and the open page asks again every minute.
 
-Next: the background job queue, so feeds are polled without being opened; then the Stream reading real items.
+Next: the Stream reading real items, starting with feed articles, with unread state.
 
 ## 0. Preparation
 
@@ -72,8 +72,8 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] OpenAPI document committed, front-end types generated from it and checked for staleness
 - [ ] Reader data from the server, replacing the mock store
 - [ ] Loading, error and empty states wired into every screen (`ui/States.tsx`, wording in `reader/copy.ts`); done for RSS and the device list
-- [ ] Postgres job queue and scheduler
-- [ ] Docker Compose: one app container serving web, API and jobs, plus Postgres
+- [x] Postgres job queue, scheduler and worker (Procrastinate); `pnpm dev` runs the worker
+- [ ] Docker Compose: one app container serving web, API and the job worker, plus Postgres
 - [ ] Master key file, generated on first run
 - [x] Server: passphrase sign-in, sessions, device list with Revoke, lock and idle lock, change passphrase (Django auth and sessions)
 - [x] Server-side rate limiting on every passphrase check, with growing waits, counted in the database; tested by attempting a brute force from one address and from many
@@ -84,7 +84,7 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [ ] Encryption card on Security and settings, designed once the claims are true
 - [ ] Export and delete-all (buttons are disabled until the server stores data; the approved passphrase confirmation for delete-all returns with it)
 - [ ] Encrypted storage for source tokens and AI keys; then restore the sidebar status button and the Connections note with truthful wording
-- [x] RSS: add a feed, fetch and parse it safely, read its articles (re-fetched when opened if older than 15 minutes, until polling exists)
+- [x] RSS: add a feed, fetch and parse it safely, read its articles; every feed is polled every fifteen minutes
 - [ ] RSS: remove a feed from the app (only possible in the admin now; needs a design)
 - [ ] RSS articles in the Stream, with unread state
 - [ ] Hacker News
