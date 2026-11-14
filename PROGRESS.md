@@ -6,12 +6,9 @@ Last updated: 2026-11-14
 
 ## Now
 
-On branch `milestone-2-gaps`, built and passing all gates, **waiting for the owner's approval** (`pnpm dev`):
+On branch `milestone-2-gaps` (pull request open, not merged). Approved by the owner on 2026-11-14: the AI screen and on-demand summaries.
 
-1. The new AI screen at `/ai`: provider keys, a model per feature, monthly limit, usage.
-2. No automatic summaries: the thread pane (`/stream`) and RSS article (`/rss`) now have an Ask card with a "Summarize this ..." button in place of the summary text.
-
-Not started, next in line: sign-in, first-run and lock screens together with the Sign-in, Devices and Your data cards (they only make sense together); then loading, error and empty states; then keyboard navigation.
+In progress: sign-in, first-run and lock screens together with the Sign-in, Devices and Your data cards. Then loading, error and empty states; then keyboard navigation.
 
 ## 0. Preparation
 
@@ -55,8 +52,8 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] Appearance settings (theme, accent, density), remembered in the browser
 - [ ] **Designed screens approved by owner**
 - [ ] Security and settings: honest Encryption, Sign-in and lock, Devices, Your data (design gap)
-- [ ] AI settings: keys, per-feature model, monthly limit, usage (design gap; built, awaiting approval)
-- [ ] On-demand summaries in place of automatic ones (built, awaiting approval)
+- [x] AI settings: keys, per-feature model, monthly limit, usage (design gap, approved)
+- [x] On-demand summaries in place of automatic ones (approved)
 - [ ] First-run setup, sign-in, lock screen (design gap)
 - [ ] Loading, error and empty states for every screen (design gap)
 - [ ] Keyboard navigation, command palette, shortcut help (design gap)
