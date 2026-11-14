@@ -65,9 +65,13 @@ def _state(request: HttpRequest) -> State:
 
 
 def _check(
-    request: HttpRequest, response: HttpResponse, passphrase: str
+    request: HttpRequest, response: HttpResponse, passphrase: str, *, wrong: int = 401
 ) -> Status[Error] | Status[Wait] | None:
-    """Checks the owner's passphrase under the rate limit. Returns the refusal, or None if right."""
+    """Checks the owner's passphrase under the rate limit. Returns the refusal, or None if right.
+
+    `wrong` is the status for a wrong passphrase: 401 when signing in, 403 from a session that is
+    already signed in, so the app can tell "wrong passphrase" from "you are no longer signed in".
+    """
     user = owner()
     try:
         right = attempt(
@@ -76,7 +80,7 @@ def _check(
     except TooManyAttempts as wait:
         response["Retry-After"] = str(wait.seconds)
         return Status(429, Wait(detail="Too many attempts.", wait_seconds=wait.seconds))
-    return None if right else Status(401, Error(detail="That passphrase is not right."))
+    return None if right else Status(wrong, Error(detail="That passphrase is not right."))
 
 
 def _weak(passphrase: str) -> Status[Error] | None:
@@ -146,23 +150,23 @@ def lock(request: HttpRequest) -> Status[None]:
     return Status(204, None)
 
 
-@router.post("/unlock", auth=SignedIn(), response={200: SessionOut, 401: Error, 429: Wait})
+@router.post("/unlock", auth=SignedIn(), response={200: SessionOut, 403: Error, 429: Wait})
 def unlock(
     request: HttpRequest, response: HttpResponse, body: PassphraseIn
 ) -> Status[SessionOut] | Status[Error] | Status[Wait]:
-    if refusal := _check(request, response, body.passphrase):
+    if refusal := _check(request, response, body.passphrase, wrong=403):
         return refusal
     request.session["locked"] = False
     mark_active(request)
     return Status(200, SessionOut(state="open"))
 
 
-@router.post("/passphrase", auth=Open(), response={204: None, 401: Error, 422: Error, 429: Wait})
+@router.post("/passphrase", auth=Open(), response={204: None, 403: Error, 422: Error, 429: Wait})
 def change_passphrase(
     request: HttpRequest, response: HttpResponse, body: ChangeIn
 ) -> Status[None] | Status[Error] | Status[Wait]:
     """Changes the passphrase and signs every other device out."""
-    if refusal := _check(request, response, body.current):
+    if refusal := _check(request, response, body.current, wrong=403):
         return refusal
     if weak := _weak(body.new):
         return weak
@@ -178,6 +182,13 @@ def change_passphrase(
     Device.objects.filter(session_key=before).update(session_key=request.session.session_key)
     for device in Device.objects.exclude(session_key=request.session.session_key):
         devices.revoke(device)
+    return Status(204, None)
+
+
+@router.post("/active", auth=Open(), response={204: None}, summary="The owner is using the app")
+def active(request: HttpRequest) -> Status[None]:
+    """Keeps the idle lock away while the owner works without making other calls. Passing the
+    `Open` check is what records the activity; the app calls this at most once a minute."""
     return Status(204, None)
 
 

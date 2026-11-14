@@ -1,21 +1,14 @@
-import { useState, type ReactNode } from 'react';
-import { Link } from 'react-router';
-import { toggled, useReader } from '../reader/store';
+import { useEffect, useState, type ReactNode } from 'react';
+import { api, reason, Refused, type Device, type LockMinutes } from '../api/client';
 import { SectionLabel } from '../ui/atoms';
-import { Button, buttonClass } from '../ui/Button';
+import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { Chip } from '../ui/Chip';
 import { focusOnMount, Input } from '../ui/Input';
+import { ErrorState, LoadingRows } from '../ui/States';
 import { Toggle } from '../ui/Toggle';
-import {
-  LOCK_AFTER,
-  lockNote,
-  mockAccepts,
-  passphraseProblem,
-  SAMPLE_ONLY,
-  SESSIONS,
-  type LockAfter,
-} from './auth';
+import { lastSeen, LOCK_AFTER, lockNote, passphraseProblem, waitMessage } from './auth';
+import { useSession } from './session';
 
 export function Row({
   name,
@@ -44,14 +37,15 @@ const Problem = ({ children }: { children: ReactNode }) => (
 );
 
 export function SignInCard() {
-  const { state, update } = useReader();
-  const lock = state.lock;
+  const session = useSession();
+  const minutes = session.lockMinutes;
   const [changing, setChanging] = useState(false);
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [repeat, setRepeat] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
+  const [lockProblem, setLockProblem] = useState<string | null>(null);
 
   const close = () => {
     setChanging(false);
@@ -61,42 +55,74 @@ export function SignInCard() {
     setProblem(null);
   };
 
+  const setLock = (value: LockMinutes) => {
+    setLockProblem(null);
+    api.setLockSettings(value).then(
+      (saved) => {
+        session.setLockMinutes(saved.minutes);
+      },
+      (error: unknown) => {
+        if (!session.refused(error)) setLockProblem(reason(error));
+      },
+    );
+  };
+
+  const change = async () => {
+    const found = passphraseProblem(next, repeat);
+    setProblem(found);
+    if (found) return;
+    try {
+      await api.changePassphrase(current, next);
+      close();
+      setDone('Passphrase changed. Every other device was signed out.');
+    } catch (error) {
+      if (session.refused(error)) return;
+      if (error instanceof Refused && error.waitSeconds) setProblem(waitMessage(error.waitSeconds));
+      else if (error instanceof Refused && error.status === 403) {
+        setProblem('The current passphrase is not right.');
+      } else setProblem(reason(error));
+    }
+  };
+
   return (
     <Card className="gap-4">
       <SectionLabel as="h2" className="pb-4">
         Sign-in and lock
       </SectionLabel>
-      <Row name="Lock when idle" note={lockNote(lock)}>
+      <Row name="Lock when idle" note={minutes === undefined ? ' ' : lockNote(minutes)}>
         <Toggle
-          on={lock.on}
+          on={minutes !== null && minutes !== undefined}
           label="Lock when idle"
           onChange={(on) => {
-            update((s) => ({ lock: { ...s.lock, on } }));
+            setLock(on ? 15 : null);
           }}
         />
       </Row>
-      {lock.on && (
+      {minutes !== null && minutes !== undefined && (
         <Row name="Lock after" note="Time without activity">
           <div role="group" aria-label="Lock after" className="flex gap-6">
-            {(Object.keys(LOCK_AFTER) as LockAfter[]).map((after) => (
+            {(Object.keys(LOCK_AFTER) as (keyof typeof LOCK_AFTER)[]).map((label) => (
               <Chip
-                key={after}
-                on={lock.after === after}
+                key={label}
+                on={minutes === LOCK_AFTER[label]}
                 onClick={() => {
-                  update((s) => ({ lock: { ...s.lock, after } }));
+                  setLock(LOCK_AFTER[label]);
                 }}
               >
-                {after}
+                {label}
               </Chip>
             ))}
           </div>
         </Row>
       )}
+      <Problem>{lockProblem}</Problem>
       <Row name="Lock now" note="Asks for the passphrase straight away">
         <Button
           size="md"
           onClick={() => {
-            update({ locked: true });
+            // The screen locks either way; the server also locks unless it cannot be reached.
+            void api.lock().catch(() => undefined);
+            session.set('locked');
           }}
         >
           Lock
@@ -119,13 +145,7 @@ export function SignInCard() {
           className="flex flex-col gap-6 border-b border-rule py-8"
           onSubmit={(e) => {
             e.preventDefault();
-            const found = mockAccepts(current)
-              ? passphraseProblem(next, repeat)
-              : 'The current passphrase is not right.';
-            setProblem(found);
-            if (found) return;
-            close();
-            setDone(SAMPLE_ONLY);
+            void change();
           }}
         >
           <Input
@@ -188,123 +208,97 @@ export function SignInCard() {
 }
 
 export function DevicesCard() {
-  const { state, update } = useReader();
+  const session = useSession();
+  const [devices, setDevices] = useState<Device[] | 'loading' | 'failed'>('loading');
+  // Read once per load, so "2 hours ago" does not change while the list is on screen.
+  const [now, setNow] = useState(0);
+
+  const fetchDevices = () => {
+    api.devices().then(
+      (list) => {
+        setNow(Date.now());
+        setDevices(list);
+      },
+      (error: unknown) => {
+        if (!session.refused(error)) setDevices('failed');
+      },
+    );
+  };
+  // The list starts as 'loading', so the first fetch needs no state change of its own.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the card appears
+  useEffect(fetchDevices, []);
+
+  const load = () => {
+    setDevices('loading');
+    fetchDevices();
+  };
+
   return (
     <Card className="gap-4">
       <SectionLabel as="h2" className="pb-4">
         Devices
       </SectionLabel>
-      {SESSIONS.filter((s) => !state.revoked.has(s.id)).map((s) => (
-        <div key={s.id} className="flex items-center gap-12 border-b border-rule py-6">
-          <div className="min-w-0 flex-1">
-            <div className="font-medium">{s.name}</div>
-            <div className="font-mono text-meta text-mute">{s.note}</div>
+      {devices === 'loading' && <LoadingRows what="devices" rows={2} />}
+      {devices === 'failed' && <ErrorState what="the devices" onRetry={load} />}
+      {Array.isArray(devices) &&
+        devices.map((d) => (
+          <div key={d.id} className="flex items-center gap-12 border-b border-rule py-6">
+            <div className="min-w-0 flex-1">
+              <div className="font-medium">{d.name}</div>
+              <div className="font-mono text-meta text-mute">
+                {d.current ? 'This device · ' : ''}
+                {lastSeen(d.last_seen, now)}
+              </div>
+            </div>
+            {d.current ? (
+              <Button
+                size="md"
+                onClick={() => {
+                  void api.signOut().catch(() => undefined);
+                  session.set('signed_out');
+                }}
+              >
+                Sign out
+              </Button>
+            ) : (
+              <Button
+                size="md"
+                aria-label={`Revoke ${d.name}`}
+                onClick={() => {
+                  api.revokeDevice(d.id).then(load, (error: unknown) => {
+                    if (!session.refused(error)) setDevices('failed');
+                  });
+                }}
+              >
+                Revoke
+              </Button>
+            )}
           </div>
-          {s.self ? (
-            <Link to="/sign-in" className={buttonClass({ size: 'md' })}>
-              Sign out
-            </Link>
-          ) : (
-            <Button
-              size="md"
-              aria-label={`Revoke ${s.name}`}
-              onClick={() => {
-                update((st) => ({ revoked: toggled(st.revoked, s.id) }));
-              }}
-            >
-              Revoke
-            </Button>
-          )}
-        </div>
-      ))}
+        ))}
     </Card>
   );
 }
 
+const NOT_YET = 'Available when Munim stores your data on the server';
+
+/** Both actions need data on the server, which does not exist yet, so they say so and do nothing. */
 export function DataCard() {
-  const [confirming, setConfirming] = useState(false);
-  const [passphrase, setPassphrase] = useState('');
-  const [problem, setProblem] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-
-  const close = () => {
-    setConfirming(false);
-    setPassphrase('');
-    setProblem(null);
-  };
-
   return (
     <Card className="gap-8">
       <SectionLabel as="h2">Your data</SectionLabel>
       <p className="text-pretty text-mute">
         Export downloads everything Munim holds as an archive of JSON and text files. Deleting
-        removes every saved item, highlight, watch and connection.
+        removes every saved item, highlight, watch and connection, after you confirm with your
+        passphrase.
       </p>
       <div className="flex gap-6">
-        <Button
-          size="lg"
-          onClick={() => {
-            close();
-            setMessage(SAMPLE_ONLY);
-          }}
-        >
+        <Button size="lg" disabled title={NOT_YET}>
           Export everything
         </Button>
-        <Button
-          size="lg"
-          danger
-          aria-expanded={confirming}
-          onClick={() => {
-            setMessage(null);
-            setConfirming(true);
-          }}
-        >
+        <Button size="lg" danger disabled title={NOT_YET}>
           Delete all data
         </Button>
       </div>
-      {confirming && (
-        <form
-          className="flex flex-col gap-6"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!mockAccepts(passphrase)) {
-              setProblem('That passphrase is not right.');
-              return;
-            }
-            close();
-            setMessage(SAMPLE_ONLY);
-          }}
-        >
-          <p className="text-a3">This cannot be undone. Enter your passphrase to confirm.</p>
-          <div className="flex gap-6">
-            <Input
-              ref={focusOnMount}
-              size="md"
-              type="password"
-              autoComplete="current-password"
-              className="flex-1"
-              aria-label="Passphrase to confirm deleting"
-              placeholder="Passphrase"
-              value={passphrase}
-              onChange={(e) => {
-                setPassphrase(e.target.value);
-              }}
-            />
-            <Button type="submit" size="stretch" danger>
-              Delete everything
-            </Button>
-            <Button size="stretch" onClick={close}>
-              Cancel
-            </Button>
-          </div>
-          <Problem>{problem}</Problem>
-        </form>
-      )}
-      {message && (
-        <p role="status" className="text-note text-mute">
-          {message}
-        </p>
-      )}
     </Card>
   );
 }

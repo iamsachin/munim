@@ -6,9 +6,11 @@ Last updated: 2026-11-14
 
 ## Now
 
-Milestone 3 in progress. Merged: the Django scaffold (#6) and the account API with rate-limited passphrase checks (#8, which replaced #7).
+Milestone 3 in progress. Merged: the Django scaffold (#6) and the account API with rate-limited passphrase checks (#8).
 
-The web app still runs on sample data. Next: generate the front-end client from the OpenAPI document and wire setup, sign-in, the lock screen with an idle timer, devices, lock settings and change passphrase to the server.
+On branch `milestone-3-web-auth` (pull request #9), waiting for the owner: the web app's set-up, sign-in, lock screen with idle timer, devices, lock settings and change passphrase now use the real server. The reader's screens still run on sample data.
+
+Next: Munim's own models (items, feeds, saved, highlights) and the first real source, RSS. Needs the owner's answer on YouTube access before that source.
 
 Lesson for stacked pull requests: merge the base without deleting its branch, retarget the next one to `main`, then delete. Deleting the base branch closes the pull request stacked on it.
 
@@ -68,7 +70,8 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] Server scaffold in `apps/server`: Django, Django Ninja, uv, ruff, mypy, pytest, wired into `pnpm check`
 - [x] Development Postgres in Docker; Django admin and built-in migrations
 - [ ] Munim's own models and migrations
-- [ ] OpenAPI document, generated front-end client replacing the mock store
+- [x] OpenAPI document committed, front-end types generated from it and checked for staleness
+- [ ] Reader data from the server, replacing the mock store
 - [ ] Loading, error and empty states wired into every screen (`ui/States.tsx`, wording in `reader/copy.ts`)
 - [ ] Postgres job queue and scheduler
 - [ ] Docker Compose: one app container serving web, API and jobs, plus Postgres
@@ -77,9 +80,10 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] Server-side rate limiting on every passphrase check, with growing waits, counted in the database; tested by attempting a brute force from one address and from many
 - [ ] Delete-all, when it exists, must confirm the passphrase through the same check
 - [ ] Trusted reverse-proxy setting, so the limit sees real client addresses behind a proxy
-- [ ] Web app wired to the account API: setup, sign-in, lock screen with an idle timer, devices, lock settings, change passphrase
+- [x] Web app wired to the account API: setup, sign-in, lock screen with an idle timer, devices, lock settings, change passphrase
+- [ ] Idle lock: watch it happen for real once (15 minutes in a browser); so far proven by unit tests and by the server's tests
 - [ ] Encryption card on Security and settings, designed once the claims are true
-- [ ] Change passphrase, export and delete-all wired to the server (the mock says it did nothing)
+- [ ] Export and delete-all (buttons are disabled until the server stores data; the approved passphrase confirmation for delete-all returns with it)
 - [ ] Encrypted storage for source tokens and AI keys; then restore the sidebar status button and the Connections note with truthful wording
 - [ ] RSS
 - [ ] Hacker News

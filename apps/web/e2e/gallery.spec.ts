@@ -1,12 +1,15 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { fakeServer } from './fake-server';
 
 const THEMES = ['Dark', 'Light'];
 const DENSITIES = ['Compact', 'Comfortable', 'Roomy'];
 const ACCENTS = ['Amber', 'Blue', 'Green', 'Coral', 'Gray'];
 
 async function open(page: Page, theme: string, accent: string, density: string) {
+  await fakeServer(page);
   await page.goto('/gallery');
+  await page.locator('#root > *').first().waitFor();
   for (const [group, name] of [
     ['Theme', theme],
     ['Accent', accent],
@@ -40,7 +43,9 @@ for (const [theme, accent, density] of cases) {
 }
 
 test('keyboard focus shows the themed ring', async ({ page }) => {
+  await fakeServer(page);
   await page.goto('/gallery');
+  await page.locator('#root > *').first().waitFor();
   await page.keyboard.press('Tab');
   const outline = await page.evaluate(() => {
     const el = document.activeElement;
@@ -54,7 +59,9 @@ test('keyboard focus shows the themed ring', async ({ page }) => {
 test('stream row: the whole row selects, nested controls keep their own action', async ({
   page,
 }) => {
+  await fakeServer(page);
   await page.goto('/gallery');
+  await page.locator('#root > *').first().waitFor();
   const row = page.getByRole('row').filter({ hasText: 'New studio shelving finally up' });
   // Far from the title text: only the stretched hit area can catch this.
   await row.click({ position: { x: 4, y: 4 } });

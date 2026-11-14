@@ -69,6 +69,23 @@ def test_calls_that_change_things_need_the_csrf_token() -> None:
     assert post(strict, "lock", HTTP_X_CSRFTOKEN=token).status_code == 403
 
 
+@pytest.mark.django_db
+def test_a_page_from_another_origin_cannot_call_the_api() -> None:
+    strict = Client(enforce_csrf_checks=True)
+    token = strict.get("/api/session").cookies["csrftoken"].value
+    body = {"passphrase": PASSPHRASE}
+
+    def setup_from(origin: str) -> int:
+        return int(
+            post(strict, "setup", body, HTTP_X_CSRFTOKEN=token, HTTP_ORIGIN=origin).status_code
+        )
+
+    # Even with a valid token, a page on another site is refused.
+    assert setup_from("https://elsewhere.example") == 403
+    # The development web app's address is trusted in development mode, which the tests run in.
+    assert setup_from("http://localhost:5173") == 200
+
+
 # --- signing in and out
 
 
@@ -181,7 +198,7 @@ def test_counts_for_addresses_not_seen_for_a_day_are_dropped() -> None:
 
 def test_unlock_and_change_passphrase_share_the_limit(owner_client: Client) -> None:
     for _ in range(3):
-        assert post(owner_client, "unlock", {"passphrase": "wrong"}).status_code == 401
+        assert post(owner_client, "unlock", {"passphrase": "wrong"}).status_code == 403
     assert post(owner_client, "unlock", {"passphrase": PASSPHRASE}).status_code == 429
     change = post(owner_client, "passphrase", {"current": PASSPHRASE, "new": "a brand new phrase"})
     assert change.status_code == 429
@@ -196,7 +213,8 @@ def test_a_locked_session_is_refused_until_unlocked(owner_client: Client) -> Non
     assert state(owner_client) == "locked"
     assert owner_client.get("/api/devices").status_code == 423
 
-    assert post(owner_client, "unlock", {"passphrase": "wrong"}).status_code == 401
+    # 403, not 401: the session is still signed in, it is the passphrase that was wrong.
+    assert post(owner_client, "unlock", {"passphrase": "wrong"}).status_code == 403
     assert state(owner_client) == "locked"
     assert post(owner_client, "unlock", {"passphrase": PASSPHRASE}).json() == {"state": "open"}
     assert owner_client.get("/api/devices").status_code == 200
@@ -220,6 +238,22 @@ def test_an_idle_session_locks_itself_after_the_chosen_time(owner_client: Client
     assert owner_client.put("/api/lock-settings", body, "application/json").json() == body
     idle_for(600)
     assert state(owner_client) == "open"
+
+
+def test_reporting_activity_keeps_the_idle_lock_away(owner_client: Client) -> None:
+    def seen_minutes_ago(minutes: float) -> None:
+        session = owner_client.session
+        session["seen"] = time.time() - minutes * 60
+        session.save()
+
+    seen_minutes_ago(14)
+    assert post(owner_client, "active").status_code == 204
+    assert time.time() - owner_client.session["seen"] < 5
+
+    # Once the time has passed, saying "active" does not undo the lock.
+    seen_minutes_ago(16)
+    assert post(owner_client, "active").status_code == 423
+    assert state(owner_client) == "locked"
 
 
 def test_lock_settings_accept_only_the_offered_times(owner_client: Client) -> None:
@@ -273,7 +307,7 @@ def test_changing_the_passphrase_signs_other_devices_out(owner_client: Client) -
     new = "a brand new phrase"
 
     wrong = post(owner_client, "passphrase", {"current": "not it", "new": new})
-    assert wrong.status_code == 401
+    assert wrong.status_code == 403
     weak = post(owner_client, "passphrase", {"current": PASSPHRASE, "new": "short"})
     assert weak.status_code == 422
     assert post(owner_client, "passphrase", {"current": PASSPHRASE, "new": new}).status_code == 204

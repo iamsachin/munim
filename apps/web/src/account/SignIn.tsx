@@ -1,15 +1,17 @@
-import { useNavigate } from 'react-router';
+import { api } from '../api/client';
 import { AuthCard } from './AuthCard';
 import { PassphraseForm } from './PassphraseForm';
+import { useSession } from './session';
 
 export function SignIn() {
-  const navigate = useNavigate();
+  const session = useSession();
   return (
     <AuthCard heading="Sign in" documentTitle="Sign in">
       <PassphraseForm
         submit="Sign in"
+        check={api.signIn}
         onSuccess={() => {
-          void navigate('/today');
+          session.set('open');
         }}
       />
       <p className="text-note text-mute">

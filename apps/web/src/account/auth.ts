@@ -1,8 +1,8 @@
-// Sign-in rules and mock data. The server takes over the checks in milestone 3.
+// Sign-in rules the browser applies itself. The server has the final say on all of them.
+
+import type { LockMinutes } from '../api/client';
 
 export const MIN_PASSPHRASE = 12;
-export const MAX_TRIES = 3;
-export const WAIT_SECONDS = 30;
 
 /** Why a new passphrase cannot be used, or null if it can. No composition rules: length is what counts. */
 export function passphraseProblem(passphrase: string, repeat: string): string | null {
@@ -13,30 +13,49 @@ export function passphraseProblem(passphrase: string, repeat: string): string | 
   return null;
 }
 
-// Mock stand-in for the server's check: there is no stored passphrase, so anything long enough passes.
-export const mockAccepts = (passphrase: string) => passphrase.length >= MIN_PASSPHRASE;
-
-/** What the mock says in place of an action only a server can perform. */
-export const SAMPLE_ONLY = 'Nothing happened: this build runs on sample data.';
+export const waitMessage = (seconds: number) =>
+  `Too many attempts. Try again in ${String(seconds)} ${seconds === 1 ? 'second' : 'seconds'}.`;
 
 export const LOCK_AFTER = { '5 min': 5, '15 min': 15, '1 hour': 60 } as const;
-export type LockAfter = keyof typeof LOCK_AFTER;
 
-export interface LockSettings {
-  on: boolean;
-  after: LockAfter;
+export const lockNote = (minutes: LockMinutes) =>
+  minutes === null
+    ? 'Munim stays open until you sign out'
+    : `After ${minutes === 60 ? '1 hour' : `${String(minutes)} minutes`} without activity`;
+
+/** "Active now", or how long ago in the largest whole unit: "5 minutes ago", "2 days ago". */
+export function lastSeen(iso: string, now: number): string {
+  const seconds = Math.max(0, (now - Date.parse(iso)) / 1000);
+  if (seconds < 120) return 'Active now';
+  const units = [
+    ['day', 86400],
+    ['hour', 3600],
+    ['minute', 60],
+  ] as const;
+  for (const [unit, size] of units) {
+    if (seconds >= size) {
+      const count = Math.floor(seconds / size);
+      return `${String(count)} ${unit}${count === 1 ? '' : 's'} ago`;
+    }
+  }
+  return 'Active now';
 }
 
-export const LOCK_INITIAL: LockSettings = { on: true, after: '15 min' };
+/** How often the idle timer looks, and the least time between two activity reports. */
+export const IDLE_TICK_MS = 15_000;
+export const REPORT_EVERY_MS = 60_000;
 
-export const lockNote = (lock: LockSettings) =>
-  lock.on
-    ? `After ${lock.after === '1 hour' ? '1 hour' : `${String(LOCK_AFTER[lock.after])} minutes`} without activity`
-    : 'Munim stays open until you sign out';
-
-// Mock: the browsers signed in to this install.
-export const SESSIONS = [
-  { id: 'this', name: 'Chrome on macOS', note: 'This device · active now', self: true },
-  { id: 'phone', name: 'Safari on iPhone', note: '2 hours ago', self: false },
-  { id: 'linux', name: 'Firefox on Linux', note: '6 days ago', self: false },
-];
+/**
+ * What the idle timer should do at `now`: lock, because nothing has been touched for the chosen
+ * time; tell the server the owner is active, at most once a minute; or nothing.
+ */
+export function idleStep(
+  now: number,
+  lastActivity: number,
+  lastReport: number,
+  minutes: LockMinutes,
+): 'lock' | 'report' | 'wait' {
+  if (minutes !== null && now - lastActivity >= minutes * 60_000) return 'lock';
+  if (lastActivity > lastReport && now - lastReport >= REPORT_EVERY_MS) return 'report';
+  return 'wait';
+}

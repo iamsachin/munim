@@ -8,7 +8,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "gen:api": "cd ../server && MUNIM_DEBUG=1 uv run python manage.py export_openapi_schema --api munim.api.api --output openapi.json && cd ../web && openapi-typescript ../server/openapi.json -o src/api/schema.d.ts && prettier --write ../server/openapi.json src/api/schema.d.ts"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "^5.3.0",
@@ -25,6 +26,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.3.0",
+    "openapi-typescript": "^7.13.0",
     "tailwindcss": "^4.3.5",
     "typescript": "^6.0.3",
     "vite": "^8.3.8",

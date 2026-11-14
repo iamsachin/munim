@@ -7,3 +7,6 @@ packages:
 peerDependencyRules:
   allowedVersions:
     'eslint-plugin-jsx-a11y>eslint': '10'
+    # openapi-typescript 7 declares TypeScript 5; it generates correctly under 6 (checked by
+    # pnpm api:check on every run). Remove once it declares 6.
+    'openapi-typescript>typescript': '6'

@@ -1,6 +1,5 @@
 import { createContext, use, useState, type ReactNode } from 'react';
 import { AI_INITIAL, type AiState } from '../account/ai';
-import { LOCK_INITIAL, type LockSettings } from '../account/auth';
 import type { Source } from '../ui/atoms';
 import { FEEDS, HIGHLIGHTS, ITEMS, LATER, SAVED, WATCHES } from './fixtures';
 import type { HighlightEntry, Item, SavedItem, Watch } from './types';
@@ -23,9 +22,6 @@ export interface ReaderState {
   disconnected: ReadonlySet<string>;
   highlights: readonly HighlightEntry[];
   ai: AiState;
-  lock: LockSettings;
-  locked: boolean;
-  revoked: ReadonlySet<string>;
 }
 
 const STORED_TITLES = new Set(SAVED.map((s) => s.title));
@@ -45,9 +41,6 @@ export const INITIAL: ReaderState = {
   disconnected: new Set(),
   highlights: HIGHLIGHTS,
   ai: AI_INITIAL,
-  lock: LOCK_INITIAL,
-  locked: false,
-  revoked: new Set(),
 };
 
 type Update = (patch: Partial<ReaderState> | ((s: ReaderState) => Partial<ReaderState>)) => void;

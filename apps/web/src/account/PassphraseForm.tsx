@@ -1,42 +1,70 @@
 import { useEffect, useState } from 'react';
+import { reason, Refused } from '../api/client';
 import { Button } from '../ui/Button';
 import { focusOnMount, Input } from '../ui/Input';
-import { MAX_TRIES, mockAccepts, WAIT_SECONDS } from './auth';
+import { waitMessage } from './auth';
 
-/** One passphrase field and a button: sign-in and unlock. Wrong entries are counted, then made to wait. */
-export function PassphraseForm({ submit, onSuccess }: { submit: string; onSuccess: () => void }) {
+/**
+ * One passphrase field and a button: sign-in and unlock. `check` sends the passphrase to the
+ * server, which decides whether it is right and whether there have been too many attempts.
+ */
+export function PassphraseForm({
+  submit,
+  check,
+  onSuccess,
+}: {
+  submit: string;
+  check: (passphrase: string) => Promise<unknown>;
+  onSuccess: () => void;
+}) {
   const [value, setValue] = useState('');
-  const [tries, setTries] = useState(0);
-  const waiting = tries >= MAX_TRIES;
+  const [problem, setProblem] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  // When the server says to wait: the moment the wait ends, and a clock to count down against.
+  const [until, setUntil] = useState(0);
+  const [now, setNow] = useState(0);
+
+  const left = Math.ceil((until - now) / 1000);
+  const waiting = left > 0;
 
   useEffect(() => {
     if (!waiting) return;
-    const timer = setTimeout(() => {
-      setTries(0);
-    }, WAIT_SECONDS * 1000);
+    const timer = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
     return () => {
-      clearTimeout(timer);
+      clearInterval(timer);
     };
   }, [waiting]);
 
-  const message = waiting
-    ? `Too many attempts. Try again in ${String(WAIT_SECONDS)} seconds.`
-    : tries > 0
-      ? 'That passphrase is not right.'
-      : null;
+  const message = waiting ? waitMessage(left) : problem;
+
+  const send = async () => {
+    if (!value || waiting || busy) return;
+    setBusy(true);
+    try {
+      await check(value);
+      onSuccess();
+    } catch (error) {
+      setValue('');
+      if (error instanceof Refused && error.waitSeconds) {
+        setProblem(null);
+        setNow(Date.now());
+        setUntil(Date.now() + error.waitSeconds * 1000);
+      } else {
+        setProblem(reason(error));
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <form
       className="flex flex-col gap-8"
       onSubmit={(e) => {
         e.preventDefault();
-        if (!value || waiting) return;
-        if (mockAccepts(value)) {
-          onSuccess();
-          return;
-        }
-        setValue('');
-        setTries((n) => n + 1);
+        void send();
       }}
     >
       <Input
@@ -57,7 +85,7 @@ export function PassphraseForm({ submit, onSuccess }: { submit: string; onSucces
       <div id="passphrase-message" role="alert" className="text-note text-a3 empty:hidden">
         {message}
       </div>
-      <Button type="submit" variant="primary" disabled={waiting}>
+      <Button type="submit" variant="primary" disabled={waiting || busy}>
         {submit}
       </Button>
     </form>

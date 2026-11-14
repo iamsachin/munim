@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
+import { useSession } from '../account/session';
+import { api } from '../api/client';
 import { ask, useReader } from '../reader/store';
 import { useTheme } from '../settings';
 import { SOURCES, type Source } from '../ui/atoms';
@@ -19,6 +21,7 @@ interface Command {
  */
 export function Palette({ onClose, onHelp }: { onClose: () => void; onHelp: () => void }) {
   const { update } = useReader();
+  const session = useSession();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
@@ -47,7 +50,8 @@ export function Palette({ onClose, onHelp }: { onClose: () => void; onHelp: () =
     {
       label: 'Lock now',
       run: () => {
-        update({ locked: true });
+        void api.lock().catch(() => undefined);
+        session.set('locked');
       },
     },
     { label: 'Keyboard shortcuts', hint: '?', run: onHelp },

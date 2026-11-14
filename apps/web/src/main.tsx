@@ -7,6 +7,7 @@ import './styles.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router';
+import { SessionProvider } from './account/session';
 import { App } from './App';
 import { ReaderProvider } from './reader/store';
 import { ThemeProvider } from './settings';
@@ -18,9 +19,11 @@ createRoot(root).render(
   <StrictMode>
     <BrowserRouter>
       <ThemeProvider>
-        <ReaderProvider>
-          <App />
-        </ReaderProvider>
+        <SessionProvider>
+          <ReaderProvider>
+            <App />
+          </ReaderProvider>
+        </SessionProvider>
       </ThemeProvider>
     </BrowserRouter>
   </StrictMode>,
