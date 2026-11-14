@@ -43,6 +43,8 @@ Accents: Amber `oklch(0.82 0.13 75)`, Blue `oklch(0.76 0.12 250)`, Green `oklch(
 
 Not in the handoff, approved by the owner (2026-11-15): a word a search matched is marked with `found`, a2 at 28%, in ink whatever the text around it; the match the owner has stepped to is outlined in a2. A tick for each match sits in the thread pane's right margin (`found-tick`), and a "Match 1 of 7" row with ↑ and ↓ steps through them.
 
+Not in the handoff, approved by the owner (2026-11-15): something that deletes asks first, in a centred dialog (`Modal`, a panel up to 420 wide): a title that names the thing, one muted paragraph saying exactly what is lost and what is kept, then Cancel (focused) and the destructive ghost button (`danger`). The RSS screen's "Remove feed" sits in a row above the feed's articles, beside their count.
+
 Tints are `color-mix(in oklch, ...)`, never new colours: AI card fill is accent 9% in card, AI card border accent 45%, ask bar fill accent 10% in bg with a 3px ring of accent 16%, highlight mark accent 22%.
 
 Type: IBM Plex Sans 400/500/600, IBM Plex Mono 400/500. Base 13.5px, line-height 1.45. Sizes in use: 9, 10, 10.5, 11, 11.5, 12, 12.5, 13, 13.5, 14, 14.5, 15, 15.5, 17, 22. These fractional sizes are intentional; define each as a theme token and never round them. Mono is for source codes, counts, ages, metadata and upper-case section labels (10.5px, letter-spacing 0.08em).
