@@ -19,7 +19,9 @@ import { CitationRow } from '../ui/CitationRow';
 import { cx } from '../ui/cx';
 import { Input } from '../ui/Input';
 import { NavRow } from '../ui/NavRow';
+import { EMPTY } from '../reader/copy';
 import { Select } from '../ui/Select';
+import { EmptyState, ErrorState, LoadingRows } from '../ui/States';
 import { Swatch } from '../ui/Swatch';
 import { Cell, RowButton, Table, TableHeader, TableRow, Th } from '../ui/Table';
 import { Toggle } from '../ui/Toggle';
@@ -445,6 +447,33 @@ export function Gallery() {
           </Table>
         </div>
       </div>
+      <h2 className="pt-8 text-title font-semibold">States</h2>
+      <div className="grid grid-cols-3 items-start gap-12">
+        <div className="rounded-6 border border-line">
+          <SectionLabel className="border-b border-line px-16 py-5">Loading</SectionLabel>
+          <LoadingRows what="the stream" rows={4} />
+        </div>
+        <div className="rounded-6 border border-line">
+          <SectionLabel className="border-b border-line px-16 py-5">Could not load</SectionLabel>
+          <ErrorState
+            what="the stream"
+            detail="The server did not answer."
+            onRetry={() => undefined}
+          />
+        </div>
+        <div className="rounded-6 border border-line">
+          <SectionLabel className="border-b border-line px-16 py-5">Empty</SectionLabel>
+          <EmptyState>{EMPTY.stream}</EmptyState>
+        </div>
+      </div>
+      <Section title="Empty wording">
+        {keys(EMPTY).map((k) => (
+          <div key={k} className="grid grid-cols-[96px_minmax(0,1fr)] items-baseline gap-x-10">
+            <span className="font-mono text-code text-mute">{k}</span>
+            <span className="text-mute">{EMPTY[k]}</span>
+          </div>
+        ))}
+      </Section>
     </main>
   );
 }

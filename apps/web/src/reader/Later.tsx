@@ -2,6 +2,7 @@ import { ScreenHeader } from '../shell/ScreenHeader';
 import { SourceTag } from '../ui/atoms';
 import { Button } from '../ui/Button';
 import { Cell, Table, TableBody, TableHeader, TableRow, Th } from '../ui/Table';
+import { EMPTY } from './copy';
 import { laterRows, laterTotal, useReader, withoutLater } from './store';
 
 const COLS = 'grid-cols-[40px_minmax(0,1fr)_160px_70px_90px_70px]';
@@ -51,7 +52,7 @@ export function Later() {
           ))}
           {rows.length === 0 && (
             <div role="row">
-              <Cell className="px-16 py-24 text-mute">The queue is empty.</Cell>
+              <Cell className="px-16 py-24 text-mute">{EMPTY.later}</Cell>
             </div>
           )}
         </TableBody>

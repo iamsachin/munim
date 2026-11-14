@@ -3,6 +3,7 @@ import { Button } from '../ui/Button';
 import { cx } from '../ui/cx';
 import { Input } from '../ui/Input';
 import { AskCard } from './AskCard';
+import { EMPTY } from './copy';
 import { FEEDS } from './fixtures';
 import { useReader } from './store';
 import type { Feed } from './types';
@@ -107,7 +108,7 @@ export function Rss() {
         </h2>
         <AskCard what="article" />
         <p className="max-w-[62ch] text-read leading-read text-pretty">
-          {article ? article.body : 'No articles fetched yet.'}
+          {article ? article.body : EMPTY.articles}
         </p>
       </article>
     </main>
