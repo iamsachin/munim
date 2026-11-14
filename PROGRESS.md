@@ -8,9 +8,9 @@ Last updated: 2026-11-14
 
 Milestone 3 in progress. Merged: the Django scaffold (#6), the account API (#8), the web app signing in against the server (#9), RSS (#10), background polling (#11), the Stream on real items (#12), feed articles readable in the thread pane (#13), rich text as blocks with images fetched through the server (#14), Hacker News with its discussions (#15), sealed storage for secrets with the AI provider keys on the server (#16), the Docker Compose install (#17), full-text search in the Stream (#18), search matches marked in the open article (#19), highlights on the server (#20), removing a feed (#21), the Encryption card (#22), export and delete-all (#23), and the trusted-proxies setting (#24).
 
-Open for the owner's approval and first real test: YouTube through OAuth.
+Open, in pull request #25 (branch `youtube-oauth`, which the owner's dev app is running): YouTube through OAuth. The owner's first real sign-in worked on 2026-11-15 and their videos are in. Built since, at their request, and waiting for their look with real videos: click-to-play in the thread pane and the preview, links and line breaks in descriptions, real thumbnails in rows, and a card view that is the YouTube page's default and opens a video large and playing. To settle before merging: whether the player starts on the first click in their browser, and whether the card view is right. duhview is paused.
 
-Still on sample data in the browser: watches, digest, Ask, every Connections row except Hacker News, and on the AI screen the models, usage and limit (the provider keys are real).
+Still on sample data in the browser: watches, digest, Ask, every Connections row except Hacker News and YouTube, and on the AI screen the models, usage and limit (the provider keys are real).
 
 Next: Reddit (needs the owner to register an app), then the AI features.
 
@@ -94,7 +94,7 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] RSS articles in the Stream, with unread state
 - [x] Rich text: every source's text becomes blocks on the server (headings, lists, quotes, code, links, bold and italic), with images fetched through the server and kept in the data folder
 - [x] Hacker News: the front page and each story's discussion, switched on and off in Connections
-- [ ] YouTube: the owner's subscriptions through OAuth, set up and connected on Connections (built against a stand-in for Google; waits for the owner's approval and a first real sign-in)
+- [ ] YouTube: the owner's subscriptions through OAuth, set up and connected on Connections; videos play where they are; the YouTube page is cards by default (first real sign-in done; waits for the owner's approval in pull request #25)
 - [ ] Reddit (official OAuth)
 - [x] Saving an item (full text of feed articles)
 - [ ] Saving: comment threads, transcripts, thumbnails
