@@ -1,6 +1,8 @@
 name: duhview
+# On demand only: duhview reviews a pull request when the owner, a member or a collaborator
+# comments "@duhview review" on it, or replies in one of its review threads. It does not run on
+# every push, because each review costs model calls.
 on:
-  pull_request:
   issue_comment:
     types: [created]
   pull_request_review_comment:
@@ -10,24 +12,15 @@ permissions:
   pull-requests: write
 jobs:
   review:
-    # Start a job only when duhview has work: a PR from this repo (forks get no secrets), or a
-    # trusted person's comment on a PR that mentions @duhview or replies in a review thread.
-    # duhview's own comments carry a hidden "<!-- duhview" marker and are skipped.
+    # Only for a trusted person's comment on a pull request that mentions @duhview or replies in a
+    # review thread. duhview's own comments carry a hidden "<!-- duhview" marker and are skipped.
     if: >-
-      (github.event_name == 'pull_request' &&
-       github.event.pull_request.head.repo.full_name == github.repository) ||
-      (github.event_name != 'pull_request' &&
-       (github.event_name == 'pull_request_review_comment' || github.event.issue.pull_request) &&
-       (contains(github.event.comment.body, '@duhview') || github.event.comment.in_reply_to_id) &&
-       !contains(github.event.comment.body, '<!-- duhview') &&
-       contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association))
-    # Reviews: one per PR, a new push cancels the old one. Comments: their own group each.
+      (github.event_name == 'pull_request_review_comment' || github.event.issue.pull_request) &&
+      (contains(github.event.comment.body, '@duhview') || github.event.comment.in_reply_to_id) &&
+      !contains(github.event.comment.body, '<!-- duhview') &&
+      contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
     concurrency:
-      group: >-
-        ${{ github.event_name == 'pull_request'
-            && format('duhview-pr-{0}', github.event.pull_request.number)
-            || format('duhview-comment-{0}', github.event.comment.id) }}
-      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+      group: duhview-comment-${{ github.event.comment.id }}
     runs-on: ubuntu-latest
     steps:
       # Actions are pinned to commit SHAs: tags and branches can be moved to different code.
