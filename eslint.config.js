@@ -4,7 +4,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['**/dist', '**/test-results', '**/playwright-report', 'design'] },
+  { ignores: ['**/dist', '**/test-results', '**/playwright-report', '**/.venv', 'design'] },
   js.configs.recommended,
   tseslint.configs.strictTypeChecked,
   { languageOptions: { parserOptions: { projectService: true } } },

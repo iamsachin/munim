@@ -40,7 +40,7 @@ The quality bar is the point of this project. Prefer a smaller thing finished pr
 | Distribution | Docker Compose: app container plus Postgres. `docker compose up` is the whole install. |
 | Licence | AGPL-3.0. |
 
-Chosen by Claude, not yet confirmed by the owner (change freely if told otherwise): pnpm workspace with `apps/web` (exists) and `apps/server` (the Python project, created in milestone 3); uv for Python dependencies; ruff, mypy in strict mode and pytest, matching the owner's duhview project; for the Postgres job queue, Django's own tasks framework if its database backend is ready, otherwise Procrastinate's Django integration (check both before adopting one); `openapi-typescript` to generate the front end's types; the page polls for new items at first, server-sent events later if polling proves too slow; Vitest and Playwright on the front end.
+Tooling, confirmed by the owner: uv for Python dependencies (its lockfile is committed); Docker Postgres for development and tests. Chosen by Claude and still open to change: ruff, mypy in strict mode with django-stubs, and pytest with pytest-django, matching the owner's duhview project; for the Postgres job queue, Django's own tasks framework if its database backend is ready, otherwise Procrastinate's Django integration (check both before adopting one); `openapi-typescript` to generate the front end's types; the page polls for new items at first, server-sent events later if polling proves too slow; Vitest and Playwright on the front end.
 
 Version pins with a reason: TypeScript stays on 6.0 until typescript-eslint supports 7. ESLint is 10 with a peer allowance for eslint-plugin-jsx-a11y in `pnpm-workspace.yaml`.
 
@@ -81,7 +81,9 @@ A piece of work is done only when all of these pass, and the result has been loo
 ## Commands
 
 - `pnpm dev`: the web app at http://localhost:5173. The design-system gallery is at `/gallery`.
-- `pnpm check`: types, lint, format, unit tests, then a production build with Playwright visual regression and axe.
+- `pnpm db`: start the development Postgres (Docker, port 5433) and wait until it is healthy. Server tests need it.
+- `pnpm dev:server`: the Django server at http://localhost:8000, in development mode. API docs at `/api/docs`, the OpenAPI document at `/api/openapi.json`, the admin at `/admin/`.
+- `pnpm check`: for the web app, types, lint, format, unit tests, then a production build with Playwright visual regression and axe; for the server, mypy, ruff and pytest against the development database.
 - `pnpm format`: apply Prettier.
 - `pnpm --filter web exec playwright test --update-snapshots`: re-record baselines. Only for a change the owner has approved; look at every changed image first.
 
@@ -100,6 +102,8 @@ Baselines are recorded on macOS Chromium and are platform-specific; other platfo
 - Never hard-code model names or lists. Read them from the provider's models endpoint. Consult the `claude-api` skill before writing any Anthropic code.
 - Secrets never reach the browser, logs, error messages or test fixtures.
 - Every migration must be safe to run on a stranger's existing data.
+- Everything an install can change is a `MUNIM_*` environment variable read through `env()` in `munim/settings.py`. A secret has no default outside development mode (`MUNIM_DEBUG=1`): the server must fail to start rather than run on a guessable value.
+- Server tests treat warnings as errors. Fix a deprecation when it appears.
 - Validate at trust boundaries with Pydantic on the server: HTTP input, source API responses, feed XML, AI output that drives UI. The browser validates what it reads from its own storage.
 - Respect each source's rate limits and terms. Cache and poll conservatively.
 

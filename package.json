@@ -6,12 +6,14 @@
   "scripts": {
     "dev": "pnpm --filter web dev",
     "typecheck": "pnpm -r typecheck",
-    "lint": "eslint .",
-    "format": "prettier --write \"apps/**/*.{ts,tsx,css,html,json}\" \"*.{js,json,yaml}\"",
+    "lint": "eslint . && pnpm -r lint",
+    "format": "prettier --write \"apps/**/*.{ts,tsx,css,html,json}\" \"*.{js,json,yaml}\" && pnpm -r format",
     "format:check": "prettier --check \"apps/**/*.{ts,tsx,css,html,json}\" \"*.{js,json,yaml}\"",
     "test": "pnpm -r test",
     "e2e": "pnpm -r e2e",
-    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm e2e"
+    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm e2e",
+    "dev:server": "pnpm --filter server dev",
+    "db": "docker compose up -d --wait db"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
