@@ -1,32 +1,18 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { ScreenHeader } from '../shell/ScreenHeader';
 import { AiBadge, Highlight, SectionLabel, SourceTag, SOURCES, type Source } from '../ui/atoms';
 import { buttonClass } from '../ui/Button';
 import { Card } from '../ui/Card';
-import { EmptyState } from '../ui/States';
+import { EmptyState, ErrorState, LoadingRows } from '../ui/States';
 import { EMPTY } from './copy';
-import { DIGESTS, ITEMS } from './fixtures';
-import { laterRows, sourceCount, useReader, watchRows } from './store';
+import { DIGESTS } from './fixtures';
+import { useItems } from './queries';
+import { useReader, watchRows } from './store';
 
 const SOURCE_ORDER: Source[] = ['RD', 'X', 'IG', 'HN', 'YT', 'RSS'];
-
-// Mock: in the handoff these are fixed. `item` is the thread each reply belongs to.
-const TODAY = 'Saturday 14 November';
-const REPLIES = [
-  {
-    who: 'tin_orchard',
-    where: 'r/selfhosted · 1h',
-    text: 'Same, but replies still fail for me about one time in ten.',
-    item: 0,
-  },
-  {
-    who: '@ops_notes',
-    where: 'X · 3h',
-    text: 'Did you consider CRDTs or was that too heavy?',
-    item: 1,
-  },
-];
+const DAY_MS = 24 * 60 * 60 * 1000;
+const DATE = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
 
 function Section({
   label,
@@ -55,7 +41,17 @@ function Section({
 }
 
 export function Today() {
-  const { state, update } = useReader();
+  const { state } = useReader();
+  const items = useItems();
+  const later = useItems({ show: 'later' });
+  const [now] = useState(() => Date.now());
+
+  // "New since yesterday": what was published in the last day, grouped by where it came from.
+  const fresh = (items.data ?? []).filter((item) => now - Date.parse(item.published_at) < DAY_MS);
+  const bySource = SOURCE_ORDER.map((source) => ({
+    source,
+    rows: fresh.filter((item) => item.source === source),
+  })).filter((group) => group.rows.length > 0);
   const watches = watchRows(state)
     .filter((w) => w.on && w.count > 0)
     .slice(0, 4);
@@ -63,7 +59,7 @@ export function Today() {
   return (
     <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
       <ScreenHeader title="Today">
-        <span className="font-mono text-meta text-mute">{TODAY}</span>
+        <span className="font-mono text-meta text-mute">{DATE.format(now)}</span>
       </ScreenHeader>
       <div className="grid max-w-1120 grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] items-start gap-12 p-16">
         <div className="flex min-w-0 flex-col gap-12">
@@ -79,36 +75,28 @@ export function Today() {
           </Card>
 
           <Section label="New since yesterday" to="/stream" action="Open stream">
-            {SOURCE_ORDER.map((s) => (
+            {items.isPending && <LoadingRows what="new items" rows={3} />}
+            {items.isError && <ErrorState what="new items" onRetry={() => void items.refetch()} />}
+            {items.isSuccess && bySource.length === 0 && (
+              <EmptyState compact>{EMPTY.newItems}</EmptyState>
+            )}
+            {bySource.map(({ source, rows }) => (
               <Link
-                key={s}
-                to={`/stream/${s.toLowerCase()}`}
+                key={source}
+                to={`/stream/${source.toLowerCase()}`}
                 className="grid grid-cols-[30px_96px_24px_minmax(0,1fr)] items-baseline gap-x-10 rounded-5 px-6 py-dn-3 text-ink hover:bg-card"
               >
-                <SourceTag src={s} />
-                <span className="font-medium">{SOURCES[s].name}</span>
-                <span className="text-right font-mono text-meta text-mute">{sourceCount(s)}</span>
-                <span className="truncate text-mute">{ITEMS.find((i) => i.src === s)?.title}</span>
+                <SourceTag src={source} />
+                <span className="font-medium">{SOURCES[source].name}</span>
+                <span className="text-right font-mono text-meta text-mute">{rows.length}</span>
+                <span className="truncate text-mute">{rows[0]?.title}</span>
               </Link>
             ))}
           </Section>
 
           <Section label="Replies to you">
-            {REPLIES.map((r) => (
-              <Link
-                key={r.who}
-                to="/stream"
-                onClick={() => {
-                  update({ selected: r.item });
-                }}
-                className="rounded-5 px-6 py-dn-3 text-ink hover:bg-card"
-              >
-                <span className="font-semibold">{r.who}</span>{' '}
-                <span className="font-mono text-code text-mute">{r.where}</span>
-                <br />
-                {r.text}
-              </Link>
-            ))}
+            {/* No source that carries replies is connected yet. */}
+            <EmptyState compact>{EMPTY.repliesToYou}</EmptyState>
           </Section>
         </div>
 
@@ -124,20 +112,19 @@ export function Today() {
           </Section>
 
           <Section label="Read later" to="/later" action="Open queue">
-            {laterRows(state)
-              .slice(0, 3)
-              .map((l) => (
-                <div
-                  key={l.key}
-                  className="grid grid-cols-[30px_minmax(0,1fr)_auto] items-baseline gap-x-10 px-6 py-dn-3"
-                >
-                  <SourceTag src={l.src} />
-                  <span className="truncate">{l.title}</span>
-                  <span className="font-mono text-meta text-mute">
-                    {l.mins ? `${String(l.mins)} min` : ''}
-                  </span>
-                </div>
-              ))}
+            {later.isPending && <LoadingRows what="the queue" rows={3} />}
+            {later.isError && <ErrorState what="the queue" onRetry={() => void later.refetch()} />}
+            {later.data?.length === 0 && <EmptyState compact>{EMPTY.later}</EmptyState>}
+            {later.data?.slice(0, 3).map((item) => (
+              <div
+                key={item.id}
+                className="grid grid-cols-[30px_minmax(0,1fr)_auto] items-baseline gap-x-10 px-6 py-dn-3"
+              >
+                <SourceTag src={item.source} />
+                <span className="truncate">{item.title}</span>
+                <span className="font-mono text-meta text-mute">{item.minutes} min</span>
+              </div>
+            ))}
           </Section>
 
           <Section label="Recent highlights" to="/highlights" action="All highlights">

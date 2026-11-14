@@ -19,7 +19,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
-from reader.models import Article, Feed
+from reader.models import Feed, Item
 
 MAX_BYTES = 5_000_000
 MAX_REDIRECTS = 5
@@ -232,7 +232,7 @@ def store(feed: Feed, parsed: Parsed, fetched: Download) -> None:
         feed.problem = ""
         feed.save()
         for entry in parsed.entries:
-            Article.objects.update_or_create(
+            Item.objects.update_or_create(
                 feed=feed,
                 guid=entry.guid,
                 defaults={

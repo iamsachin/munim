@@ -249,7 +249,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/feeds/{feed_id}/articles': {
+  '/api/items': {
     parameters: {
       query?: never;
       header?: never;
@@ -257,10 +257,51 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * List Articles
-     * @description The feed's newest articles, newest first.
+     * List Items
+     * @description Items, newest first. Saved and queued lists are ordered by when that was done.
      */
-    get: operations['reader_api_list_articles'];
+    get: operations['reader_api_list_items'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/items/{item_id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Item */
+    get: operations['reader_api_get_item'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Change Item
+     * @description Marks an item read or unread, saved or not, queued for later or not.
+     */
+    patch: operations['reader_api_change_item'];
+    trace?: never;
+  };
+  '/api/counts': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Counts
+     * @description The numbers beside the sidebar's rows.
+     */
+    get: operations['reader_api_counts'];
     put?: never;
     post?: never;
     delete?: never;
@@ -350,14 +391,26 @@ export interface components {
       /** Url */
       url: string;
     };
-    /** ArticleOut */
-    ArticleOut: {
+    /**
+     * ItemOut
+     * @description An item as a row in a list.
+     */
+    ItemOut: {
       /** Id */
       id: number;
+      /**
+       * Source
+       * @enum {string}
+       */
+      source: 'RD' | 'X' | 'IG' | 'HN' | 'YT' | 'RSS';
       /** Title */
       title: string;
-      /** Url */
-      url: string;
+      /** Origin */
+      origin: string;
+      /** Sub */
+      sub: string;
+      /** Replies */
+      replies: number;
       /**
        * Published At
        * Format: date-time
@@ -365,8 +418,92 @@ export interface components {
       published_at: string;
       /** Minutes */
       minutes: number;
+      /** Unread */
+      unread: boolean;
+      /** Saved At */
+      saved_at: string | null;
+      /** Later At */
+      later_at: string | null;
+      /** Media */
+      media: ('Video' | 'Image') | null;
+    };
+    /** Comment */
+    Comment: {
+      /** Who */
+      who: string;
+      /** Meta */
+      meta: string;
+      /** Text */
+      text: string;
+      /** Depth */
+      depth: number;
+    };
+    /**
+     * ItemDetail
+     * @description An item opened: its own page's address, its text, and its replies.
+     */
+    ItemDetail: {
+      /** Id */
+      id: number;
+      /**
+       * Source
+       * @enum {string}
+       */
+      source: 'RD' | 'X' | 'IG' | 'HN' | 'YT' | 'RSS';
+      /** Title */
+      title: string;
+      /** Origin */
+      origin: string;
+      /** Sub */
+      sub: string;
+      /** Replies */
+      replies: number;
+      /**
+       * Published At
+       * Format: date-time
+       */
+      published_at: string;
+      /** Minutes */
+      minutes: number;
+      /** Unread */
+      unread: boolean;
+      /** Saved At */
+      saved_at: string | null;
+      /** Later At */
+      later_at: string | null;
+      /** Media */
+      media: ('Video' | 'Image') | null;
+      /** Url */
+      url: string;
       /** Paragraphs */
       paragraphs: string[];
+      /** Comments */
+      comments: components['schemas']['Comment'][];
+    };
+    /**
+     * ItemPatch
+     * @description What to change. Anything left out stays as it is.
+     */
+    ItemPatch: {
+      /** Read */
+      read?: boolean | null;
+      /** Saved */
+      saved?: boolean | null;
+      /** Later */
+      later?: boolean | null;
+    };
+    /** Counts */
+    Counts: {
+      /** Stream */
+      stream: number;
+      /** Later */
+      later: number;
+      /** Saved */
+      saved: number;
+      /** Sources */
+      sources: {
+        [key: string]: number;
+      };
     };
   };
   responses: never;
@@ -801,12 +938,37 @@ export interface operations {
       };
     };
   };
-  reader_api_list_articles: {
+  reader_api_list_items: {
+    parameters: {
+      query?: {
+        show?: 'all' | 'unread' | 'saved' | 'later';
+        source?: ('RD' | 'X' | 'IG' | 'HN' | 'YT' | 'RSS') | null;
+        feed?: number | null;
+        q?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ItemOut'][];
+        };
+      };
+    };
+  };
+  reader_api_get_item: {
     parameters: {
       query?: never;
       header?: never;
       path: {
-        feed_id: number;
+        item_id: number;
       };
       cookie?: never;
     };
@@ -818,7 +980,53 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ArticleOut'][];
+          'application/json': components['schemas']['ItemDetail'];
+        };
+      };
+    };
+  };
+  reader_api_change_item: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        item_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ItemPatch'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ItemOut'];
+        };
+      };
+    };
+  };
+  reader_api_counts: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Counts'];
         };
       };
     };

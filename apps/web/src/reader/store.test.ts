@@ -1,17 +1,5 @@
 import { expect, test } from 'vitest';
-import { LATER, SAVED } from './fixtures';
-import {
-  INITIAL,
-  laterRowFor,
-  laterRows,
-  laterTotal,
-  matchCount,
-  savedRows,
-  toggled,
-  watchRows,
-  withoutLater,
-  type ReaderState,
-} from './store';
+import { INITIAL, matchCount, toggled, watchRows, type ReaderState } from './store';
 
 const state = (patch: Partial<ReaderState>): ReaderState => ({ ...INITIAL, ...patch });
 
@@ -22,58 +10,9 @@ test('toggled adds a missing value and removes a present one, without mutating',
   expect([...set]).toEqual([1]);
 });
 
-test('saved: stream items in the stored list start saved; the list follows saves and unsaves', () => {
-  expect(savedRows(INITIAL)).toEqual(SAVED);
-  // Item 9, "Conflict-free sync explained in 12 minutes", is in the stored list.
-  expect(INITIAL.saved.has(9)).toBe(true);
-
-  const unsaved = savedRows(state({ saved: toggled(INITIAL.saved, 9) }));
-  expect(unsaved).toHaveLength(SAVED.length - 1);
-  expect(unsaved.some((r) => r.title.startsWith('Conflict-free sync'))).toBe(false);
-
-  // Item 3 is a YouTube video that is not in the stored list.
-  const added = savedRows(state({ saved: toggled(INITIAL.saved, 3) }));
-  expect(added).toHaveLength(SAVED.length + 1);
-  expect(added[0]).toMatchObject({ kind: 'Video', src: 'YT', when: 'Now', parsed: 'Processing' });
-});
-
-test('read later: queued items come first, finished ones drop out', () => {
-  const rows = laterRows(state({ laterAdded: [3], laterDone: new Set(['b0']) }));
-  expect(rows).toHaveLength(LATER.length);
-  expect(rows[0]).toMatchObject({ key: 'i3', item: 3, added: 'Now', mins: 0 });
-  expect(rows.some((r) => r.key === 'b0')).toBe(false);
-});
-
-test('read later total switches to hours at 60 minutes', () => {
-  expect(laterTotal(laterRows(INITIAL))).toBe('6 items · 1 h 30 min');
-  const short = laterRows(state({ laterDone: new Set(['b1', 'b2']) }));
-  expect(laterTotal(short)).toBe('4 items · 34 min');
-  expect(laterTotal([])).toBe('0 items · 0 min');
-});
-
 test('watches: new ones start with no matches, switched-off ones do not count', () => {
   expect(matchCount(INITIAL)).toBe(19);
   const s = state({ watchNew: ['sqlite'], watchOff: new Set(['rate limits']) });
   expect(watchRows(s).at(-1)).toMatchObject({ name: 'sqlite', count: 0, on: true });
   expect(matchCount(s)).toBe(12);
-});
-
-test('an item already in the stored queue counts as queued, and can be taken out', () => {
-  // Item 10 is "Notes on end-to-end encryption for small apps", which is also stored row b0.
-  const stored = laterRowFor(INITIAL, 10);
-  if (!stored) throw new Error('item 10 should be in the stored queue');
-  expect(stored.key).toBe('b0');
-  expect(laterRowFor(INITIAL, 1)).toBeUndefined();
-
-  const after = state(withoutLater(INITIAL, stored));
-  expect(laterRowFor(after, 10)).toBeUndefined();
-  expect(laterRows(after)).toHaveLength(5);
-});
-
-test('an item queued this session is taken out by its index', () => {
-  const s = state({ laterAdded: [1] });
-  const row = laterRowFor(s, 1);
-  if (!row) throw new Error('item 1 should be queued');
-  expect(row).toMatchObject({ key: 'i1', item: 1 });
-  expect(state(withoutLater(s, row)).laterAdded).toEqual([]);
 });

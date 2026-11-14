@@ -1,19 +1,16 @@
 import { createContext, use, useState, type ReactNode } from 'react';
 import { AI_INITIAL, type AiState } from '../account/ai';
-import type { Source } from '../ui/atoms';
-import { HIGHLIGHTS, ITEMS, LATER, SAVED, WATCHES } from './fixtures';
-import type { HighlightEntry, Item, SavedItem, Watch } from './types';
+import { HIGHLIGHTS, WATCHES } from './fixtures';
+import type { HighlightEntry, Watch } from './types';
 
 export const SCOPES = ['Everything', 'Saved', 'This week', 'Open item'] as const;
 export type Scope = (typeof SCOPES)[number];
 
-/** Everything the owner can change in the mock reader. Items are identified by their index in ITEMS. */
+/**
+ * What still runs on sample data in the browser: highlights, watches, Ask, connections and AI
+ * settings. Items, feeds and sign-in are the server's.
+ */
 export interface ReaderState {
-  selected: number;
-  saved: ReadonlySet<number>;
-  replies: Readonly<Record<number, readonly string[]>>;
-  laterAdded: readonly number[];
-  laterDone: ReadonlySet<string>;
   watchOff: ReadonlySet<string>;
   watchNew: readonly string[];
   scope: Scope;
@@ -23,15 +20,7 @@ export interface ReaderState {
   ai: AiState;
 }
 
-const STORED_TITLES = new Set(SAVED.map((s) => s.title));
-
 export const INITIAL: ReaderState = {
-  selected: 0,
-  // Every stream item that is also in the stored saved list starts out saved.
-  saved: new Set(ITEMS.flatMap((item, i) => (STORED_TITLES.has(item.title) ? [i] : []))),
-  replies: {},
-  laterAdded: [],
-  laterDone: new Set(),
   watchOff: new Set(),
   watchNew: [],
   scope: 'Everything',
@@ -45,7 +34,7 @@ type Update = (patch: Partial<ReaderState> | ((s: ReaderState) => Partial<Reader
 
 const Ctx = createContext<{ state: ReaderState; update: Update } | null>(null);
 
-// shortcut: synchronous in-memory state over fixtures, replace with server queries in milestone 3
+// shortcut: in-memory state over fixtures for what the server does not hold yet
 export function ReaderProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState(INITIAL);
   const update: Update = (patch) => {
@@ -65,94 +54,6 @@ export function toggled<T>(set: ReadonlySet<T>, value: T): ReadonlySet<T> {
   const next = new Set(set);
   if (!next.delete(value)) next.add(value);
   return next;
-}
-
-export function itemAt(index: number): Item {
-  const item = ITEMS[index];
-  if (!item) throw new Error(`No item at index ${String(index)}`);
-  return item;
-}
-
-export const sourceCount = (src: Source) => ITEMS.filter((i) => i.src === src).length;
-
-/**
- * The Saved list: items saved from the stream this session first, then the stored list minus any
- * stream item that has since been unsaved.
- */
-export function savedRows(s: ReaderState): SavedItem[] {
-  const fresh = [...s.saved]
-    .map(itemAt)
-    .filter((item) => !STORED_TITLES.has(item.title))
-    .map((item): SavedItem => ({
-      kind:
-        item.media === 'Video'
-          ? 'Video'
-          : item.src === 'RSS'
-            ? 'Article'
-            : item.src === 'X'
-              ? 'Post'
-              : 'Thread',
-      src: item.src,
-      title: item.title,
-      from: item.from,
-      parsed: 'Processing',
-      when: 'Now',
-    }));
-  const stored = SAVED.filter((row) => {
-    const i = ITEMS.findIndex((item) => item.title === row.title);
-    return i < 0 || s.saved.has(i);
-  });
-  return [...fresh, ...stored];
-}
-
-export interface LaterRow {
-  key: string;
-  /** Set when the row was queued from the stream, so it can be unqueued. */
-  item?: number;
-  src: Source;
-  title: string;
-  from: string;
-  mins: number;
-  added: string;
-}
-
-/** The read-later queue: items queued this session first, then the stored queue minus finished ones. */
-export function laterRows(s: ReaderState): LaterRow[] {
-  const queued = s.laterAdded.map((i) => {
-    const { src, title, from } = itemAt(i);
-    return { key: `i${String(i)}`, item: i, src, title, from, mins: 0, added: 'Now' };
-  });
-  const stored = LATER.map((l, i) => ({ key: `b${String(i)}`, ...l }));
-  return [...queued, ...stored.filter((l) => !s.laterDone.has(l.key))];
-}
-
-/** The queue row for a stream item, whether it was queued this session or was already stored. */
-export function laterRowFor(s: ReaderState, index: number): LaterRow | undefined {
-  const { src, title } = itemAt(index);
-  return laterRows(s).find((r) => r.item === index || (r.src === src && r.title === title));
-}
-
-/** The state change that takes `row` out of the queue. */
-export function withoutLater(s: ReaderState, row: LaterRow): Partial<ReaderState> {
-  return row.item === undefined
-    ? { laterDone: new Set(s.laterDone).add(row.key) }
-    : { laterAdded: s.laterAdded.filter((x) => x !== row.item) };
-}
-
-/** The state change that queues an item, or takes it out if it is already queued. */
-export function laterToggled(s: ReaderState, index: number): Partial<ReaderState> {
-  const row = laterRowFor(s, index);
-  return row ? withoutLater(s, row) : { laterAdded: [index, ...s.laterAdded] };
-}
-
-/** "6 items · 1 h 30 min". Reading time is unknown for freshly queued items and counts as zero. */
-export function laterTotal(rows: readonly LaterRow[]) {
-  const mins = rows.reduce((n, r) => n + r.mins, 0);
-  const time =
-    mins >= 60
-      ? `${String(Math.floor(mins / 60))} h ${String(mins % 60)} min`
-      : `${String(mins)} min`;
-  return `${String(rows.length)} items · ${time}`;
 }
 
 export interface WatchRow extends Watch {

@@ -6,11 +6,13 @@ Last updated: 2026-11-14
 
 ## Now
 
-Milestone 3 in progress. Merged: the Django scaffold (#6), the account API (#8), the web app signing in against the server (#9), RSS as the first real source (#10).
+Milestone 3 in progress. Merged: the Django scaffold (#6), the account API (#8), the web app signing in against the server (#9), RSS (#10), background polling (#11).
 
-On branch `milestone-3-polling` (pull request #11): the job queue and worker; feeds are polled every fifteen minutes and the open page asks again every minute.
+On branch `milestone-3-stream` (pull request #12): the Stream, its thread pane, Saved, Read later, Today and the sidebar counts read real items from the server, with unread, saved and queued state. Only feed articles exist as items so far.
 
-Next: the Stream reading real items, starting with feed articles, with unread state.
+Still on sample data in the browser: highlights, watches, digest, Ask, connections, AI settings.
+
+Next: decide with the owner whether the thread pane should show a feed article's text; then Hacker News as the second source (needs no account), which brings real comments.
 
 ## 0. Preparation
 
@@ -68,9 +70,11 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] Server scaffold in `apps/server`: Django, Django Ninja, uv, ruff, mypy, pytest, wired into `pnpm check`
 - [x] Development Postgres in Docker; Django admin and built-in migrations
 - [x] Feed and Article models and migrations, in the admin
-- [ ] Models for the rest: stream items from every source, saved items, highlights, watches
+- [x] Stream items, with read, saved and read-later state (feed articles only so far)
+- [ ] Models for the rest: other sources' items and their comments, highlights, watches
 - [x] OpenAPI document committed, front-end types generated from it and checked for staleness
-- [ ] Reader data from the server, replacing the mock store
+- [x] Stream, Saved, Read later, Today and sidebar counts from the server
+- [ ] Highlights, watches, digest, Ask, connections and AI settings from the server
 - [ ] Loading, error and empty states wired into every screen (`ui/States.tsx`, wording in `reader/copy.ts`); done for RSS and the device list
 - [x] Postgres job queue, scheduler and worker (Procrastinate); `pnpm dev` runs the worker
 - [ ] Docker Compose: one app container serving web, API and the job worker, plus Postgres
@@ -86,11 +90,12 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [ ] Encrypted storage for source tokens and AI keys; then restore the sidebar status button and the Connections note with truthful wording
 - [x] RSS: add a feed, fetch and parse it safely, read its articles; every feed is polled every fifteen minutes
 - [ ] RSS: remove a feed from the app (only possible in the admin now; needs a design)
-- [ ] RSS articles in the Stream, with unread state
+- [x] RSS articles in the Stream, with unread state
 - [ ] Hacker News
 - [ ] YouTube
 - [ ] Reddit (official OAuth)
-- [ ] Saving: full text, threads, transcripts, thumbnails
+- [x] Saving an item (full text of feed articles)
+- [ ] Saving: comment threads, transcripts, thumbnails
 - [ ] Search (Postgres full-text)
 - [ ] Highlights stored with their position in the text, so a short quote is not also marked inside other words
 - [ ] **Approved by owner**

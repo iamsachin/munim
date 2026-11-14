@@ -1,21 +1,25 @@
+import { useState } from 'react';
 import { ScreenHeader } from '../shell/ScreenHeader';
 import { SourceTag } from '../ui/atoms';
 import { Button } from '../ui/Button';
+import { ErrorState, LoadingRows } from '../ui/States';
 import { Cell, Table, TableBody, TableHeader, TableRow, Th } from '../ui/Table';
 import { EMPTY } from './copy';
-import { laterRows, laterTotal, useReader, withoutLater } from './store';
+import { age, readingTotal, useChangeItem, useItems } from './queries';
 
 const COLS = 'grid-cols-[40px_minmax(0,1fr)_160px_70px_90px_70px]';
 const META = 'font-mono text-meta text-mute';
 
 export function Later() {
-  const { state, update } = useReader();
-  const rows = laterRows(state);
+  const items = useItems({ show: 'later' });
+  const change = useChangeItem();
+  const [now] = useState(() => Date.now());
+  const rows = items.data ?? [];
 
   return (
     <main className="flex min-h-0 flex-1 flex-col">
       <ScreenHeader title="Read later">
-        <span className={META}>{laterTotal(rows)}</span>
+        {items.isSuccess && <span className={META}>{readingTotal(rows)}</span>}
       </ScreenHeader>
       <Table label="Read later" className="flex min-h-0 flex-1 flex-col">
         <TableHeader className={COLS}>
@@ -29,20 +33,20 @@ export function Later() {
           </Th>
         </TableHeader>
         <TableBody className="min-h-0 flex-1 overflow-y-auto">
-          {rows.map((l) => (
-            <TableRow key={l.key} className={`${COLS} items-center`}>
+          {rows.map((item) => (
+            <TableRow key={item.id} className={`${COLS} items-center`}>
               <Cell>
-                <SourceTag src={l.src} />
+                <SourceTag src={item.source} />
               </Cell>
-              <Cell className="truncate font-medium">{l.title}</Cell>
-              <Cell className={`${META} truncate`}>{l.from}</Cell>
-              <Cell className={`${META} text-right`}>{l.mins ? `${String(l.mins)} min` : ''}</Cell>
-              <Cell className={META}>{l.added}</Cell>
+              <Cell className="truncate font-medium">{item.title}</Cell>
+              <Cell className={`${META} truncate`}>{item.origin}</Cell>
+              <Cell className={`${META} text-right`}>{item.minutes} min</Cell>
+              <Cell className={META}>{item.later_at ? age(item.later_at, now) : ''}</Cell>
               <Cell className="justify-self-end">
                 <Button
-                  aria-label={`Done: ${l.title}`}
+                  aria-label={`Done: ${item.title}`}
                   onClick={() => {
-                    update((s) => withoutLater(s, l));
+                    change.mutate({ id: item.id, later: false });
                   }}
                 >
                   Done
@@ -50,7 +54,21 @@ export function Later() {
               </Cell>
             </TableRow>
           ))}
-          {rows.length === 0 && (
+          {items.isPending && (
+            <div role="row">
+              <Cell>
+                <LoadingRows what="the queue" />
+              </Cell>
+            </div>
+          )}
+          {items.isError && (
+            <div role="row">
+              <Cell>
+                <ErrorState what="the queue" onRetry={() => void items.refetch()} />
+              </Cell>
+            </div>
+          )}
+          {items.isSuccess && rows.length === 0 && (
             <div role="row">
               <Cell className="px-16 py-24 text-mute">{EMPTY.later}</Cell>
             </div>

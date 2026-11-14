@@ -4,59 +4,58 @@ import { useTheme } from '../settings';
 import { focusId, useKeys } from '../shell/keys';
 import { ScreenHeader } from '../shell/ScreenHeader';
 import { MediaThumb, SaveDot, SourceTag, SOURCES, type Source } from '../ui/atoms';
-import { Button } from '../ui/Button';
+import { Button, buttonClass } from '../ui/Button';
 import { Chip } from '../ui/Chip';
 import { cx } from '../ui/cx';
 import { Input } from '../ui/Input';
+import { EmptyState, ErrorState, LoadingRows } from '../ui/States';
 import { Cell, RowButton, Table, TableBody, TableHeader, TableRow, Th } from '../ui/Table';
-import { EmptyState } from '../ui/States';
 import { AskCard } from './AskCard';
 import { EMPTY } from './copy';
-import { ITEMS } from './fixtures';
 import { highlightable, Marked } from './Marked';
 import { NO_REPLY } from './marks';
 import { MediaPreview } from './MediaPreview';
-import { itemAt, laterRowFor, laterToggled, toggled, useReader } from './store';
+import { age, useChangeItem, useItem, useItems } from './queries';
+import { useReader } from './store';
 
 const COLS = 'grid-cols-[34px_minmax(0,1fr)_40px_30px_16px]';
 const FILTERS = ['All', 'Unread', 'Saved', 'Video'] as const;
 type Filter = (typeof FILTERS)[number];
+const SHOW = { All: 'all', Unread: 'unread', Saved: 'saved', Video: 'all' } as const;
 
 const isSource = (code: string): code is Source => Object.hasOwn(SOURCES, code);
 
 export function Stream() {
-  const { state, update } = useReader();
   const param = useParams().source?.toUpperCase();
+  const source = param !== undefined && isSource(param) ? param : undefined;
+  const { theme } = useTheme();
   const [filter, setFilter] = useState<Filter>('All');
   const [query, setQuery] = useState('');
+  const [chosen, setChosen] = useState<number | undefined>(undefined);
   const [zoom, setZoom] = useState<number | null>(null);
+  // Ages are worked out against one moment, so they do not change while the screen is open.
+  const [now] = useState(() => Date.now());
 
-  const { theme } = useTheme();
-  const source = param !== undefined && isSource(param) ? param : undefined;
+  const items = useItems({ source, show: SHOW[filter], q: query.trim() });
+  const change = useChangeItem();
+  // The server has no notion of "video" yet, so that one filter is applied here.
+  const rows = (items.data ?? []).filter((item) => filter !== 'Video' || item.media === 'Video');
+  // The open item is the one chosen, if it is in the list on screen; otherwise the first row.
+  const current = rows.find((item) => item.id === chosen) ?? rows[0];
+  const zoomed = rows.find((item) => item.id === zoom);
 
-  // The open thread must belong to the stream being shown: if the selected item is from another
-  // source, show this source's first item instead.
-  const first = source ? ITEMS.findIndex((item) => item.src === source) : -1;
-  const current = first >= 0 && itemAt(state.selected).src !== source ? first : state.selected;
-
-  const q = query.trim().toLowerCase();
-  const rows = ITEMS.map((item, i) => ({ item, i })).filter(
-    ({ item, i }) =>
-      (!source || item.src === source) &&
-      (filter === 'All' ||
-        (filter === 'Unread' && item.unread) ||
-        (filter === 'Saved' && state.saved.has(i)) ||
-        (filter === 'Video' && item.sub.includes('video'))) &&
-      (!q || (item.title + item.from).toLowerCase().includes(q)),
-  );
-  const select = (i: number) => {
-    update({ selected: i });
+  /**
+   * Opens an item and marks it read. Only a deliberate choice does this: the row shown by
+   * default stays unread, or opening the Unread filter would read its way down the list.
+   */
+  const open = (id: number) => {
+    setChosen(id);
+    if (rows.find((item) => item.id === id)?.unread) change.mutate({ id, read: true });
   };
-  /** Moves the selection through the rows on screen, stopping at either end. */
   const move = (step: number) => {
-    const at = rows.findIndex((r) => r.i === current);
+    const at = rows.findIndex((item) => item.id === current?.id);
     const next = rows[at < 0 ? 0 : Math.min(rows.length - 1, Math.max(0, at + step))];
-    if (next) select(next.i);
+    if (next) open(next.id);
   };
   useKeys(
     {
@@ -67,16 +66,13 @@ export function Stream() {
         move(-1);
       },
       s: () => {
-        update((st) => ({ saved: toggled(st.saved, current) }));
+        if (current) change.mutate({ id: current.id, saved: !current.saved_at });
       },
       l: () => {
-        update((st) => laterToggled(st, current));
+        if (current) change.mutate({ id: current.id, later: !current.later_at });
       },
       a: () => {
         focusId('item-ask');
-      },
-      r: () => {
-        focusId('thread-reply');
       },
     },
     theme.shortcuts === 'On',
@@ -86,7 +82,7 @@ export function Stream() {
     document
       .querySelector('[role="row"][aria-current="true"]')
       ?.scrollIntoView({ block: 'nearest' });
-  }, [current]);
+  }, [current?.id]);
 
   // An address like /stream/mastodon names no source we have.
   if (param !== undefined && !source) return <Navigate to="/today" replace />;
@@ -127,67 +123,89 @@ export function Stream() {
             </Th>
           </TableHeader>
           <TableBody className="min-h-0 flex-1 overflow-y-auto">
-            {rows.map(({ item, i }) => {
-              const replies = item.replies + (state.replies[i]?.length ?? 0);
-              return (
-                <TableRow
-                  key={i}
-                  selected={i === current}
-                  className={cx(COLS, 'min-h-44 items-center')}
-                >
-                  <Cell>
-                    <SourceTag src={item.src} />
-                  </Cell>
-                  <Cell className="flex min-w-0 items-center gap-10">
-                    {item.media && (
-                      <MediaThumb
-                        kind={item.media}
-                        onClick={() => {
-                          setZoom(i);
-                        }}
-                      />
-                    )}
-                    <RowButton
+            {rows.map((item) => (
+              <TableRow
+                key={item.id}
+                selected={item.id === current?.id}
+                className={cx(COLS, 'min-h-44 items-center')}
+              >
+                <Cell>
+                  <SourceTag src={item.source} />
+                </Cell>
+                <Cell className="flex min-w-0 items-center gap-10">
+                  {item.media && (
+                    <MediaThumb
+                      kind={item.media}
                       onClick={() => {
-                        select(i);
-                      }}
-                      className={cx('min-w-0 flex-1 truncate', item.unread && 'font-semibold')}
-                    >
-                      {item.title}{' '}
-                      <span className="pl-6 font-mono text-meta font-normal text-mute">
-                        {[item.from, item.sub].filter(Boolean).join(' · ')}
-                      </span>
-                    </RowButton>
-                  </Cell>
-                  <Cell className="text-right font-mono text-meta text-mute">{replies || ''}</Cell>
-                  <Cell className="text-right font-mono text-meta text-mute">{item.age}</Cell>
-                  <Cell>
-                    <SaveDot
-                      saved={state.saved.has(i)}
-                      onToggle={() => {
-                        update((s) => ({ saved: toggled(s.saved, i) }));
+                        setZoom(item.id);
                       }}
                     />
-                  </Cell>
-                </TableRow>
-              );
-            })}
-            {rows.length === 0 && (
+                  )}
+                  <RowButton
+                    onClick={() => {
+                      open(item.id);
+                    }}
+                    className={cx('min-w-0 flex-1 truncate', item.unread && 'font-semibold')}
+                  >
+                    {item.title}{' '}
+                    <span className="pl-6 font-mono text-meta font-normal text-mute">
+                      {[item.origin, item.sub].filter(Boolean).join(' · ')}
+                    </span>
+                  </RowButton>
+                </Cell>
+                <Cell className="text-right font-mono text-meta text-mute">
+                  {item.replies || ''}
+                </Cell>
+                <Cell className="text-right font-mono text-meta text-mute">
+                  {age(item.published_at, now)}
+                </Cell>
+                <Cell>
+                  <SaveDot
+                    saved={item.saved_at !== null}
+                    onToggle={() => {
+                      change.mutate({ id: item.id, saved: !item.saved_at });
+                    }}
+                  />
+                </Cell>
+              </TableRow>
+            ))}
+            {items.isPending && (
               <div role="row">
-                <Cell className="px-16 py-24 text-mute">{EMPTY.filter}</Cell>
+                <Cell>
+                  <LoadingRows what="the stream" />
+                </Cell>
+              </div>
+            )}
+            {items.isError && (
+              <div role="row">
+                <Cell>
+                  <ErrorState what="the stream" onRetry={() => void items.refetch()} />
+                </Cell>
+              </div>
+            )}
+            {items.isSuccess && rows.length === 0 && (
+              <div role="row">
+                <Cell className="px-16 py-24 text-mute">
+                  {filter === 'All' && !query.trim() ? EMPTY.stream : EMPTY.filter}
+                </Cell>
               </div>
             )}
           </TableBody>
         </Table>
       </main>
 
-      <Thread key={current} index={current} />
+      {current ? (
+        <Thread key={current.id} id={current.id} now={now} />
+      ) : (
+        <aside aria-label="Thread" className="border-l border-line bg-panel" />
+      )}
 
-      {zoom !== null && (
+      {zoomed && (
         <MediaPreview
-          item={itemAt(zoom)}
+          item={zoomed}
+          now={now}
           onOpenThread={() => {
-            select(zoom);
+            open(zoomed.id);
             setZoom(null);
           }}
           onClose={() => {
@@ -199,111 +217,90 @@ export function Stream() {
   );
 }
 
-/** The selected item: a question field, replies and the reply box. Keyed by item, so drafts reset. */
-function Thread({ index: i }: { index: number }) {
-  const { state, update } = useReader();
-  const [draft, setDraft] = useState('');
+/** The open item: a question field, its replies, and where to go to answer. Keyed by item. */
+function Thread({ id, now }: { id: number; now: number }) {
+  const { state } = useReader();
+  const item = useItem(id);
+  const change = useChangeItem();
+  const frame = 'flex min-h-0 min-w-0 flex-col gap-12 border-l border-line bg-panel p-14';
 
-  const item = itemAt(i);
-  const saved = state.saved.has(i);
-  const queued = laterRowFor(state, i);
-  const quotes = state.highlights.filter((h) => h.title === item.title).map((h) => h.quote);
-  const blocked = NO_REPLY[item.src];
-  const comments = [
-    ...item.comments,
-    ...(state.replies[i] ?? []).map((text) => ({ who: 'you', meta: 'now', text, depth: 0 })),
-  ];
+  if (!item.data) {
+    return (
+      <aside aria-label="Thread" className={frame}>
+        {item.isError ? (
+          <ErrorState what="this item" onRetry={() => void item.refetch()} />
+        ) : (
+          <LoadingRows what="this item" rows={4} />
+        )}
+      </aside>
+    );
+  }
+  const it = item.data;
+  const quotes = state.highlights.filter((h) => h.title === it.title).map((h) => h.quote);
+  const isArticle = it.source === 'RSS';
 
   return (
-    <aside
-      aria-label="Thread"
-      className="flex min-h-0 min-w-0 flex-col gap-12 border-l border-line bg-panel p-14"
-    >
+    <aside aria-label="Thread" className={frame}>
       <div className="flex items-center gap-8 font-mono text-meta text-mute">
-        <SourceTag src={item.src} inheritSize />
+        <SourceTag src={it.source} inheritSize />
         {/* Truncates at narrow widths so the buttons keep their place. */}
         <span className="min-w-0 truncate">
-          {item.from} · {item.age}
+          {it.origin} · {age(it.published_at, now)}
         </span>
         <Button
           className="ml-auto font-sans"
-          aria-pressed={saved}
+          aria-pressed={it.saved_at !== null}
           onClick={() => {
-            update((s) => ({ saved: toggled(s.saved, i) }));
+            change.mutate({ id, saved: !it.saved_at });
           }}
         >
-          {saved ? 'Saved' : 'Save'}
+          {it.saved_at ? 'Saved' : 'Save'}
         </Button>
         <Button
           className="font-sans"
-          aria-pressed={!!queued}
+          aria-pressed={it.later_at !== null}
           onClick={() => {
-            update((s) => laterToggled(s, i));
+            change.mutate({ id, later: !it.later_at });
           }}
         >
-          {queued ? 'Queued' : 'Read later'}
+          {it.later_at ? 'Queued' : 'Read later'}
         </Button>
       </div>
-      <h2 className="text-title leading-title font-semibold text-pretty">{item.title}</h2>
+      <h2 className="text-title leading-title font-semibold text-pretty">{it.title}</h2>
 
-      <AskCard what="thread" />
+      <AskCard what={isArticle ? 'article' : 'thread'} />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-        {comments.map((c, n) => (
+        {it.comments.map((c, n) => (
           <div
             key={n}
             style={{ '--depth': c.depth } as CSSProperties}
-            className={cx(
-              'thread-indent border-b border-l border-b-rule py-dn-4 pl-10',
-              c.who === 'you' ? 'border-l-accent' : 'border-l-line',
-            )}
+            className="thread-indent border-b border-l border-b-rule border-l-line py-dn-4 pl-10"
           >
             <span className="font-semibold">{c.who}</span>{' '}
             <span className="font-mono text-code text-mute">{c.meta}</span>
             <br />
-            <span {...highlightable(item)}>
+            <span {...highlightable({ src: it.source, title: it.title, from: it.origin })}>
               <Marked text={c.text} quotes={quotes} />
             </span>
           </div>
         ))}
-        {comments.length === 0 && <EmptyState compact>{EMPTY.replies}</EmptyState>}
+        {/* A feed article has no replies to wait for, so it does not say "none yet". */}
+        {it.comments.length === 0 && !isArticle && <EmptyState compact>{EMPTY.replies}</EmptyState>}
       </div>
 
-      {blocked ? (
-        <div className="flex items-center gap-8">
-          <span className="flex-1 text-note text-mute">{blocked}</span>
-          {/* The mock has no addresses to open, so this says why rather than doing nothing. */}
-          <Button size="md" disabled title="Available when sources are connected">
+      <div className="flex items-center gap-8">
+        <span className="flex-1 text-note text-mute">{NO_REPLY[it.source]}</span>
+        {it.url ? (
+          <a href={it.url} target="_blank" rel="noreferrer" className={buttonClass({ size: 'md' })}>
+            Open original
+          </a>
+        ) : (
+          <Button size="md" disabled title="This item has no address to open">
             Open original
           </Button>
-        </div>
-      ) : (
-        <form
-          className="flex gap-6"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const text = draft.trim();
-            if (!text) return;
-            setDraft('');
-            update((s) => ({ replies: { ...s.replies, [i]: [...(s.replies[i] ?? []), text] } }));
-          }}
-        >
-          <Input
-            id="thread-reply"
-            size="lg"
-            className="flex-1"
-            aria-label={`Reply on ${SOURCES[item.src].name}`}
-            placeholder={`Reply on ${SOURCES[item.src].name}`}
-            value={draft}
-            onChange={(e) => {
-              setDraft(e.target.value);
-            }}
-          />
-          <Button type="submit" variant="primary">
-            Reply
-          </Button>
-        </form>
-      )}
+        )}
+      </div>
     </aside>
   );
 }

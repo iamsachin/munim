@@ -1,5 +1,3 @@
-import socket
-from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -13,7 +11,7 @@ from reader import feeds
 from reader.models import Feed
 from reader.tasks import poll_feeds
 
-from .conftest import PASSPHRASE, post
+from .conftest import PASSPHRASE, Handler, post
 
 RSS = b"""<?xml version="1.0"?>
 <rss version="2.0"><channel>
@@ -44,28 +42,9 @@ ATOM = b"""<?xml version="1.0" encoding="utf-8"?>
   </entry>
 </feed>"""
 
-Handler = Callable[[httpx.Request], httpx.Response]
 
-
-@pytest.fixture
-def web(monkeypatch: pytest.MonkeyPatch) -> Callable[[Handler], None]:
-    """Replaces the network: names resolve as below, and requests go to the given handler."""
-    addresses = {"localhost": "127.0.0.1", "intranet.example": "10.0.0.5"}
-
-    def resolve(host: str, port: int, **_: Any) -> list[Any]:
-        address = addresses.get(host, "93.184.216.34")
-        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (address, port))]
-
-    monkeypatch.setattr("reader.feeds.socket.getaddrinfo", resolve)
-    real = httpx.Client
-
-    def serve(handler: Handler) -> None:
-        def client(**options: Any) -> httpx.Client:
-            return real(transport=httpx.MockTransport(handler), **options)
-
-        monkeypatch.setattr("reader.feeds.httpx.Client", client)
-
-    return serve
+def items_of(client: Client, feed_id: int) -> list[dict[str, Any]]:
+    return list(client.get(f"/api/items?feed={feed_id}").json())
 
 
 def ok(content: bytes, **headers: str) -> Handler:
@@ -210,17 +189,19 @@ def test_adding_a_feed_fetches_it_and_lists_its_articles(owner_client: Client, w
     assert feed["url"] == "https://lowtech.example/feed"
 
     assert owner_client.get("/api/feeds").json() == [feed]
-    articles = owner_client.get(f"/api/feeds/{feed['id']}/articles").json()
+    articles = items_of(owner_client, feed["id"])
     assert [a["title"] for a in articles] == [
         "A year of running my own feed reader",
         "Reading in the evening",
     ]
-    assert articles[0]["paragraphs"] == [
+    assert {a["origin"] for a in articles} == {"Low Tech Notes"}
+    opened = owner_client.get(f"/api/items/{articles[0]['id']}").json()
+    assert opened["paragraphs"] == [
         "I started the year with 130 feeds.",
         "By March it was a second inbox.",
     ]
-    assert articles[0]["url"] == "https://lowtech.example/year"
-    assert articles[0]["minutes"] == 1
+    assert opened["url"] == "https://lowtech.example/year"
+    assert opened["minutes"] == 1
 
 
 def test_a_feed_is_added_only_once_and_only_if_it_can_be_read(
@@ -264,7 +245,7 @@ def test_polling_adds_new_entries_and_updates_old_ones_without_duplicates(
     # The feed's server was told what we already have, so it can answer "nothing new".
     assert seen == ['"v1"']
     assert owner_client.get("/api/feeds").json()[0]["articles"] == 3
-    titles = [a["title"] for a in owner_client.get(f"/api/feeds/{feed['id']}/articles").json()]
+    titles = [a["title"] for a in items_of(owner_client, feed["id"])]
     assert titles == ["New today", "A year of running my own feed reader", "Reading at night"]
 
 
@@ -326,7 +307,7 @@ def test_reading_articles_does_not_fetch_anything(owner_client: Client, web: Any
         return httpx.Response(304)
 
     web(handler)
-    assert len(owner_client.get(f"/api/feeds/{feed['id']}/articles").json()) == 2
+    assert len(items_of(owner_client, feed["id"])) == 2
     assert calls == []
 
 
@@ -361,4 +342,4 @@ def test_feeds_need_an_open_session(owner_client: Client, web: Any) -> None:
     assert post(Client(), "feeds", {"url": "https://lowtech.example/feed"}).status_code == 401
     post(owner_client, "lock")
     assert owner_client.get("/api/feeds").status_code == 423
-    assert owner_client.get("/api/feeds/1/articles").status_code == 423
+    assert owner_client.get("/api/items").status_code == 423

@@ -22,10 +22,20 @@ class Feed(models.Model):
         return self.title
 
 
-class Article(models.Model):
-    """One entry of a feed, stored as plain text."""
+class Source(models.TextChoices):
+    REDDIT = "RD", "Reddit"
+    X = "X", "X"
+    INSTAGRAM = "IG", "Instagram"
+    HACKER_NEWS = "HN", "Hacker News"
+    YOUTUBE = "YT", "YouTube"
+    RSS = "RSS", "RSS"
 
-    feed = models.ForeignKey(Feed, on_delete=models.CASCADE, related_name="articles")
+
+class Item(models.Model):
+    """One thing in the stream. So far only feed articles; other sources will add their own."""
+
+    source = models.CharField(max_length=3, choices=Source.choices, default=Source.RSS)
+    feed = models.ForeignKey(Feed, on_delete=models.CASCADE, related_name="items")
     # The entry's own identifier in the feed, so a re-fetch updates it and does not add it again.
     guid = models.CharField(max_length=1000)
     url = models.URLField(max_length=1000, blank=True)
@@ -33,6 +43,10 @@ class Article(models.Model):
     # Plain text; paragraphs are separated by a blank line.
     body = models.TextField(blank=True)
     published_at = models.DateTimeField()
+    # What the owner has done with it. Null means not read, not saved, not queued.
+    read_at = models.DateTimeField(null=True, blank=True)
+    saved_at = models.DateTimeField(null=True, blank=True)
+    later_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-published_at", "-id"]

@@ -5,7 +5,18 @@ export type SessionState = Schemas['SessionOut']['state'];
 export type Device = Schemas['DeviceOut'];
 export type LockMinutes = Schemas['LockSettings']['minutes'];
 export type Feed = Schemas['FeedOut'];
-export type Article = Schemas['ArticleOut'];
+export type Item = Schemas['ItemOut'];
+export type ItemDetail = Schemas['ItemDetail'];
+export type ItemPatch = Schemas['ItemPatch'];
+export type Counts = Schemas['Counts'];
+
+/** Which items to list. Everything left out means "do not narrow by this". */
+export interface ItemQuery {
+  show?: 'all' | 'unread' | 'saved' | 'later';
+  source?: Item['source'];
+  feed?: number;
+  q?: string;
+}
 
 /** The server answered, and the answer was no. `waitSeconds` is set when it said to try later. */
 export class Refused extends Error {
@@ -62,7 +73,14 @@ export const api = {
   lockSettings: () => call<Schemas['LockSettings']>('GET', 'lock-settings'),
   feeds: () => call<Feed[]>('GET', 'feeds'),
   addFeed: (url: string) => call<Feed>('POST', 'feeds', { url } satisfies Schemas['FeedIn']),
-  articles: (feedId: number) => call<Article[]>('GET', `feeds/${String(feedId)}/articles`),
+  items: (query: ItemQuery = {}) => {
+    const wanted = Object.entries(query).filter(([, value]) => value !== undefined && value !== '');
+    const search = new URLSearchParams(wanted.map(([key, value]) => [key, String(value)]));
+    return call<Item[]>('GET', `items?${search.toString()}`);
+  },
+  item: (id: number) => call<ItemDetail>('GET', `items/${String(id)}`),
+  changeItem: (id: number, patch: ItemPatch) => call<Item>('PATCH', `items/${String(id)}`, patch),
+  counts: () => call<Counts>('GET', 'counts'),
   setLockSettings: (minutes: LockMinutes) =>
     call<Schemas['LockSettings']>('PUT', 'lock-settings', {
       minutes,
