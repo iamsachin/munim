@@ -5,13 +5,13 @@ import { Cell, Table, TableHeader, TableRow, Th } from '../ui/Table';
 
 const COLS = 'grid-cols-[34px_110px_minmax(80px,1fr)_minmax(0,150px)_90px_110px_100px]';
 
-// Mock, from the handoff.
+// Mock, from the handoff, except Access: only Reddit can be written to (see NO_REPLY).
 const CONNECTED: { src: Source; account: string; access: string; sync: string }[] = [
   { src: 'RD', account: 'u/you', access: 'Read, reply, vote', sync: '2 min ago' },
-  { src: 'X', account: '@you', access: 'Read, reply', sync: '5 min ago' },
-  { src: 'IG', account: '@you', access: 'Read, comment', sync: '14 min ago' },
-  { src: 'HN', account: 'you', access: 'Read, reply', sync: '2 min ago' },
-  { src: 'YT', account: 'Your subscriptions', access: 'Read, comment', sync: '9 min ago' },
+  { src: 'X', account: '@you', access: 'Read', sync: '5 min ago' },
+  { src: 'IG', account: '@you', access: 'Read', sync: '14 min ago' },
+  { src: 'HN', account: 'you', access: 'Read', sync: '2 min ago' },
+  { src: 'YT', account: 'Your subscriptions', access: 'Read', sync: '9 min ago' },
   { src: 'RSS', account: '5 feeds', access: 'Read', sync: '31 min ago' },
 ];
 const PLANNED = [

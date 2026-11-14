@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { Button } from '../ui/Button';
 import { cx } from '../ui/cx';
 import { Input } from '../ui/Input';
+import { EmptyState } from '../ui/States';
 import { useTheme } from '../settings';
 import { focusId, useKeys } from '../shell/keys';
 import { AskCard } from './AskCard';
 import { EMPTY } from './copy';
 import { FEEDS } from './fixtures';
+import { highlightable, Marked } from './Marked';
 import { useReader } from './store';
 import type { Feed } from './types';
 
@@ -129,9 +131,19 @@ export function Rss() {
           {article?.title ?? feed?.name}
         </h2>
         <AskCard what="article" />
-        <p className="max-w-[62ch] text-read leading-read text-pretty">
-          {article ? article.body : EMPTY.articles}
-        </p>
+        {article ? (
+          <p
+            className="max-w-[62ch] text-read leading-read text-pretty"
+            {...highlightable({ src: 'RSS', title: article.title, from: feed.name })}
+          >
+            <Marked
+              text={article.body}
+              quotes={state.highlights.filter((h) => h.title === article.title).map((h) => h.quote)}
+            />
+          </p>
+        ) : (
+          <EmptyState compact>{EMPTY.articles}</EmptyState>
+        )}
       </article>
     </main>
   );

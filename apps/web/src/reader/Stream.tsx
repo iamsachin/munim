@@ -13,6 +13,8 @@ import { EmptyState } from '../ui/States';
 import { AskCard } from './AskCard';
 import { EMPTY } from './copy';
 import { ITEMS } from './fixtures';
+import { highlightable, Marked } from './Marked';
+import { NO_REPLY } from './marks';
 import { MediaPreview } from './MediaPreview';
 import { itemAt, laterRowFor, laterToggled, toggled, useReader } from './store';
 
@@ -205,6 +207,8 @@ function Thread({ index: i }: { index: number }) {
   const item = itemAt(i);
   const saved = state.saved.has(i);
   const queued = laterRowFor(state, i);
+  const quotes = state.highlights.filter((h) => h.title === item.title).map((h) => h.quote);
+  const blocked = NO_REPLY[item.src];
   const comments = [
     ...item.comments,
     ...(state.replies[i] ?? []).map((text) => ({ who: 'you', meta: 'now', text, depth: 0 })),
@@ -257,37 +261,49 @@ function Thread({ index: i }: { index: number }) {
             <span className="font-semibold">{c.who}</span>{' '}
             <span className="font-mono text-code text-mute">{c.meta}</span>
             <br />
-            {c.text}
+            <span {...highlightable(item)}>
+              <Marked text={c.text} quotes={quotes} />
+            </span>
           </div>
         ))}
         {comments.length === 0 && <EmptyState compact>{EMPTY.replies}</EmptyState>}
       </div>
 
-      <form
-        className="flex gap-6"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const text = draft.trim();
-          if (!text) return;
-          setDraft('');
-          update((s) => ({ replies: { ...s.replies, [i]: [...(s.replies[i] ?? []), text] } }));
-        }}
-      >
-        <Input
-          id="thread-reply"
-          size="lg"
-          className="flex-1"
-          aria-label={`Reply on ${SOURCES[item.src].name}`}
-          placeholder={`Reply on ${SOURCES[item.src].name}`}
-          value={draft}
-          onChange={(e) => {
-            setDraft(e.target.value);
+      {blocked ? (
+        <div className="flex items-center gap-8">
+          <span className="flex-1 text-note text-mute">{blocked}</span>
+          {/* The mock has no addresses to open, so this says why rather than doing nothing. */}
+          <Button size="md" disabled title="Available when sources are connected">
+            Open original
+          </Button>
+        </div>
+      ) : (
+        <form
+          className="flex gap-6"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const text = draft.trim();
+            if (!text) return;
+            setDraft('');
+            update((s) => ({ replies: { ...s.replies, [i]: [...(s.replies[i] ?? []), text] } }));
           }}
-        />
-        <Button type="submit" variant="primary">
-          Reply
-        </Button>
-      </form>
+        >
+          <Input
+            id="thread-reply"
+            size="lg"
+            className="flex-1"
+            aria-label={`Reply on ${SOURCES[item.src].name}`}
+            placeholder={`Reply on ${SOURCES[item.src].name}`}
+            value={draft}
+            onChange={(e) => {
+              setDraft(e.target.value);
+            }}
+          />
+          <Button type="submit" variant="primary">
+            Reply
+          </Button>
+        </form>
+      )}
     </aside>
   );
 }

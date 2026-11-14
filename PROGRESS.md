@@ -6,9 +6,12 @@ Last updated: 2026-11-14
 
 ## Now
 
-Approved and merged so far in milestone 2: every designed screen, the AI screen, on-demand summaries, first run, sign-in, lock, security settings, the loading, error and empty states, keyboard navigation and the command palette.
+On branch `milestone-2-highlights` (pull request #5). Built, passing all gates, **waiting for the owner's approval** (`pnpm dev`): the last two pieces of milestone 2.
 
-In progress, the last two pieces of milestone 2: the disabled-reply state and highlighting by selecting text.
+1. Replies only where the source allows them: Reddit keeps its reply box; the others say why not.
+2. Highlighting by selecting text in a comment or article, marked in place, with notes and removal on the Highlights screen.
+
+When these are approved, milestone 2 is complete and milestone 3 (the Django server) begins.
 
 ## 0. Preparation
 
@@ -57,8 +60,8 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] First-run setup, sign-in, lock screen (design gap, approved)
 - [x] Loading, error and empty states: patterns and wording (design gap, approved; wired in milestone 3)
 - [x] Keyboard navigation, command palette, shortcut help (design gap, approved)
-- [ ] Disabled-reply state for sources without an official write API (design gap)
-- [ ] Highlight by selecting text, with a note
+- [ ] Disabled-reply state for sources without an official write API (design gap; built, awaiting approval)
+- [ ] Highlight by selecting text, with a note (built, awaiting approval)
 - [ ] **Approved by owner**
 
 ## 3. Server, sign-in, sources

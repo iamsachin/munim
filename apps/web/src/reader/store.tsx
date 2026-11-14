@@ -2,8 +2,8 @@ import { createContext, use, useState, type ReactNode } from 'react';
 import { AI_INITIAL, type AiState } from '../account/ai';
 import { LOCK_INITIAL, type LockSettings } from '../account/auth';
 import type { Source } from '../ui/atoms';
-import { FEEDS, ITEMS, LATER, SAVED, WATCHES } from './fixtures';
-import type { Item, SavedItem, Watch } from './types';
+import { FEEDS, HIGHLIGHTS, ITEMS, LATER, SAVED, WATCHES } from './fixtures';
+import type { HighlightEntry, Item, SavedItem, Watch } from './types';
 
 export const SCOPES = ['Everything', 'Saved', 'This week', 'Open item'] as const;
 export type Scope = (typeof SCOPES)[number];
@@ -21,6 +21,7 @@ export interface ReaderState {
   scope: Scope;
   asks: readonly { q: string; scope: Scope }[];
   disconnected: ReadonlySet<string>;
+  highlights: readonly HighlightEntry[];
   ai: AiState;
   lock: LockSettings;
   locked: boolean;
@@ -42,6 +43,7 @@ export const INITIAL: ReaderState = {
   scope: 'Everything',
   asks: [],
   disconnected: new Set(),
+  highlights: HIGHLIGHTS,
   ai: AI_INITIAL,
   lock: LOCK_INITIAL,
   locked: false,

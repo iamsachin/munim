@@ -1,4 +1,4 @@
-import { HIGHLIGHTS, ITEMS } from '../reader/fixtures';
+import { ITEMS } from '../reader/fixtures';
 import {
   articleCount,
   laterRows,
@@ -40,7 +40,7 @@ export function Sidebar({ onCommands }: { onCommands: () => void }) {
           <NavRow name="Stream" count={ITEMS.length} to="/stream" />
           <NavRow name="Read later" count={laterRows(state).length} to="/later" />
           <NavRow name="Saved" count={savedRows(state).length} to="/saved" />
-          <NavRow name="Highlights" count={HIGHLIGHTS.length} to="/highlights" />
+          <NavRow name="Highlights" count={state.highlights.length} to="/highlights" />
           <NavRow name="RSS" count={articleCount()} to="/rss" />
           <NavRow name="Digest" to="/digest" />
           <NavRow name="Watches" count={matchCount(state)} to="/watches" />
