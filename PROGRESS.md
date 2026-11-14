@@ -80,7 +80,7 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] Server: passphrase sign-in, sessions, device list with Revoke, lock and idle lock, change passphrase (Django auth and sessions)
 - [x] Server-side rate limiting on every passphrase check, with growing waits, counted in the database; tested by attempting a brute force from one address and from many
 - [x] Delete-all confirms the passphrase through the same rate-limited check as sign-in
-- [ ] Trusted reverse-proxy setting, so the limit sees real client addresses behind a proxy
+- [x] Trusted reverse-proxy setting (`MUNIM_TRUSTED_PROXIES`), so the limit sees real client addresses behind a proxy
 - [x] Web app wired to the account API: setup, sign-in, lock screen with an idle timer, devices, lock settings, change passphrase
 - [ ] Idle lock: watch it happen for real once (15 minutes in a browser); so far proven by unit tests and by the server's tests
 - [x] Encryption card on Security and settings, saying what this install does; and a line on the AI screen about how keys are kept (approved)
