@@ -9,8 +9,8 @@ import { Input } from '../ui/Input';
 import { EmptyState, ErrorState, LoadingRows } from '../ui/States';
 import { AskCard } from './AskCard';
 import { EMPTY } from './copy';
-import { age, useArticles, useFeeds } from './feeds';
 import { highlightable, Marked } from './Marked';
+import { age, useChangeItem, useFeeds, useItem, useItems } from './queries';
 import { useReader } from './store';
 
 export function Rss() {
@@ -18,30 +18,42 @@ export function Rss() {
   const { theme } = useTheme();
   const queries = useQueryClient();
   const feeds = useFeeds();
+  const change = useChangeItem();
+  const [chosenFeed, setChosenFeed] = useState<number | undefined>(undefined);
   const [chosen, setChosen] = useState<number | undefined>(undefined);
-  const [articleIndex, setArticleIndex] = useState(0);
   const [url, setUrl] = useState('');
   // Ages are worked out against one moment, so they do not change while the screen is open.
   const [now] = useState(() => Date.now());
 
-  // Until one is chosen, the first feed is shown.
-  const feed = feeds.data?.find((f) => f.id === chosen) ?? feeds.data?.[0];
-  const articles = useArticles(feed?.id);
-  const article = articles.data?.[articleIndex];
+  // Until one is chosen, the first feed and its newest article are shown.
+  const feed = feeds.data?.find((f) => f.id === chosenFeed) ?? feeds.data?.[0];
+  const articles = useItems({ feed: feed?.id }, feed !== undefined);
+  const current = articles.data?.find((a) => a.id === chosen) ?? articles.data?.[0];
+  const article = useItem(current?.id);
 
   const add = useMutation({
     mutationFn: api.addFeed,
     onSuccess: (added: Feed) => {
       setUrl('');
-      setChosen(added.id);
-      setArticleIndex(0);
-      void queries.invalidateQueries({ queryKey: ['feeds'] });
+      setChosenFeed(added.id);
+      setChosen(undefined);
+      // The new feed's articles are in the stream and the counts too.
+      return Promise.all(
+        ['feeds', 'items', 'counts'].map((key) => queries.invalidateQueries({ queryKey: [key] })),
+      );
     },
   });
 
+  /** Opens an article and marks it read. Only a deliberate choice does this. */
+  const open = (id: number) => {
+    setChosen(id);
+    if (articles.data?.find((a) => a.id === id)?.unread) change.mutate({ id, read: true });
+  };
   const move = (step: number) => {
-    const last = (articles.data?.length ?? 1) - 1;
-    setArticleIndex((i) => Math.min(last, Math.max(0, i + step)));
+    const list = articles.data ?? [];
+    const at = list.findIndex((a) => a.id === current?.id);
+    const next = list[at < 0 ? 0 : Math.min(list.length - 1, Math.max(0, at + step))];
+    if (next) open(next.id);
   };
   useKeys(
     {
@@ -73,8 +85,8 @@ export function Rss() {
               type="button"
               aria-current={f.id === feed?.id || undefined}
               onClick={() => {
-                setChosen(f.id);
-                setArticleIndex(0);
+                setChosenFeed(f.id);
+                setChosen(undefined);
                 // A complaint about the last address typed has nothing to do with this feed.
                 add.reset();
               }}
@@ -128,47 +140,48 @@ export function Rss() {
           <ErrorState what="the articles" onRetry={() => void articles.refetch()} />
         )}
         {articles.data?.length === 0 && <EmptyState>{EMPTY.articles}</EmptyState>}
-        {articles.data?.map((a, i) => (
+        {articles.data?.map((a) => (
           <button
             key={a.id}
             type="button"
-            aria-current={i === articleIndex || undefined}
+            aria-current={a.id === current?.id || undefined}
             onClick={() => {
-              setArticleIndex(i);
+              open(a.id);
             }}
             className={cx(
               'block w-full cursor-pointer border-b border-rule px-16 py-dn-6 text-left hover:bg-card',
-              i === articleIndex && 'row-bar bg-card',
+              a.id === current?.id && 'row-bar bg-card',
             )}
           >
             <span className="block font-mono text-code text-mute">
               {age(a.published_at, now)} · {a.minutes} min
             </span>
-            <span className={cx('block', i === 0 && 'font-semibold')}>{a.title}</span>
+            <span className={cx('block', a.unread && 'font-semibold')}>{a.title}</span>
           </button>
         ))}
       </div>
 
       <article className="flex min-h-0 flex-col gap-12 overflow-y-auto bg-panel px-24 py-20">
-        {article && feed ? (
+        {current && feed ? (
           <>
             <div className="flex items-center gap-8 font-mono text-meta text-mute">
               <span className="font-medium text-a2">RSS</span>
               {/* Truncates at narrow widths so the buttons keep their place. */}
               <span className="min-w-0 truncate">
-                {feed.title} · {age(article.published_at, now)} · {article.minutes} min
+                {feed.title} · {age(current.published_at, now)} · {current.minutes} min
               </span>
-              {/* Saving is not wired yet, so it says why rather than looking live. */}
               <Button
                 className="ml-auto font-sans"
-                disabled
-                title="Available when saved items are stored on the server"
+                aria-pressed={current.saved_at !== null}
+                onClick={() => {
+                  change.mutate({ id: current.id, saved: !current.saved_at });
+                }}
               >
-                Save
+                {current.saved_at ? 'Saved' : 'Save'}
               </Button>
-              {article.url ? (
+              {article.data?.url ? (
                 <a
-                  href={article.url}
+                  href={article.data.url}
                   target="_blank"
                   rel="noreferrer"
                   className={`${buttonClass()} font-sans`}
@@ -182,19 +195,23 @@ export function Rss() {
               )}
             </div>
             <h2 className="text-headline leading-headline font-semibold text-pretty">
-              {article.title}
+              {current.title}
             </h2>
             <AskCard what="article" />
-            {article.paragraphs.map((text, i) => (
+            {article.isPending && <LoadingRows what="the article" rows={4} />}
+            {article.isError && (
+              <ErrorState what="the article" onRetry={() => void article.refetch()} />
+            )}
+            {article.data?.paragraphs.map((text, i) => (
               <p
                 key={i}
                 className="max-w-[62ch] text-read leading-read text-pretty"
-                {...highlightable({ src: 'RSS', title: article.title, from: feed.title })}
+                {...highlightable({ src: 'RSS', title: current.title, from: feed.title })}
               >
                 <Marked
                   text={text}
                   quotes={state.highlights
-                    .filter((h) => h.title === article.title)
+                    .filter((h) => h.title === current.title)
                     .map((h) => h.quote)}
                 />
               </p>

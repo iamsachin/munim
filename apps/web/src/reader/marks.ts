@@ -3,9 +3,10 @@ import type { HighlightEntry } from './types';
 
 /**
  * Where Munim cannot write back, and what it says instead of a reply box. A source that is not
- * listed can be replied to. Only official write APIs count.
+ * listed can be replied to; none can yet. Only official write APIs will count.
  */
 export const NO_REPLY: Partial<Record<Source, string>> = {
+  RD: 'Replying on Reddit arrives with the Reddit connection.',
   X: 'Replying on X is not available yet.',
   IG: 'Replying on Instagram is not available yet.',
   HN: 'Hacker News has no official way to reply from another app.',

@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { fakeServer, GOOD, type State } from './fake-server';
+import { fakeServer, GOOD, NOW, type State } from './fake-server';
 
 const SCREENS = [
   ['today', '/today'],
@@ -28,15 +28,21 @@ const VARIANTS = [
   { name: 'dark-920', theme: 'Dark', density: 'Comfortable', width: 920, axe: false },
 ] as const;
 
-/** Opens the app at `path` with a stand-in server in the given state. Returns the stand-in. */
+/**
+ * Opens the app at `path` with a stand-in server in the given state. Returns the stand-in.
+ * The page's clock reads one fixed moment, so dates and ages never change between runs; pass
+ * `fixClock: false` for a test that drives the clock itself.
+ */
 async function open(
   page: Page,
   path: string,
   theme = 'Dark',
   density = 'Comfortable',
   state: State = 'open',
+  fixClock = true,
 ) {
   const server = await fakeServer(page, state);
+  if (fixClock) await page.clock.setFixedTime(NOW);
   await page.addInitScript(
     (saved) => {
       localStorage.setItem('munim.theme', saved);
@@ -117,21 +123,25 @@ test('a source stream opens a thread from that source, not the last one selected
   await expect(thread.getByRole('heading')).toHaveText(/^What finally got you/);
 });
 
-test('an item already in the read-later queue shows as queued and is not added twice', async ({
+test('an item already in the read-later queue shows as queued, and can be taken out', async ({
   page,
 }) => {
   await open(page, '/stream');
   await page.getByRole('button', { name: /^Notes on end-to-end encryption/ }).click();
   const queued = page.getByRole('button', { name: 'Queued' });
   await expect(queued).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByRole('link', { name: /^Read later/ })).toHaveText(/6$/);
-  await queued.click();
   await expect(page.getByRole('link', { name: /^Read later/ })).toHaveText(/5$/);
+  await queued.click();
+  await expect(page.getByRole('button', { name: 'Read later' })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  );
+  await expect(page.getByRole('link', { name: /^Read later/ })).toHaveText(/4$/);
 });
 
 test('stream: source, filter and search narrow the list', async ({ page }) => {
   await open(page, '/stream');
-  await expect(rows(page)).toHaveCount(19); // header + 18 items
+  await expect(rows(page)).toHaveCount(23); // header + 22 items
   await page.getByRole('button', { name: 'Video', exact: true }).click();
   await expect(rows(page)).toHaveCount(5);
   await page.getByRole('button', { name: 'All', exact: true }).click();
@@ -153,39 +163,92 @@ test('stream: selecting, saving and queueing update the thread and the counts', 
   await page.getByRole('button', { name: /^Shipped offline sync/ }).click();
   await expect(thread.getByRole('heading')).toHaveText(/^Shipped offline sync/);
 
-  await expect(page.getByRole('link', { name: /^Saved/ })).toHaveText(/13$/);
+  await expect(page.getByRole('link', { name: /^Saved/ })).toHaveText(/8$/);
   await thread.getByRole('button', { name: 'Save' }).click();
   await expect(thread.getByRole('button', { name: 'Saved' })).toHaveAttribute(
     'aria-pressed',
     'true',
   );
-  await expect(page.getByRole('link', { name: /^Saved/ })).toHaveText(/14$/);
+  await expect(page.getByRole('link', { name: /^Saved/ })).toHaveText(/9$/);
 
   await thread.getByRole('button', { name: 'Read later' }).click();
-  await expect(page.getByRole('link', { name: /^Read later/ })).toHaveText(/7$/);
+  await expect(thread.getByRole('button', { name: 'Queued' })).toBeVisible();
+  await expect(page.getByRole('link', { name: /^Read later/ })).toHaveText(/6$/);
 });
 
-test('replies: a Reddit thread can be replied to; other sources say why not', async ({ page }) => {
+test('stream: opening an item marks it read; the default row is left alone', async ({ page }) => {
+  await open(page, '/stream');
+  const row = (title: RegExp) => page.getByRole('button', { name: title });
+  // The first row is on screen by default but was not opened, so it is still unread.
+  await expect(row(/^What finally got you/)).toHaveClass(/font-semibold/);
+  await expect(row(/^Shipped offline sync/)).toHaveClass(/font-semibold/);
+  await row(/^Shipped offline sync/).click();
+  await expect(row(/^Shipped offline sync/)).not.toHaveClass(/font-semibold/);
+
+  await page.getByRole('button', { name: 'Unread', exact: true }).click();
+  await expect(rows(page)).toHaveCount(6); // header + the five still unread
+  // Opening the Unread list does not read its way down it.
+  await expect(row(/^What finally got you/)).toHaveClass(/font-semibold/);
+  await row(/^Show HN: A local-first/).click();
+  await expect(rows(page)).toHaveCount(5);
+});
+
+test('stream: an empty stream, a failed one, and a failed item each say so', async ({ page }) => {
+  await fakeServer(page);
+  await page.route('**/api/items?*', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }),
+  );
+  await page.goto('/stream');
+  await expect(
+    page.getByText('Nothing here yet. Connect a source and its items appear here.'),
+  ).toBeVisible();
+  await expect(page).toHaveScreenshot('stream-empty-dark.png');
+
+  await page.unroute('**/api/items?*');
+  await page.route('**/api/items?*', (route) => route.fulfill({ status: 500, body: '' }));
+  await page.reload();
+  await expect(page.getByRole('alert')).toContainText('Could not load the stream.');
+  await page.unroute('**/api/items?*');
+  await page.route('**/api/items/*', (route) => route.fulfill({ status: 500, body: '' }));
+  await page.getByRole('button', { name: 'Try again' }).click();
+  await expect(rows(page)).toHaveCount(23);
+  await expect(page.getByRole('alert')).toContainText('Could not load this item.');
+  await expect(page).toHaveScreenshot('stream-item-failed-dark.png');
+  await page.unroute('**/api/items/*');
+  await page.getByRole('button', { name: 'Try again' }).click();
+  await expect(page.getByRole('complementary', { name: 'Thread' }).getByRole('heading')).toHaveText(
+    /^What finally got you/,
+  );
+});
+
+test('replies: no source can be replied to yet, and each says why', async ({ page }) => {
   await open(page, '/stream');
   const thread = page.getByRole('complementary', { name: 'Thread' });
-  await thread.getByLabel('Reply on Reddit').fill('Search is what did it for me.');
-  await thread.getByRole('button', { name: 'Reply' }).click();
-  await expect(thread.getByText('Search is what did it for me.')).toBeVisible();
-  await expect(thread.getByLabel('Reply on Reddit')).toHaveValue('');
-  await expect(rows(page).filter({ hasText: 'What finally got you' })).toContainText('215');
+  await expect(
+    thread.getByText('Replying on Reddit arrives with the Reddit connection.'),
+  ).toBeVisible();
+  await expect(thread.getByRole('link', { name: 'Open original' })).toHaveAttribute(
+    'href',
+    /^https:\/\/example\.com\/items\/\d+$/,
+  );
 
   await page.getByRole('button', { name: /^Show HN/ }).click();
   await expect(thread.getByText('Hacker News has no official way to reply')).toBeVisible();
   await expect(thread.getByRole('button', { name: 'Reply' })).toHaveCount(0);
-  await expect(thread.getByRole('button', { name: 'Open original' })).toBeDisabled();
   await expect(page).toHaveScreenshot('stream-no-reply-dark.png');
   expect(await axeFailures(page)).toEqual([]);
 
   await page.getByRole('button', { name: /^A year of running my own feed reader/ }).click();
   await expect(thread.getByText('Feeds have no replies.')).toBeVisible();
+  // An article has no replies to wait for, so it does not say "none yet".
+  await expect(thread.getByText('No replies yet.')).toHaveCount(0);
+  await page.getByRole('button', { name: /^Backups: what is your restore/ }).click();
+  await expect(thread.getByText('No replies yet.')).toBeVisible();
 });
 
-test('saved: an item saved in the stream is listed, an unsaved one is not', async ({ page }) => {
+test('saved: an item saved in the stream is listed first, an unsaved one is not listed', async ({
+  page,
+}) => {
   await open(page, '/stream');
   await rows(page)
     .filter({ hasText: 'Building a home server rack' })
@@ -197,9 +260,14 @@ test('saved: an item saved in the stream is listed, an unsaved one is not', asyn
     .click();
   await page.getByRole('link', { name: /^Saved/ }).click();
   const saved = page.getByRole('table', { name: 'Saved' });
-  await expect(saved.getByRole('row')).toHaveCount(14); // header + 13: one added, one removed
+  await expect(saved.getByRole('row')).toHaveCount(9); // header + 8: one added, one removed
   await expect(saved.getByRole('row').nth(1)).toContainText('Building a home server rack');
+  await expect(saved.getByRole('row').nth(1)).toContainText('Video');
   await expect(saved.getByText('Show HN: A local-first archive')).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Articles' }).click();
+  await expect(saved.getByRole('row')).toHaveCount(3); // header + the two saved feed articles
+  await expect(saved.getByRole('row').nth(1)).toContainText('Full text');
 });
 
 test('media preview opens from a thumbnail, closes on Escape, and can open the thread', async ({
@@ -349,10 +417,10 @@ test('ai: usage can be viewed for last month', async ({ page }) => {
 
 test('read later: Done removes the row and updates the totals', async ({ page }) => {
   await open(page, '/later');
-  await expect(page.getByText('6 items · 1 h 30 min')).toBeVisible();
+  await expect(page.getByText('5 items · 1 h 22 min')).toBeVisible();
   await page.getByRole('button', { name: /^Done: Kiln firing schedules/ }).click();
-  await expect(page.getByText('5 items · 48 min')).toBeVisible();
-  await expect(page.getByRole('link', { name: /^Read later/ })).toHaveText(/5$/);
+  await expect(page.getByText('4 items · 40 min')).toBeVisible();
+  await expect(page.getByRole('link', { name: /^Read later/ })).toHaveText(/4$/);
 });
 
 test('watches: add one, refuse a duplicate, switch one off', async ({ page }) => {
@@ -389,7 +457,7 @@ test('rss: choosing a feed and an article', async ({ page }) => {
   await expect(page.getByText('Wire Notes · 2d · 4 min')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Open original' })).toHaveAttribute(
     'href',
-    'https://feeds.example/52',
+    /^https:\/\/example\.com\/items\/\d+$/,
   );
 });
 
@@ -513,7 +581,7 @@ test('sign-in: after three wrong passphrases the server makes even the right one
   page,
 }) => {
   await page.clock.install();
-  const server = await open(page, '/', 'Dark', 'Comfortable', 'signed_out');
+  const server = await open(page, '/', 'Dark', 'Comfortable', 'signed_out', false);
   const field = page.getByLabel('Passphrase');
   const button = page.getByRole('button', { name: 'Sign in' });
   for (let i = 0; i < 3; i++) {
@@ -701,7 +769,7 @@ test('keyboard: g then a letter goes to a view, and typing in a field is left al
   await expect(page).toHaveURL(/\/stream$/);
 });
 
-test('keyboard: j and k move through the stream, and s, l, a, r act on the selected item', async ({
+test('keyboard: j and k move through the stream, and s, l, a act on the selected item', async ({
   page,
 }) => {
   await open(page, '/stream');
@@ -715,30 +783,25 @@ test('keyboard: j and k move through the stream, and s, l, a, r act on the selec
   await page.keyboard.press('k'); // stops at the first row
   await expect(threadHeading(page)).toHaveText(/^What finally got you/);
 
-  await page.keyboard.press('r');
-  await expect(page.getByLabel('Reply on Reddit')).toBeFocused();
-  await page.getByLabel('Reply on Reddit').blur();
   await page.keyboard.press('j');
   await page.keyboard.press('s');
-  await expect(page.getByRole('link', { name: /^Saved/ })).toHaveText(/14$/);
+  await expect(page.getByRole('link', { name: /^Saved/ })).toHaveText(/9$/);
   await page.keyboard.press('l');
-  await expect(page.getByRole('link', { name: /^Read later/ })).toHaveText(/7$/);
-  await page.keyboard.press('r'); // X has no reply box, so nothing takes the focus
-  await expect(page.locator('input:focus')).toHaveCount(0);
+  await expect(page.getByRole('link', { name: /^Read later/ })).toHaveText(/6$/);
   await page.keyboard.press('a');
   await expect(page.getByLabel('Ask about this thread')).toBeFocused();
 });
 
 test('keyboard: the last row scrolls into view, and "g s" does not also save', async ({ page }) => {
   await open(page, '/stream');
-  for (let i = 0; i < 17; i++) await page.keyboard.press('j');
-  await expect(threadHeading(page)).toHaveText(/^Summarizing 400-comment threads/);
+  for (let i = 0; i < 21; i++) await page.keyboard.press('j');
+  await expect(threadHeading(page)).toHaveText(/^What a retry budget is/);
   await expect(rows(page).last()).toBeInViewport();
 
   await page.keyboard.press('g');
   await page.keyboard.press('s');
   await expect(page).toHaveURL(/\/stream$/);
-  await expect(page.getByRole('link', { name: /^Saved/ })).toHaveText(/13$/);
+  await expect(page.getByRole('link', { name: /^Saved/ })).toHaveText(/8$/);
 });
 
 test('keyboard: / focuses the ask bar; rss moves with j and k', async ({ page }) => {

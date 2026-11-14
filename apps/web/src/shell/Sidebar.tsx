@@ -1,6 +1,5 @@
-import { useFeeds } from '../reader/feeds';
-import { ITEMS } from '../reader/fixtures';
-import { laterRows, matchCount, savedRows, sourceCount, useReader } from '../reader/store';
+import { useCounts, useFeeds } from '../reader/queries';
+import { matchCount, useReader } from '../reader/store';
 import { SectionLabel, SOURCES, type Source } from '../ui/atoms';
 import { NavRow } from '../ui/NavRow';
 import { Brand } from './Brand';
@@ -23,6 +22,8 @@ function Group({ label, children }: { label: string; children: ReactNode }) {
 export function Sidebar({ onCommands }: { onCommands: () => void }) {
   const { state } = useReader();
   const feeds = useFeeds();
+  // Undefined until the server answers: a row then shows no number rather than a wrong one.
+  const counts = useCounts().data;
   return (
     <aside className="flex min-h-0 flex-col border-r border-line bg-panel">
       {/* The navigation scrolls on short windows; the commands button below stays in view. */}
@@ -32,9 +33,9 @@ export function Sidebar({ onCommands }: { onCommands: () => void }) {
         </div>
         <Group label="Views">
           <NavRow name="Today" to="/today" />
-          <NavRow name="Stream" count={ITEMS.length} to="/stream" />
-          <NavRow name="Read later" count={laterRows(state).length} to="/later" />
-          <NavRow name="Saved" count={savedRows(state).length} to="/saved" />
+          <NavRow name="Stream" count={counts?.stream} to="/stream" />
+          <NavRow name="Read later" count={counts?.later} to="/later" />
+          <NavRow name="Saved" count={counts?.saved} to="/saved" />
           <NavRow name="Highlights" count={state.highlights.length} to="/highlights" />
           <NavRow name="RSS" count={feeds.data?.reduce((n, f) => n + f.articles, 0)} to="/rss" />
           <NavRow name="Digest" to="/digest" />
@@ -46,7 +47,7 @@ export function Sidebar({ onCommands }: { onCommands: () => void }) {
             <NavRow
               key={s}
               name={SOURCES[s].name}
-              count={sourceCount(s)}
+              count={counts?.sources[s]}
               dot={SOURCES[s].tone}
               to={`/stream/${s.toLowerCase()}`}
             />

@@ -38,7 +38,6 @@ export const HELP: { title: string; rows: { keys: string[]; what: string }[] }[]
       { keys: ['h'], what: 'Highlight selected text' },
       { keys: ['s'], what: 'Save or unsave (Stream)' },
       { keys: ['l'], what: 'Read later (Stream)' },
-      { keys: ['r'], what: 'Reply (Stream)' },
     ],
   },
   {

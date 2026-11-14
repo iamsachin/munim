@@ -201,6 +201,58 @@ test('a fresh install, from set-up to the admin, against the real server', async
     }
   });
 
+  await test.step('feed articles are in the stream, unread until opened', async () => {
+    await page.goto('/stream');
+    const rows = page.getByRole('table', { name: 'Stream' }).getByRole('row');
+    await expect(rows).toHaveCount(3); // header + the two articles
+    await expect(page.getByRole('link', { name: /^Stream/ })).toHaveText(/2$/);
+    const year = page.getByRole('button', { name: /^A year of running my own feed reader/ });
+    const evening = page.getByRole('button', { name: /^Reading in the evening/ });
+    // "Reading in the evening" was opened on the RSS screen; the other never was.
+    await expect(year).toHaveClass(/font-semibold/);
+    await expect(evening).not.toHaveClass(/font-semibold/);
+
+    await page.getByRole('button', { name: 'Unread', exact: true }).click();
+    await expect(rows).toHaveCount(2);
+    await year.click();
+    // Once read it leaves the Unread list, which now has nothing in it.
+    await expect(year).toHaveCount(0);
+    await expect(page.getByText('Nothing matches this filter.')).toBeVisible();
+    // Read state is the server's: still read after a reload.
+    await page.reload();
+    await expect(year).not.toHaveClass(/font-semibold/);
+  });
+
+  await test.step('saving and queueing are kept by the server', async () => {
+    const thread = page.getByRole('complementary', { name: 'Thread' });
+    await thread.getByRole('button', { name: 'Save' }).click();
+    await expect(thread.getByRole('button', { name: 'Saved' })).toBeVisible();
+    await thread.getByRole('button', { name: 'Read later' }).click();
+    await expect(thread.getByRole('button', { name: 'Queued' })).toBeVisible();
+    await expect(thread.getByText('Feeds have no replies.')).toBeVisible();
+    await expect(thread.getByRole('link', { name: 'Open original' })).toHaveAttribute(
+      'href',
+      'https://lowtech.example/year',
+    );
+
+    await page.goto('/saved');
+    const saved = page.getByRole('table', { name: 'Saved' }).getByRole('row');
+    await expect(saved).toHaveCount(2);
+    await expect(saved.nth(1)).toContainText('A year of running my own feed reader');
+    await expect(saved.nth(1)).toContainText('Low Tech Notes');
+    await expect(saved.nth(1)).toContainText('Full text');
+
+    await page.goto('/later');
+    await expect(page.getByText('1 item · 1 min')).toBeVisible();
+    await page.getByRole('button', { name: /^Done: A year of running/ }).click();
+    await expect(page.getByText('The queue is empty.')).toBeVisible();
+    await expect(page.getByRole('link', { name: /^Read later/ })).toHaveText(/0$/);
+    await expect(page.getByRole('link', { name: /^Saved/ })).toHaveText(/1$/);
+
+    await page.goto('/today');
+    await expect(page.getByText('No replies to you.')).toBeVisible();
+  });
+
   await test.step('the admin opens for a signed-in owner, and sends anyone else to sign in', async () => {
     await page.goto('/admin/');
     await expect(heading(page, 'Site administration')).toBeVisible();

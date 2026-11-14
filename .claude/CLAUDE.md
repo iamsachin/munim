@@ -102,7 +102,7 @@ Baselines are recorded on macOS Chromium and are platform-specific; other platfo
 - Solve the whole task with the least new code. No abstraction, option or dependency that nothing needs yet. In particular: no plugin framework for modules until a second module exists; a module is a folder with its routes, screens and data.
 - Never hard-code model names or lists. Read them from the provider's models endpoint. Consult the `claude-api` skill before writing any Anthropic code.
 - Secrets never reach the browser, logs, error messages or test fixtures.
-- Every migration must be safe to run on a stranger's existing data.
+- Every migration must be safe to run on a stranger's existing data. Read every generated migration before keeping it: when a model is renamed and changed at once, Django writes "delete the old table, create a new one", which destroys the data. Write the rename by hand (`RenameModel`, then the field changes) and prove it with a test that migrates real rows, as `tests/test_migrations.py` does.
 - Anything the server fetches because of an address someone typed (feeds now, more sources later) goes through `download()` in `reader/feeds.py` or the same checks: http(s) only, private networks refused at every redirect, size and time capped. `MUNIM_ALLOW_PRIVATE_FEEDS=1` is the only way round it.
 - Content from outside is stored and shown as plain text. Nothing a feed sends is rendered as HTML.
 - Background work is a Procrastinate task in the app's `tasks.py`, run by the worker (`manage.py procrastinate worker`). A scheduled task takes both a `queueing_lock` and a `lock`, so missed runs do not pile up and runs never overlap. Reading the API never fetches from the outside world; only tasks and the add-a-feed call do.

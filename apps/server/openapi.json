@@ -345,16 +345,45 @@
         "security": [{ "Open": [] }]
       }
     },
-    "/api/feeds/{feed_id}/articles": {
+    "/api/items": {
       "get": {
-        "operationId": "reader_api_list_articles",
-        "summary": "List Articles",
+        "operationId": "reader_api_list_items",
+        "summary": "List Items",
         "parameters": [
           {
-            "in": "path",
-            "name": "feed_id",
-            "schema": { "title": "Feed Id", "type": "integer" },
-            "required": true
+            "in": "query",
+            "name": "show",
+            "schema": {
+              "default": "all",
+              "enum": ["all", "unread", "saved", "later"],
+              "title": "Show",
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "source",
+            "schema": {
+              "anyOf": [
+                { "enum": ["RD", "X", "IG", "HN", "YT", "RSS"], "type": "string" },
+                { "type": "null" }
+              ],
+              "title": "Source"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "feed",
+            "schema": { "anyOf": [{ "type": "integer" }, { "type": "null" }], "title": "Feed" },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": { "default": "", "title": "Q", "type": "string" },
+            "required": false
           }
         ],
         "responses": {
@@ -363,7 +392,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": { "$ref": "#/components/schemas/ArticleOut" },
+                  "items": { "$ref": "#/components/schemas/ItemOut" },
                   "title": "Response",
                   "type": "array"
                 }
@@ -371,7 +400,78 @@
             }
           }
         },
-        "description": "The feed's newest articles, newest first.",
+        "description": "Items, newest first. Saved and queued lists are ordered by when that was done.",
+        "tags": ["reader"],
+        "security": [{ "Open": [] }]
+      }
+    },
+    "/api/items/{item_id}": {
+      "get": {
+        "operationId": "reader_api_get_item",
+        "summary": "Get Item",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "schema": { "title": "Item Id", "type": "integer" },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ItemDetail" } }
+            }
+          }
+        },
+        "tags": ["reader"],
+        "security": [{ "Open": [] }]
+      },
+      "patch": {
+        "operationId": "reader_api_change_item",
+        "summary": "Change Item",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "schema": { "title": "Item Id", "type": "integer" },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ItemOut" } }
+            }
+          }
+        },
+        "description": "Marks an item read or unread, saved or not, queued for later or not.",
+        "tags": ["reader"],
+        "requestBody": {
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/ItemPatch" } }
+          },
+          "required": true
+        },
+        "security": [{ "Open": [] }]
+      }
+    },
+    "/api/counts": {
+      "get": {
+        "operationId": "reader_api_counts",
+        "summary": "Counts",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Counts" } }
+            }
+          }
+        },
+        "description": "The numbers beside the sidebar's rows.",
         "tags": ["reader"],
         "security": [{ "Open": [] }]
       }
@@ -471,17 +571,142 @@
         "title": "FeedIn",
         "type": "object"
       },
-      "ArticleOut": {
+      "ItemOut": {
+        "description": "An item as a row in a list.",
         "properties": {
           "id": { "title": "Id", "type": "integer" },
+          "source": {
+            "enum": ["RD", "X", "IG", "HN", "YT", "RSS"],
+            "title": "Source",
+            "type": "string"
+          },
           "title": { "title": "Title", "type": "string" },
-          "url": { "title": "Url", "type": "string" },
+          "origin": { "title": "Origin", "type": "string" },
+          "sub": { "title": "Sub", "type": "string" },
+          "replies": { "title": "Replies", "type": "integer" },
           "published_at": { "format": "date-time", "title": "Published At", "type": "string" },
           "minutes": { "title": "Minutes", "type": "integer" },
-          "paragraphs": { "items": { "type": "string" }, "title": "Paragraphs", "type": "array" }
+          "unread": { "title": "Unread", "type": "boolean" },
+          "saved_at": {
+            "anyOf": [{ "format": "date-time", "type": "string" }, { "type": "null" }],
+            "title": "Saved At"
+          },
+          "later_at": {
+            "anyOf": [{ "format": "date-time", "type": "string" }, { "type": "null" }],
+            "title": "Later At"
+          },
+          "media": {
+            "anyOf": [{ "enum": ["Video", "Image"], "type": "string" }, { "type": "null" }],
+            "title": "Media"
+          }
         },
-        "required": ["id", "title", "url", "published_at", "minutes", "paragraphs"],
-        "title": "ArticleOut",
+        "required": [
+          "id",
+          "source",
+          "title",
+          "origin",
+          "sub",
+          "replies",
+          "published_at",
+          "minutes",
+          "unread",
+          "saved_at",
+          "later_at",
+          "media"
+        ],
+        "title": "ItemOut",
+        "type": "object"
+      },
+      "Comment": {
+        "properties": {
+          "who": { "title": "Who", "type": "string" },
+          "meta": { "title": "Meta", "type": "string" },
+          "text": { "title": "Text", "type": "string" },
+          "depth": { "title": "Depth", "type": "integer" }
+        },
+        "required": ["who", "meta", "text", "depth"],
+        "title": "Comment",
+        "type": "object"
+      },
+      "ItemDetail": {
+        "description": "An item opened: its own page's address, its text, and its replies.",
+        "properties": {
+          "id": { "title": "Id", "type": "integer" },
+          "source": {
+            "enum": ["RD", "X", "IG", "HN", "YT", "RSS"],
+            "title": "Source",
+            "type": "string"
+          },
+          "title": { "title": "Title", "type": "string" },
+          "origin": { "title": "Origin", "type": "string" },
+          "sub": { "title": "Sub", "type": "string" },
+          "replies": { "title": "Replies", "type": "integer" },
+          "published_at": { "format": "date-time", "title": "Published At", "type": "string" },
+          "minutes": { "title": "Minutes", "type": "integer" },
+          "unread": { "title": "Unread", "type": "boolean" },
+          "saved_at": {
+            "anyOf": [{ "format": "date-time", "type": "string" }, { "type": "null" }],
+            "title": "Saved At"
+          },
+          "later_at": {
+            "anyOf": [{ "format": "date-time", "type": "string" }, { "type": "null" }],
+            "title": "Later At"
+          },
+          "media": {
+            "anyOf": [{ "enum": ["Video", "Image"], "type": "string" }, { "type": "null" }],
+            "title": "Media"
+          },
+          "url": { "title": "Url", "type": "string" },
+          "paragraphs": { "items": { "type": "string" }, "title": "Paragraphs", "type": "array" },
+          "comments": {
+            "items": { "$ref": "#/components/schemas/Comment" },
+            "title": "Comments",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "source",
+          "title",
+          "origin",
+          "sub",
+          "replies",
+          "published_at",
+          "minutes",
+          "unread",
+          "saved_at",
+          "later_at",
+          "media",
+          "url",
+          "paragraphs",
+          "comments"
+        ],
+        "title": "ItemDetail",
+        "type": "object"
+      },
+      "ItemPatch": {
+        "description": "What to change. Anything left out stays as it is.",
+        "properties": {
+          "read": { "anyOf": [{ "type": "boolean" }, { "type": "null" }], "title": "Read" },
+          "saved": { "anyOf": [{ "type": "boolean" }, { "type": "null" }], "title": "Saved" },
+          "later": { "anyOf": [{ "type": "boolean" }, { "type": "null" }], "title": "Later" }
+        },
+        "title": "ItemPatch",
+        "type": "object"
+      },
+      "Counts": {
+        "properties": {
+          "stream": { "title": "Stream", "type": "integer" },
+          "later": { "title": "Later", "type": "integer" },
+          "saved": { "title": "Saved", "type": "integer" },
+          "sources": {
+            "additionalProperties": { "type": "integer" },
+            "title": "Sources",
+            "type": "object"
+          }
+        },
+        "required": ["stream", "later", "saved", "sources"],
+        "title": "Counts",
         "type": "object"
       }
     },
