@@ -68,7 +68,12 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 
 ## 3. Server, sign-in, sources
 
-- [ ] Server scaffold, Postgres, migrations, Docker Compose
+- [ ] Server scaffold in `apps/server`: FastAPI, uv, ruff, mypy, pytest, wired into `pnpm check`
+- [ ] Postgres, SQLAlchemy models, Alembic migrations
+- [ ] OpenAPI document, generated front-end client replacing the mock store
+- [ ] Postgres job queue and scheduler
+- [ ] Docker Compose: one app container serving web, API and jobs, plus Postgres
+- [ ] Master key file, generated on first run
 - [ ] Passphrase sign-in, sessions, device list with Revoke, idle lock
 - [ ] Encrypted storage for source tokens and AI keys; then restore the sidebar status button and the Connections note with truthful wording
 - [ ] RSS
@@ -76,7 +81,7 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [ ] YouTube
 - [ ] Reddit (official OAuth)
 - [ ] Saving: full text, threads, transcripts, thumbnails
-- [ ] Search
+- [ ] Search (Postgres full-text)
 - [ ] **Approved by owner**
 
 ## 4. AI and write-back
