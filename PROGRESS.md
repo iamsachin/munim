@@ -6,9 +6,11 @@ Last updated: 2026-11-14
 
 ## Now
 
-Milestone 3 in progress. Merged: the Django scaffold (#6), the account API with rate-limited passphrase checks (#8), and the web app signing in against the real server (#9). The reader's screens still run on sample data.
+Milestone 3 in progress. Merged: the Django scaffold (#6), the account API (#8), the web app signing in against the server (#9).
 
-Next: Munim's own models (items, feeds, saved, highlights) and the first real source, RSS. The owner's answer on YouTube access is needed before that source, not before RSS.
+On branch `milestone-3-rss` (pull request #10): RSS is the first real source. A feed is fetched and parsed by the server, stored as plain text, and read on the RSS screen. Every other reader screen still runs on sample data, and the Stream does not show feed articles yet.
+
+Next: the background job queue, so feeds are polled without being opened; then the Stream reading real items.
 
 ## 0. Preparation
 
@@ -65,10 +67,11 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 
 - [x] Server scaffold in `apps/server`: Django, Django Ninja, uv, ruff, mypy, pytest, wired into `pnpm check`
 - [x] Development Postgres in Docker; Django admin and built-in migrations
-- [ ] Munim's own models and migrations
+- [x] Feed and Article models and migrations, in the admin
+- [ ] Models for the rest: stream items from every source, saved items, highlights, watches
 - [x] OpenAPI document committed, front-end types generated from it and checked for staleness
 - [ ] Reader data from the server, replacing the mock store
-- [ ] Loading, error and empty states wired into every screen (`ui/States.tsx`, wording in `reader/copy.ts`)
+- [ ] Loading, error and empty states wired into every screen (`ui/States.tsx`, wording in `reader/copy.ts`); done for RSS and the device list
 - [ ] Postgres job queue and scheduler
 - [ ] Docker Compose: one app container serving web, API and jobs, plus Postgres
 - [ ] Master key file, generated on first run
@@ -81,7 +84,9 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [ ] Encryption card on Security and settings, designed once the claims are true
 - [ ] Export and delete-all (buttons are disabled until the server stores data; the approved passphrase confirmation for delete-all returns with it)
 - [ ] Encrypted storage for source tokens and AI keys; then restore the sidebar status button and the Connections note with truthful wording
-- [ ] RSS
+- [x] RSS: add a feed, fetch and parse it safely, read its articles (re-fetched when opened if older than 15 minutes, until polling exists)
+- [ ] RSS: remove a feed from the app (only possible in the admin now; needs a design)
+- [ ] RSS articles in the Stream, with unread state
 - [ ] Hacker News
 - [ ] YouTube
 - [ ] Reddit (official OAuth)

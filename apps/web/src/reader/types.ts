@@ -35,17 +35,6 @@ export interface SavedItem {
   when: string;
 }
 
-export interface Article {
-  title: string;
-  meta: string;
-  body: string;
-}
-
-export interface Feed {
-  name: string;
-  articles: Article[];
-}
-
 export interface HighlightEntry {
   quote: string;
   note: string;

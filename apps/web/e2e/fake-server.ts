@@ -24,6 +24,88 @@ export async function fakeServer(page: Page, start: State = 'open') {
     { id: 3, name: 'Firefox on Linux', last_seen: ago(6 * 24 * HOUR), current: false },
   ];
 
+  // Feeds, as the server lists them: by title. Ages are relative to now, so the text is stable.
+  const article = (id: number, title: string, hours: number, minutes: number, text: string) => ({
+    id,
+    title,
+    url: `https://feeds.example/${String(id)}`,
+    published_at: ago(hours * HOUR),
+    minutes,
+    paragraphs: [text],
+  });
+  const articles: Record<number, ReturnType<typeof article>[]> = {
+    1: [
+      article(
+        11,
+        'Designing a calendar that does less',
+        19,
+        8,
+        'Most calendar views answer a question nobody asked: what does the whole month look like. The question people ask is what is next, and how long until it starts.',
+      ),
+    ],
+    2: [
+      article(
+        21,
+        'A year of running my own feed reader',
+        6,
+        12,
+        'I started the year with 130 feeds and a habit of opening the reader whenever I was bored. By March the unread count had become a second inbox. What fixed it was not a feature. I stopped polling every fifteen minutes, moved to twice a day, and deleted any feed I had skipped ten times in a row.',
+      ),
+      article(
+        22,
+        'Reading in the evening, a short essay',
+        24,
+        5,
+        'There is a particular quiet to reading things after they have stopped being new. Most of what felt urgent at noon has resolved itself by nine.',
+      ),
+    ],
+    3: [
+      article(
+        31,
+        'Notes on end-to-end encryption for small apps',
+        10,
+        9,
+        'Before choosing a cipher, write down what the server is allowed to know. For most small apps the honest answer includes sizes, timestamps and who talks to whom. Decide whether that is acceptable, then design recovery, because recovery is where most schemes quietly give the server a copy of the key.',
+      ),
+    ],
+    4: [
+      article(
+        41,
+        'Reader 4.2: faster full-text search',
+        24,
+        2,
+        'This release rebuilds the search index. Existing libraries are migrated in the background on first launch.',
+      ),
+    ],
+    5: [
+      article(
+        51,
+        'The case for boring sync protocols',
+        12,
+        7,
+        'Incremental sync is fast until it is wrong, and when it is wrong it is wrong silently. A periodic full comparison with checksums is slow, predictable, and tells you when something drifted.',
+      ),
+      article(
+        52,
+        'What a retry budget is',
+        48,
+        4,
+        'A retry budget caps the share of requests that may be retries. Ten percent is a common starting point.',
+      ),
+    ],
+  };
+  const feeds = [
+    { id: 1, title: 'Field Notes' },
+    { id: 2, title: 'Low Tech Notes' },
+    { id: 3, title: 'Plain Crypto' },
+    { id: 4, title: 'Release notes' },
+    { id: 5, title: 'Wire Notes' },
+  ].map((f) => ({ ...f, url: `https://feeds.example/${String(f.id)}.xml`, problem: '' }));
+  const listed = () =>
+    [...feeds]
+      .sort((a, b) => a.title.localeCompare(b.title))
+      .map((f) => ({ ...f, articles: articles[f.id]?.length ?? 0 }));
+
   await page.route('**/api/**', async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname.slice('/api/'.length);
@@ -92,6 +174,21 @@ export async function fakeServer(page: Page, start: State = 'open') {
       minutes = body.minutes as number | null;
       return reply(200, { minutes });
     }
+    if (call === 'GET feeds') return reply(200, listed());
+    if (call === 'POST feeds') {
+      const url = String(body.url);
+      if (feeds.some((f) => f.url === url)) return refuse(409, 'That feed is already here.');
+      if (!url.endsWith('.xml')) return refuse(422, 'That address is not an RSS or Atom feed.');
+      const id = 100 + feeds.length;
+      feeds.push({ id, title: 'Example Feed', url, problem: '' });
+      articles[id] = [article(id * 10, 'The first example', 1, 3, 'An article from the new feed.')];
+      return reply(
+        201,
+        listed().find((f) => f.id === id),
+      );
+    }
+    const feedArticles = /^GET feeds\/(\d+)\/articles$/.exec(call);
+    if (feedArticles) return reply(200, articles[Number(feedArticles[1])] ?? []);
     if (call === 'POST passphrase') {
       if (await refused(body.current, 403)) return;
       if (tooShort(body.new)) return refuse(422, 'Use at least 12 characters.');

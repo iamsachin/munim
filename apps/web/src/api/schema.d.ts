@@ -228,6 +228,67 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/feeds': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Feeds */
+    get: operations['reader_api_list_feeds'];
+    put?: never;
+    /**
+     * Add Feed
+     * @description Fetches the feed first; it is only added if it can be read.
+     */
+    post: operations['reader_api_add_feed'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/feeds/{feed_id}/refresh': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Refresh Feed
+     * @description Fetches the feed again. If that fails, the reason is in `problem`.
+     */
+    post: operations['reader_api_refresh_feed'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/feeds/{feed_id}/articles': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Articles
+     * @description The feed's newest articles, newest first.
+     */
+    get: operations['reader_api_list_articles'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -290,6 +351,42 @@ export interface components {
     LockSettings: {
       /** Minutes */
       minutes: (5 | 15 | 60) | null;
+    };
+    /** FeedOut */
+    FeedOut: {
+      /** Id */
+      id: number;
+      /** Title */
+      title: string;
+      /** Url */
+      url: string;
+      /** Articles */
+      articles: number;
+      /** Problem */
+      problem: string;
+    };
+    /** FeedIn */
+    FeedIn: {
+      /** Url */
+      url: string;
+    };
+    /** ArticleOut */
+    ArticleOut: {
+      /** Id */
+      id: number;
+      /** Title */
+      title: string;
+      /** Url */
+      url: string;
+      /**
+       * Published At
+       * Format: date-time
+       */
+      published_at: string;
+      /** Minutes */
+      minutes: number;
+      /** Paragraphs */
+      paragraphs: string[];
     };
   };
   responses: never;
@@ -658,6 +755,112 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['LockSettings'];
+        };
+      };
+    };
+  };
+  reader_api_list_feeds: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['FeedOut'][];
+        };
+      };
+    };
+  };
+  reader_api_add_feed: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['FeedIn'];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['FeedOut'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+    };
+  };
+  reader_api_refresh_feed: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        feed_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['FeedOut'];
+        };
+      };
+    };
+  };
+  reader_api_list_articles: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        feed_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ArticleOut'][];
         };
       };
     };

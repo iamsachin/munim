@@ -1,12 +1,6 @@
+import { useFeeds } from '../reader/feeds';
 import { ITEMS } from '../reader/fixtures';
-import {
-  articleCount,
-  laterRows,
-  matchCount,
-  savedRows,
-  sourceCount,
-  useReader,
-} from '../reader/store';
+import { laterRows, matchCount, savedRows, sourceCount, useReader } from '../reader/store';
 import { SectionLabel, SOURCES, type Source } from '../ui/atoms';
 import { NavRow } from '../ui/NavRow';
 import { Brand } from './Brand';
@@ -28,6 +22,7 @@ function Group({ label, children }: { label: string; children: ReactNode }) {
 
 export function Sidebar({ onCommands }: { onCommands: () => void }) {
   const { state } = useReader();
+  const feeds = useFeeds();
   return (
     <aside className="flex min-h-0 flex-col border-r border-line bg-panel">
       {/* The navigation scrolls on short windows; the commands button below stays in view. */}
@@ -41,7 +36,7 @@ export function Sidebar({ onCommands }: { onCommands: () => void }) {
           <NavRow name="Read later" count={laterRows(state).length} to="/later" />
           <NavRow name="Saved" count={savedRows(state).length} to="/saved" />
           <NavRow name="Highlights" count={state.highlights.length} to="/highlights" />
-          <NavRow name="RSS" count={articleCount()} to="/rss" />
+          <NavRow name="RSS" count={feeds.data?.reduce((n, f) => n + f.articles, 0)} to="/rss" />
           <NavRow name="Digest" to="/digest" />
           <NavRow name="Watches" count={matchCount(state)} to="/watches" />
           <NavRow name="Ask" dot="accent" to="/ask" />
