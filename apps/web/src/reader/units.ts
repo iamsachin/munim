@@ -12,13 +12,9 @@ export interface Marks {
   found: Range[];
 }
 
-/** How many units a block is: a list is one per item; code and images are none. */
+/** How many units a block is: a list is one per item; code, images and videos are none. */
 export const unitCount = (block: Block) =>
-  block.type === 'list'
-    ? block.items.length
-    : block.type === 'code' || block.type === 'image'
-      ? 0
-      : 1;
+  block.type === 'list' ? block.items.length : 'spans' in block ? 1 : 0;
 
 /**
  * The units of some blocks, in reading order: each paragraph, heading, paragraph of a quotation
@@ -26,11 +22,7 @@ export const unitCount = (block: Block) =>
  */
 export const unitsOf = (blocks: readonly Block[]): (readonly Span[])[] =>
   blocks.flatMap((block) =>
-    block.type === 'list'
-      ? block.items
-      : block.type === 'code' || block.type === 'image'
-        ? []
-        : [block.spans],
+    block.type === 'list' ? block.items : 'spans' in block ? [block.spans] : [],
   );
 
 /**

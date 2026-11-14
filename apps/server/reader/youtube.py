@@ -278,11 +278,14 @@ def _store(video: _Video) -> None:
     live = {"live": "live now", "upcoming": "upcoming"}.get(video.snippet.liveBroadcastContent)
     long = length(video.contentDetails.duration)
     thumbs = video.snippet.thumbnails
-    picture = next((thumbs[k].url for k in ("high", "medium", "default") if k in thumbs), "")
+    sizes = ("maxres", "standard", "high", "medium", "default")
+    still = next((thumbs[k].url for k in sizes if k in thumbs and thumbs[k].url), "")
     text = from_text(video.snippet.description)
-    item.blocks = [{"type": "image", "src": picture, "alt": ""}, *text] if picture else text
+    title = video.snippet.title[:500]
+    # Played in YouTube's own player, where it is; nothing of the video itself is fetched.
+    item.blocks = [{"type": "video", "src": still, "alt": title, "video": video.id}, *text]
     item.body = text_of(text)
-    item.title = video.snippet.title[:500]
+    item.title = title
     item.url = f"https://www.youtube.com/watch?v={video.id}"
     item.origin = video.snippet.channelTitle[:300]
     item.sub = live or (f"video {long}" if long else "video")
@@ -346,6 +349,12 @@ def _fetch(client: httpx.Client, token: str) -> None:
     have = set(
         Item.objects.filter(source=Source.YOUTUBE, guid__in=wanted).values_list("guid", flat=True)
     )
+    # Videos stored before they could be played here are read once more, to be stored as they
+    # are now. Fifty videos cost one call.
+    old = Item.objects.filter(source=Source.YOUTUBE).exclude(blocks__0__type="video")
+    stale = list(old.values_list("guid", flat=True)[:MAX_CHANNELS])
+    have -= set(stale)
+    wanted += stale
     for ids in _chunks([video for video in dict.fromkeys(wanted) if video not in have]):
         body = _get(client, token, "videos", part="snippet,contentDetails", id=",".join(ids))
         for raw in body.get("items", []):

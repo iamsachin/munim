@@ -695,6 +695,7 @@ export interface components {
         | components['schemas']['ListBlock']
         | components['schemas']['Code']
         | components['schemas']['Image']
+        | components['schemas']['Video']
       )[];
     };
     /** Heading */
@@ -787,6 +788,7 @@ export interface components {
         | components['schemas']['ListBlock']
         | components['schemas']['Code']
         | components['schemas']['Image']
+        | components['schemas']['Video']
       )[];
       /** Comments */
       comments: components['schemas']['Comment'][];
@@ -841,6 +843,24 @@ export interface components {
       marks: ('bold' | 'italic' | 'code')[];
       /** Href */
       href?: string | null;
+    };
+    /**
+     * Video
+     * @description A video that can be played where it is, in its source's own player. Until the owner
+     *     plays it only the still is shown, and that comes through Munim like any picture.
+     */
+    Video: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      type: 'video';
+      /** Src */
+      src: string;
+      /** Alt */
+      alt: string;
+      /** Video */
+      video: string;
     };
     /**
      * ItemPatch

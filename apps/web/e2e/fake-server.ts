@@ -448,7 +448,20 @@ export async function fakeServer(page: Page, start: State = 'open') {
       return reply(200, {
         ...row(item),
         url: `https://example.com/items/${String(item.id)}`,
-        blocks: item.title === RICH_TITLE ? richBlocks(item.id) : item.paragraphs.map(paragraph),
+        blocks: [
+          // A YouTube video can be played where it is; its still comes through this server.
+          ...(item.source === 'YT'
+            ? [
+                {
+                  type: 'video',
+                  src: `/api/items/${String(item.id)}/images/0`,
+                  alt: item.title,
+                  video: 'munimsample',
+                },
+              ]
+            : []),
+          ...(item.title === RICH_TITLE ? richBlocks(item.id) : item.paragraphs.map(paragraph)),
+        ],
         comments: item.comments.map(({ text: said, ...comment }) => ({
           ...comment,
           blocks: [paragraph(said)],

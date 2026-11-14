@@ -27,8 +27,9 @@ class ImageProblem(Exception):
 
 
 def source_of(item: Item, index: int) -> str:
-    """The address of the item's nth image. Only images an item really has can be asked for."""
-    sources = [block["src"] for block in item.blocks if block["type"] == "image"]
+    """The address of the item's nth picture: an image, or the still shown before a video is
+    played. Only pictures an item really has can be asked for."""
+    sources = [block["src"] for block in item.blocks if block["type"] in ("image", "video")]
     if not 0 <= index < len(sources):
         raise ImageProblem("There is no such image.")
     return str(sources[index])
