@@ -169,10 +169,17 @@ export async function fakeServer(page: Page, start: State = 'open') {
     { id: 4, title: 'Release notes' },
     { id: 5, title: 'Wire Notes' },
   ].map((f) => ({ ...f, url: `https://feeds.example/${String(f.id)}.xml`, problem: '' }));
+  /** Saved, queued or highlighted: such an item stays when its feed is removed. */
+  const isKept = (item: (typeof items)[number]) =>
+    !!item.savedAt || !!item.laterAt || highlights.some((h) => h.item_id === item.id);
   const listed = () =>
     [...feeds]
       .sort((a, b) => a.title.localeCompare(b.title))
-      .map((f) => ({ ...f, articles: items.filter((item) => item.feed === f.id).length }));
+      .map((f) => ({
+        ...f,
+        articles: items.filter((item) => item.feed === f.id).length,
+        kept: items.filter((item) => item.feed === f.id && isKept(item)).length,
+      }));
 
   await page.route('**/api/**', async (route) => {
     const request = route.request();
@@ -315,6 +322,15 @@ export async function fakeServer(page: Page, start: State = 'open') {
       return reply(200, hackerNews);
     }
     if (call === 'GET feeds') return reply(200, listed());
+    const [, gone] = /^DELETE feeds\/(\d+)$/.exec(call) ?? [];
+    if (gone) {
+      const id = Number(gone);
+      feeds.splice(0, feeds.length, ...feeds.filter((f) => f.id !== id));
+      const stay = items.filter((item) => item.feed !== id || isKept(item));
+      for (const item of stay) if (item.feed === id) item.feed = null;
+      items.splice(0, items.length, ...stay);
+      return reply(204);
+    }
     if (call === 'POST feeds') {
       const url = String(body.url);
       if (feeds.some((f) => f.url === url)) return refuse(409, 'That feed is already here.');

@@ -85,6 +85,7 @@ export const api = {
   lockSettings: () => call<Schemas['LockSettings']>('GET', 'lock-settings'),
   feeds: () => call<Feed[]>('GET', 'feeds'),
   addFeed: (url: string) => call<Feed>('POST', 'feeds', { url } satisfies Schemas['FeedIn']),
+  removeFeed: (id: number) => call<undefined>('DELETE', `feeds/${String(id)}`),
   items: (query: ItemQuery = {}) => {
     const wanted = Object.entries(query).filter(([, value]) => value !== undefined && value !== '');
     const search = new URLSearchParams(wanted.map(([key, value]) => [key, String(value)]));

@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Annotated, Any, Literal
 
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -31,6 +31,8 @@ class FeedOut(Schema):
     title: str
     url: str
     articles: int
+    # How many of those the owner saved, queued or highlighted: they stay if the feed is removed.
+    kept: int
     # Why the last fetch failed, or empty.
     problem: str
 
@@ -212,15 +214,43 @@ def _row(item: Item) -> dict[str, Any]:
     }
 
 
-def _feed_out(feed: Feed, articles: int) -> FeedOut:
+# An article the owner has done something with. These outlive their feed.
+_KEPT = Q(saved_at__isnull=False) | Q(later_at__isnull=False) | Q(highlights__isnull=False)
+
+
+def _feed_out(feed: Feed) -> FeedOut:
+    kept = feed.items.filter(_KEPT).distinct().count()
     return FeedOut(
-        id=feed.pk, title=feed.title, url=feed.url, articles=articles, problem=feed.problem
+        id=feed.pk,
+        title=feed.title,
+        url=feed.url,
+        articles=feed.items.count(),
+        kept=kept,
+        problem=feed.problem,
     )
 
 
 @router.get("/feeds", response=list[FeedOut])
 def list_feeds(request: HttpRequest) -> list[FeedOut]:
-    return [_feed_out(f, f.count) for f in Feed.objects.annotate(count=Count("items"))]
+    return [_feed_out(feed) for feed in Feed.objects.all()]
+
+
+@router.delete("/feeds/{feed_id}", response={204: None})
+def remove_feed(request: HttpRequest, feed_id: int) -> Status[None]:
+    """Stops following a feed. Articles the owner saved, queued or highlighted stay, under the
+    feed's name; the rest go with it."""
+    with transaction.atomic():
+        feed = Feed.objects.select_for_update().filter(pk=feed_id).first()
+        if feed is None:
+            return Status(204, None)
+        for item in feed.items.filter(_KEPT).distinct():
+            item.feed = None
+            item.origin = feed.title[:300]
+            # Its own identifier was only unique within the feed.
+            item.guid = f"{feed.url} {item.guid}"[:1000]
+            item.save(update_fields=["feed", "origin", "guid"])
+        feed.delete()
+    return Status(204, None)
 
 
 @router.post("/feeds", response={201: FeedOut, 409: Error, 422: Error})
@@ -238,7 +268,7 @@ def add_feed(request: HttpRequest, body: FeedIn) -> Status[FeedOut] | Status[Err
         return Status(422, Error(detail=str(problem)))
     feed = Feed(url=url)
     feeds.store(feed, parsed, fetched)
-    return Status(201, _feed_out(feed, feed.items.count()))
+    return Status(201, _feed_out(feed))
 
 
 # shortcut: a list is capped rather than paged, add paging when a stream outgrows the cap.

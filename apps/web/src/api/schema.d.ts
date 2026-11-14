@@ -249,6 +249,27 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/feeds/{feed_id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Remove Feed
+     * @description Stops following a feed. Articles the owner saved, queued or highlighted stay, under the
+     *     feed's name; the rest go with it.
+     */
+    delete: operations['reader_api_remove_feed'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/items': {
     parameters: {
       query?: never;
@@ -508,6 +529,8 @@ export interface components {
       url: string;
       /** Articles */
       articles: number;
+      /** Kept */
+      kept: number;
       /** Problem */
       problem: string;
     };
@@ -1273,6 +1296,26 @@ export interface operations {
         content: {
           'application/json': components['schemas']['Error'];
         };
+      };
+    };
+  };
+  reader_api_remove_feed: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        feed_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
     };
   };
