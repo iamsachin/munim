@@ -465,6 +465,113 @@
         "security": [{ "Open": [] }]
       }
     },
+    "/api/highlights": {
+      "get": {
+        "operationId": "reader_api_list_highlights",
+        "summary": "List Highlights",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/HighlightOut" },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "description": "Every highlight, newest first.",
+        "tags": ["reader"],
+        "security": [{ "Open": [] }]
+      }
+    },
+    "/api/items/{item_id}/highlights": {
+      "post": {
+        "operationId": "reader_api_add_highlight",
+        "summary": "Add Highlight",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "schema": { "title": "Item Id", "type": "integer" },
+            "required": true
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/HighlightOut" } }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          }
+        },
+        "description": "Marks a passage. Marking the same place twice gives back the first highlight.",
+        "tags": ["reader"],
+        "requestBody": {
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/HighlightIn" } }
+          },
+          "required": true
+        },
+        "security": [{ "Open": [] }]
+      }
+    },
+    "/api/highlights/{highlight_id}": {
+      "patch": {
+        "operationId": "reader_api_change_highlight",
+        "summary": "Change Highlight",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "highlight_id",
+            "schema": { "title": "Highlight Id", "type": "integer" },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/HighlightOut" } }
+            }
+          }
+        },
+        "description": "Sets the note. An empty note removes it.",
+        "tags": ["reader"],
+        "requestBody": {
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/NoteIn" } }
+          },
+          "required": true
+        },
+        "security": [{ "Open": [] }]
+      },
+      "delete": {
+        "operationId": "reader_api_remove_highlight",
+        "summary": "Remove Highlight",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "highlight_id",
+            "schema": { "title": "Highlight Id", "type": "integer" },
+            "required": true
+          }
+        ],
+        "responses": { "204": { "description": "No Content" } },
+        "tags": ["reader"],
+        "security": [{ "Open": [] }]
+      }
+    },
     "/api/sources/hacker-news": {
       "get": {
         "operationId": "reader_api_hacker_news",
@@ -800,6 +907,20 @@
         "title": "Heading",
         "type": "object"
       },
+      "HighlightPlace": {
+        "description": "A highlight as the text it is in needs it: where it is, and its words.",
+        "properties": {
+          "id": { "title": "Id", "type": "integer" },
+          "reply": { "anyOf": [{ "type": "integer" }, { "type": "null" }], "title": "Reply" },
+          "unit": { "title": "Unit", "type": "integer" },
+          "start": { "title": "Start", "type": "integer" },
+          "end": { "title": "End", "type": "integer" },
+          "quote": { "title": "Quote", "type": "string" }
+        },
+        "required": ["id", "reply", "unit", "start", "end", "quote"],
+        "title": "HighlightPlace",
+        "type": "object"
+      },
       "Image": {
         "properties": {
           "type": { "const": "image", "title": "Type", "type": "string" },
@@ -869,6 +990,11 @@
             "title": "Comments",
             "type": "array"
           },
+          "highlights": {
+            "items": { "$ref": "#/components/schemas/HighlightPlace" },
+            "title": "Highlights",
+            "type": "array"
+          },
           "found": {
             "items": { "items": { "type": "string" }, "type": "array" },
             "title": "Found",
@@ -891,6 +1017,7 @@
           "url",
           "blocks",
           "comments",
+          "highlights",
           "found"
         ],
         "title": "ItemDetail",
@@ -962,6 +1089,64 @@
         "title": "ItemPatch",
         "type": "object"
       },
+      "HighlightOut": {
+        "description": "A highlight in the list of them all: with its note and what it was taken from.",
+        "properties": {
+          "id": { "title": "Id", "type": "integer" },
+          "reply": { "anyOf": [{ "type": "integer" }, { "type": "null" }], "title": "Reply" },
+          "unit": { "title": "Unit", "type": "integer" },
+          "start": { "title": "Start", "type": "integer" },
+          "end": { "title": "End", "type": "integer" },
+          "quote": { "title": "Quote", "type": "string" },
+          "note": { "title": "Note", "type": "string" },
+          "created_at": { "format": "date-time", "title": "Created At", "type": "string" },
+          "item_id": { "title": "Item Id", "type": "integer" },
+          "source": {
+            "enum": ["RD", "X", "IG", "HN", "YT", "RSS"],
+            "title": "Source",
+            "type": "string"
+          },
+          "title": { "title": "Title", "type": "string" },
+          "origin": { "title": "Origin", "type": "string" }
+        },
+        "required": [
+          "id",
+          "reply",
+          "unit",
+          "start",
+          "end",
+          "quote",
+          "note",
+          "created_at",
+          "item_id",
+          "source",
+          "title",
+          "origin"
+        ],
+        "title": "HighlightOut",
+        "type": "object"
+      },
+      "HighlightIn": {
+        "properties": {
+          "reply": {
+            "anyOf": [{ "minimum": 0, "type": "integer" }, { "type": "null" }],
+            "title": "Reply"
+          },
+          "unit": { "minimum": 0, "title": "Unit", "type": "integer" },
+          "start": { "minimum": 0, "title": "Start", "type": "integer" },
+          "end": { "exclusiveMinimum": 0, "title": "End", "type": "integer" },
+          "quote": { "maxLength": 5000, "minLength": 1, "title": "Quote", "type": "string" }
+        },
+        "required": ["unit", "start", "end", "quote"],
+        "title": "HighlightIn",
+        "type": "object"
+      },
+      "NoteIn": {
+        "properties": { "note": { "maxLength": 2000, "title": "Note", "type": "string" } },
+        "required": ["note"],
+        "title": "NoteIn",
+        "type": "object"
+      },
       "ConnectionOut": {
         "description": "A source that is switched on as a whole.",
         "properties": {
@@ -987,13 +1172,14 @@
           "stream": { "title": "Stream", "type": "integer" },
           "later": { "title": "Later", "type": "integer" },
           "saved": { "title": "Saved", "type": "integer" },
+          "highlights": { "title": "Highlights", "type": "integer" },
           "sources": {
             "additionalProperties": { "type": "integer" },
             "title": "Sources",
             "type": "object"
           }
         },
-        "required": ["stream", "later", "saved", "sources"],
+        "required": ["stream", "later", "saved", "highlights", "sources"],
         "title": "Counts",
         "type": "object"
       },

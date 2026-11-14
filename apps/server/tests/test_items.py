@@ -235,6 +235,7 @@ def test_counts_cover_every_source_and_follow_changes(stream: Client) -> None:
         "stream": 3,
         "later": 0,
         "saved": 0,
+        "highlights": 0,
         "sources": {**empty, "RSS": 3},
     }
     change(stream, the(stream, "Sync"), saved=True, later=True)

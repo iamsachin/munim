@@ -4,15 +4,17 @@ import { Highlight, SourceTag } from '../ui/atoms';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { focusOnMount, Input } from '../ui/Input';
-import { EmptyState } from '../ui/States';
+import { EmptyState, ErrorState, LoadingRows } from '../ui/States';
 import { EMPTY } from './copy';
-import { highlightKey } from './marks';
-import { useReader } from './store';
+import { day, useHighlights, useNoteHighlight, useRemoveHighlight } from './queries';
 
 export function Highlights() {
-  const { state, update } = useReader();
-  const [editing, setEditing] = useState<string | null>(null);
+  const highlights = useHighlights();
+  const setNoteOf = useNoteHighlight();
+  const remove = useRemoveHighlight();
+  const [editing, setEditing] = useState<number | null>(null);
   const [note, setNote] = useState('');
+  const [now] = useState(() => Date.now());
 
   return (
     <main className="flex min-h-0 flex-1 flex-col">
@@ -22,9 +24,13 @@ export function Highlights() {
         </span>
       </ScreenHeader>
       <div className="flex min-h-0 flex-1 flex-col gap-10 overflow-y-auto p-16">
-        {state.highlights.length === 0 && <EmptyState compact>{EMPTY.highlights}</EmptyState>}
-        {state.highlights.map((h) => {
-          const key = highlightKey(h);
+        {highlights.isPending && <LoadingRows what="highlights" rows={3} />}
+        {highlights.isError && (
+          <ErrorState what="the highlights" onRetry={() => void highlights.refetch()} />
+        )}
+        {highlights.data?.length === 0 && <EmptyState compact>{EMPTY.highlights}</EmptyState>}
+        {highlights.data?.map((h) => {
+          const key = h.id;
           // Enough of the quote to tell two buttons apart when read aloud.
           const which = h.quote.slice(0, 40);
           return (
@@ -37,11 +43,7 @@ export function Highlights() {
                   className="flex gap-6"
                   onSubmit={(e) => {
                     e.preventDefault();
-                    update((s) => ({
-                      highlights: s.highlights.map((x) =>
-                        highlightKey(x) === key ? { ...x, note: note.trim() } : x,
-                      ),
-                    }));
+                    setNoteOf.mutate({ id: h.id, note });
                     setEditing(null);
                   }}
                 >
@@ -72,11 +74,11 @@ export function Highlights() {
                 h.note && <div className="text-mute">Note: {h.note}</div>
               )}
               <div className="flex items-baseline gap-10 font-mono text-meta text-mute">
-                <SourceTag src={h.src} />
+                <SourceTag src={h.source} />
                 <span className="min-w-0 truncate">
-                  {h.title} · {h.from}
+                  {h.title} · {h.origin}
                 </span>
-                <span className="ml-auto">{h.when}</span>
+                <span className="ml-auto">{day(h.created_at, now)}</span>
                 <Button
                   className="font-sans"
                   aria-label={`${h.note ? 'Edit' : 'Add'} note: ${which}`}
@@ -91,9 +93,7 @@ export function Highlights() {
                   className="font-sans"
                   aria-label={`Remove: ${which}`}
                   onClick={() => {
-                    update((s) => ({
-                      highlights: s.highlights.filter((x) => highlightKey(x) !== key),
-                    }));
+                    remove.mutate(h.id);
                   }}
                 >
                   Remove

@@ -13,7 +13,7 @@ from procrastinate.exceptions import AlreadyEnqueued
 
 from account.auth import Open
 from reader import feeds, images, search, tasks
-from reader.models import Connection, Feed, Item, Source
+from reader.models import Connection, Feed, Highlight, Item, Source
 
 router = Router(tags=["reader"], auth=Open())
 
@@ -114,6 +114,42 @@ class Comment(Schema):
     blocks: list[Block]
 
 
+class HighlightPlace(Schema):
+    """A highlight as the text it is in needs it: where it is, and its words."""
+
+    id: int
+    # Null for the item's own text, or the number of the reply it is in.
+    reply: int | None
+    # Which run of text there (paragraph, heading, list item), and the characters within it.
+    unit: int
+    start: int
+    end: int
+    quote: str
+
+
+class HighlightIn(Schema):
+    reply: int | None = Field(None, ge=0)
+    unit: int = Field(ge=0)
+    start: int = Field(ge=0)
+    end: int = Field(gt=0)
+    quote: str = Field(min_length=1, max_length=5000)
+
+
+class HighlightOut(HighlightPlace):
+    """A highlight in the list of them all: with its note and what it was taken from."""
+
+    note: str
+    created_at: datetime
+    item_id: int
+    source: SourceCode
+    title: str
+    origin: str
+
+
+class NoteIn(Schema):
+    note: str = Field(max_length=2000)
+
+
 class ItemDetail(ItemOut):
     """An item opened: its own page's address, its text as blocks, and its replies."""
 
@@ -121,6 +157,7 @@ class ItemDetail(ItemOut):
     url: str
     blocks: list[Block]
     comments: list[Comment]
+    highlights: list[HighlightPlace]
     # When it was opened from a search: for each word searched for, in order, the words in
     # this item's text that match it ("movement" may be "movements" here). Empty otherwise.
     found: list[list[str]]
@@ -152,6 +189,7 @@ class Counts(Schema):
     stream: int
     later: int
     saved: int
+    highlights: int
     # Items per source, for every source, including those with none.
     sources: dict[str, int]
 
@@ -249,6 +287,7 @@ def get_item(request: HttpRequest, item_id: int, q: str = "") -> ItemDetail:
             "url": item.url,
             "blocks": _shown(item),
             "comments": _comments(item),
+            "highlights": list(item.highlights.all()),
             "found": search.found_words(item, q.strip()) if q.strip() else [],
         }
     )
@@ -324,6 +363,65 @@ def change_item(request: HttpRequest, item_id: int, body: ItemPatch) -> ItemOut:
     return ItemOut(**_row(item))
 
 
+def _highlight(highlight: Highlight) -> HighlightOut:
+    item = highlight.item
+    return HighlightOut(
+        id=highlight.pk,
+        reply=highlight.reply,
+        unit=highlight.unit,
+        start=highlight.start,
+        end=highlight.end,
+        quote=highlight.quote,
+        note=highlight.note,
+        created_at=highlight.created_at,
+        item_id=item.pk,
+        source=item.source,  # type: ignore[arg-type]
+        title=item.title,
+        origin=item.feed.title if item.feed else item.origin,
+    )
+
+
+@router.get("/highlights", response=list[HighlightOut])
+def list_highlights(request: HttpRequest) -> list[HighlightOut]:
+    """Every highlight, newest first."""
+    return [_highlight(h) for h in Highlight.objects.select_related("item__feed")]
+
+
+@router.post("/items/{item_id}/highlights", response={201: HighlightOut, 422: Error})
+def add_highlight(
+    request: HttpRequest, item_id: int, body: HighlightIn
+) -> Status[HighlightOut] | Status[Error]:
+    """Marks a passage. Marking the same place twice gives back the first highlight."""
+    item = get_object_or_404(Item.objects.select_related("feed"), pk=item_id)
+    quote = body.quote.strip()
+    if body.end <= body.start or not quote:
+        return Status(422, Error(detail="A highlight needs some text."))
+    highlight, _ = Highlight.objects.get_or_create(
+        item=item,
+        reply=body.reply,
+        unit=body.unit,
+        start=body.start,
+        end=body.end,
+        defaults={"quote": quote},
+    )
+    return Status(201, _highlight(highlight))
+
+
+@router.patch("/highlights/{highlight_id}", response=HighlightOut)
+def change_highlight(request: HttpRequest, highlight_id: int, body: NoteIn) -> HighlightOut:
+    """Sets the note. An empty note removes it."""
+    highlight = get_object_or_404(Highlight.objects.select_related("item__feed"), pk=highlight_id)
+    highlight.note = body.note.strip()
+    highlight.save(update_fields=["note"])
+    return _highlight(highlight)
+
+
+@router.delete("/highlights/{highlight_id}", response={204: None})
+def remove_highlight(request: HttpRequest, highlight_id: int) -> Status[None]:
+    Highlight.objects.filter(pk=highlight_id).delete()
+    return Status(204, None)
+
+
 def _connection(connection: Connection | None) -> ConnectionOut:
     if connection is None:
         return ConnectionOut(enabled=False, synced_at=None, problem="")
@@ -364,5 +462,6 @@ def counts(request: HttpRequest) -> Counts:
         stream=Item.objects.count(),
         later=Item.objects.filter(later_at__isnull=False).count(),
         saved=Item.objects.filter(saved_at__isnull=False).count(),
+        highlights=Highlight.objects.count(),
         sources={code: by_source.get(code, 0) for code in Source.values},
     )

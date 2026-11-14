@@ -1,48 +1,5 @@
 // Mock data from design/handoff/Atrium.dc.html. Replaced by server data in milestone 3.
-import type { Digest, HighlightEntry, Match, Watch } from './types';
-
-export const HIGHLIGHTS: HighlightEntry[] = [
-  {
-    quote: 'Recovery is where most schemes quietly give the server a copy of the key.',
-    note: 'Check this against our own recovery flow.',
-    src: 'RSS',
-    title: 'Notes on end-to-end encryption for small apps',
-    from: 'Plain Crypto',
-    when: 'Today',
-  },
-  {
-    quote: 'Chunking by reply tree beats chunking by length.',
-    note: '',
-    src: 'RD',
-    title: 'Summarizing 400-comment threads: what actually works',
-    from: 'r/LocalLLaMA',
-    when: 'Yesterday',
-  },
-  {
-    quote: 'Incremental sync is fast until it is wrong, and when it is wrong it is wrong silently.',
-    note: 'Good argument for a weekly full check.',
-    src: 'RSS',
-    title: 'The case for boring sync protocols',
-    from: 'Wire Notes',
-    when: 'Mon',
-  },
-  {
-    quote: 'Export should be the first feature, not the last.',
-    note: '',
-    src: 'X',
-    title: 'Small thing: export should be the first feature',
-    from: '@lena_builds',
-    when: 'Mon',
-  },
-  {
-    quote: 'The airflow section at 9:40 is the part most people skip.',
-    note: 'Rewatch before ordering fans.',
-    src: 'YT',
-    title: 'Building a home server rack from scratch',
-    from: 'Bench Hours',
-    when: 'Sun',
-  },
-];
+import type { Digest, Match, Watch } from './types';
 
 export const WATCHES: Watch[] = [
   { name: 'rate limits', kind: 'Keyword', where: 'All sources', count: 7, last: '15h ago' },

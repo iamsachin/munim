@@ -105,3 +105,27 @@ class Item(models.Model):
 
     def __str__(self) -> str:
         return self.title
+
+
+class Highlight(models.Model):
+    """A passage the owner marked in an item, with an optional note."""
+
+    item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name="highlights")
+    # Where the passage is. `reply` is null for the item's own text, or the number of the reply
+    # it is in. `unit` counts the runs of text there: each paragraph, heading, paragraph of a
+    # quotation and list item is one. `start` and `end` are characters within that run.
+    reply = models.PositiveIntegerField(null=True, blank=True)
+    unit = models.PositiveIntegerField()
+    start = models.PositiveIntegerField()
+    end = models.PositiveIntegerField()
+    # The words themselves. If the text has changed since (a feed corrected an article, a
+    # discussion grew), the passage is found again by these.
+    quote = models.TextField()
+    note = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self) -> str:
+        return self.quote[:60]

@@ -1,32 +1,21 @@
 import { Found, Highlight } from '../ui/atoms';
-import { withFound, type Range } from './found';
-import { splitMarks } from './marks';
+import { flagged, type Range } from './found';
 
 /**
- * Text with the owner's highlighted quotes marked in place and, when it was opened from a
- * search, the words the search matched.
+ * A run of text with the owner's highlights marked in place and, when it was opened from a
+ * search, the words the search matched. The ranges count from the start of this text.
  */
 export function Marked({
   text,
-  quotes,
-  found = [],
+  marked,
+  found,
 }: {
   text: string;
-  quotes: readonly string[];
-  found?: readonly Range[];
+  marked: readonly Range[];
+  found: readonly Range[];
 }) {
-  return withFound(splitMarks(text, quotes), found).map((piece, i) => {
+  return flagged(flagged([{ text }], marked, 'marked'), found, 'found').map((piece, i) => {
     const words = piece.found ? <Found key={i}>{piece.text}</Found> : piece.text;
     return piece.marked ? <Highlight key={i}>{words}</Highlight> : words;
   });
 }
-
-/**
- * Put on the element whose text can be highlighted. SelectionHighlight reads these to know which
- * item a selection belongs to.
- */
-export const highlightable = (item: { src: string; title: string; from: string }) => ({
-  'data-highlight-src': item.src,
-  'data-highlight-title': item.title,
-  'data-highlight-from': item.from,
-});

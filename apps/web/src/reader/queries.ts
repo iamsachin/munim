@@ -37,6 +37,40 @@ export const useCounts = () =>
   useQuery({ queryKey: ['counts'], queryFn: api.counts, refetchInterval: ASK_AGAIN_MS });
 
 /** Marks an item read, saved or queued. Every list and count that might show it is asked again. */
+/** Every highlight, newest first. Shared by the Highlights screen and Today. */
+export const useHighlights = () => useQuery({ queryKey: ['highlights'], queryFn: api.highlights });
+
+/** What changes when a highlight is made, noted or removed: the list, its count, and the item. */
+function useHighlightChange<In, Out>(mutationFn: (input: In) => Promise<Out>) {
+  const queries = useQueryClient();
+  return useMutation({
+    mutationFn,
+    onSuccess: () =>
+      Promise.all(
+        ['highlights', 'item', 'counts'].map((key) =>
+          queries.invalidateQueries({ queryKey: [key] }),
+        ),
+      ),
+  });
+}
+export const useAddHighlight = () => useHighlightChange(api.addHighlight);
+export const useNoteHighlight = () => useHighlightChange(api.noteHighlight);
+export const useRemoveHighlight = () => useHighlightChange(api.removeHighlight);
+
+/**
+ * "Today", "Yesterday", "Mon", "3 Nov": the day something was done, as the Highlights screen
+ * words it. Days are the owner's own, not UTC's.
+ */
+export function day(iso: string, now: number): string {
+  const then = new Date(iso);
+  const midnight = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const days = Math.round((midnight(new Date(now)).getTime() - midnight(then).getTime()) / 864e5);
+  if (days <= 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return then.toLocaleDateString('en', { weekday: 'short' });
+  return then.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
+
 export function useChangeItem() {
   const queries = useQueryClient();
   return useMutation({

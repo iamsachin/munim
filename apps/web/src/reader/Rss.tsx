@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { api, reason, sessionOver, type Feed } from '../api/client';
 import { useTheme } from '../settings';
 import { focusId, useKeys } from '../shell/keys';
@@ -11,10 +11,9 @@ import { AskCard } from './AskCard';
 import { Blocks } from './Blocks';
 import { EMPTY } from './copy';
 import { age, useChangeItem, useFeeds, useItem, useItems } from './queries';
-import { useReader } from './store';
+import { marksFor } from './units';
 
 export function Rss() {
-  const { state } = useReader();
   const { theme } = useTheme();
   const queries = useQueryClient();
   const feeds = useFeeds();
@@ -30,6 +29,10 @@ export function Rss() {
   const articles = useItems({ feed: feed?.id }, feed !== undefined);
   const current = articles.data?.find((a) => a.id === chosen) ?? articles.data?.[0];
   const article = useItem(current?.id);
+  const marks = useMemo(
+    () => (article.data ? marksFor([article.data.blocks], article.data.highlights, [])[0] : []),
+    [article.data],
+  );
 
   const add = useMutation({
     mutationFn: api.addFeed,
@@ -205,10 +208,8 @@ export function Rss() {
             {article.data && (
               <Blocks
                 blocks={article.data.blocks}
-                item={{ src: 'RSS', title: current.title, from: feed.title }}
-                quotes={state.highlights
-                  .filter((h) => h.title === current.title)
-                  .map((h) => h.quote)}
+                where={{ item: article.data.id, reply: null }}
+                marks={marks}
                 className="max-w-[62ch]"
               />
             )}

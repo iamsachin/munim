@@ -1,14 +1,14 @@
 import { createContext, use, useState, type ReactNode } from 'react';
 import { AI_INITIAL, type AiState } from '../account/ai';
-import { HIGHLIGHTS, WATCHES } from './fixtures';
-import type { HighlightEntry, Watch } from './types';
+import { WATCHES } from './fixtures';
+import type { Watch } from './types';
 
 export const SCOPES = ['Everything', 'Saved', 'This week', 'Open item'] as const;
 export type Scope = (typeof SCOPES)[number];
 
 /**
- * What still runs on sample data in the browser: highlights, watches, Ask, connections and AI
- * settings. Items, feeds and sign-in are the server's.
+ * What still runs on sample data in the browser: watches, Ask, connections and AI settings.
+ * Items, feeds, highlights and sign-in are the server's.
  */
 export interface ReaderState {
   watchOff: ReadonlySet<string>;
@@ -16,7 +16,6 @@ export interface ReaderState {
   scope: Scope;
   asks: readonly { q: string; scope: Scope }[];
   disconnected: ReadonlySet<string>;
-  highlights: readonly HighlightEntry[];
   ai: AiState;
 }
 
@@ -26,7 +25,6 @@ export const INITIAL: ReaderState = {
   scope: 'Everything',
   asks: [],
   disconnected: new Set(),
-  highlights: HIGHLIGHTS,
   ai: AI_INITIAL,
 };
 

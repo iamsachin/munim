@@ -10,6 +10,8 @@ export type ItemDetail = Schemas['ItemDetail'];
 export type ItemPatch = Schemas['ItemPatch'];
 export type Counts = Schemas['Counts'];
 export type Connection = Schemas['ConnectionOut'];
+/** A passage the owner marked, with its note and what it was taken from. */
+export type Highlight = Schemas['HighlightOut'];
 /** What the browser knows of a provider's key: its last four characters and whether it works. */
 export type AiKey = Schemas['KeyOut'];
 
@@ -93,6 +95,12 @@ export const api = {
     call<ItemDetail>('GET', `items/${String(id)}${q && `?q=${encodeURIComponent(q)}`}`),
   changeItem: (id: number, patch: ItemPatch) => call<Item>('PATCH', `items/${String(id)}`, patch),
   counts: () => call<Counts>('GET', 'counts'),
+  highlights: () => call<Highlight[]>('GET', 'highlights'),
+  addHighlight: ({ item, ...place }: Schemas['HighlightIn'] & { item: number }) =>
+    call<Highlight>('POST', `items/${String(item)}/highlights`, place),
+  noteHighlight: ({ id, note }: { id: number; note: string }) =>
+    call<Highlight>('PATCH', `highlights/${String(id)}`, { note } satisfies Schemas['NoteIn']),
+  removeHighlight: (id: number) => call<undefined>('DELETE', `highlights/${String(id)}`),
   aiKeys: () => call<AiKey[]>('GET', 'ai/keys'),
   setAiKey: ({ provider, key }: { provider: AiKey['provider']; key: string }) =>
     call<AiKey>('PUT', `ai/keys/${provider}`, { key } satisfies Schemas['KeyIn']),

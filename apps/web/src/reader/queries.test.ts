@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { age, heldOf, kindOf, readingTotal } from './queries';
+import { age, day, heldOf, kindOf, readingTotal } from './queries';
 
 test('age is shown in the largest whole unit, in the short form', () => {
   const now = Date.parse('2026-11-14T12:00:00Z');
@@ -35,4 +35,17 @@ test('what is held of a saved item is said plainly', () => {
   expect(heldOf({ source: 'RD', media: null, replies: 214 })).toBe('214 comments');
   expect(heldOf({ source: 'HN', media: null, replies: 1 })).toBe('1 comment');
   expect(heldOf({ source: 'X', media: null, replies: 0 })).toBe('Text');
+});
+
+test('a day is named as the owner would: today, yesterday, a weekday, then a date', () => {
+  // Built from local parts, so the test means the same in every time zone.
+  const at = (dayOfMonth: number, hour: number) =>
+    new Date(2026, 10, dayOfMonth, hour).toISOString();
+  const now = new Date(2026, 10, 14, 17, 30).getTime();
+  expect(day(at(14, 0), now)).toBe('Today');
+  expect(day(at(14, 23), now)).toBe('Today');
+  expect(day(at(13, 23), now)).toBe('Yesterday');
+  expect(day(at(9, 12), now)).toBe('Mon');
+  expect(day(at(8, 12), now)).toBe('Sun');
+  expect(day(at(7, 12), now)).toBe('7 Nov');
 });

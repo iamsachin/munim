@@ -7,7 +7,7 @@ import { Card } from '../ui/Card';
 import { EmptyState, ErrorState, LoadingRows } from '../ui/States';
 import { EMPTY } from './copy';
 import { DIGESTS } from './fixtures';
-import { useItems } from './queries';
+import { useHighlights, useItems } from './queries';
 import { useReader, watchRows } from './store';
 
 const SOURCE_ORDER: Source[] = ['RD', 'X', 'IG', 'HN', 'YT', 'RSS'];
@@ -42,6 +42,7 @@ function Section({
 
 export function Today() {
   const { state } = useReader();
+  const highlights = useHighlights();
   const items = useItems();
   const later = useItems({ show: 'later' });
   const [now] = useState(() => Date.now());
@@ -128,12 +129,16 @@ export function Today() {
           </Section>
 
           <Section label="Recent highlights" to="/highlights" action="All highlights">
-            {state.highlights.length === 0 && <EmptyState compact>{EMPTY.highlights}</EmptyState>}
-            {state.highlights.slice(0, 2).map((h) => (
-              <div key={h.quote} className="p-6">
+            {highlights.isPending && <LoadingRows what="highlights" rows={2} />}
+            {highlights.isError && (
+              <ErrorState what="the highlights" onRetry={() => void highlights.refetch()} />
+            )}
+            {highlights.data?.length === 0 && <EmptyState compact>{EMPTY.highlights}</EmptyState>}
+            {highlights.data?.slice(0, 2).map((h) => (
+              <div key={h.id} className="p-6">
                 <Highlight>{h.quote}</Highlight>
                 <div className="pt-3 font-mono text-code text-mute">
-                  {h.title} · {h.from}
+                  {h.title} · {h.origin}
                 </div>
               </div>
             ))}

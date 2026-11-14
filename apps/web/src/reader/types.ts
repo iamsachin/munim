@@ -1,14 +1,5 @@
 import type { Source } from '../ui/atoms';
 
-export interface HighlightEntry {
-  quote: string;
-  note: string;
-  src: Source;
-  title: string;
-  from: string;
-  when: string;
-}
-
 export interface Watch {
   name: string;
   kind: string;

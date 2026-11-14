@@ -1,21 +1,14 @@
 import { useMemo, useState } from 'react';
-import type { ItemDetail } from '../api/client';
 import { cx } from '../ui/cx';
-import { findMatches, type Range } from './found';
-import { highlightable, Marked } from './Marked';
+import { within, type Range } from './found';
+import { Marked } from './Marked';
+import { unitCount, type Block, type Marks, type Span } from './units';
 
-export type Block = ItemDetail['blocks'][number];
-type Span = Extract<Block, { type: 'paragraph' }>['spans'][number];
-
-const NOTHING: readonly (readonly string[])[] = [];
-
-/** The runs of text in a block that a search can match. Code is shown as written, unmarked. */
-const spansOf = (block: Block): readonly Span[] =>
-  block.type === 'list'
-    ? block.items.flat()
-    : block.type === 'paragraph' || block.type === 'heading' || block.type === 'quote'
-      ? block.spans
-      : [];
+/** Running totals: where each thing starts, given how long each one is. */
+const starts = (lengths: readonly number[]) =>
+  lengths.reduce<number[]>((at, length, i) => [...at, (at[i] ?? 0) + length], [0]).slice(0, -1);
+const firstUnits = (blocks: readonly Block[]) => starts(blocks.map(unitCount));
+const startsOf = (spans: readonly Span[]) => starts(spans.map((span) => span.text.length));
 
 const READ = 'text-read leading-read text-pretty';
 
@@ -26,61 +19,66 @@ const READ = 'text-read leading-read text-pretty';
  */
 export function Blocks({
   blocks,
-  item,
-  quotes,
-  found = NOTHING,
+  where,
+  marks,
   compact = false,
   className,
 }: {
   blocks: readonly Block[];
-  /** What the text belongs to, so a selection in it can be saved as a highlight. */
-  item: { src: string; title: string; from: string };
-  /** The owner's highlights in this item, marked where they appear. */
-  quotes: readonly string[];
-  /** From the server, when the item was opened from a search: the words that matched it. */
-  found?: readonly (readonly string[])[];
+  /** The item these blocks belong to, and which reply if they are one: a selection in them is
+   * saved as a highlight there. */
+  where: { item: number; reply: number | null };
+  /** What to mark in each unit of the text: highlights, and what a search matched. */
+  marks: readonly Marks[] | undefined;
   /** For a reply: the size of the text around it, and less space between blocks. */
   compact?: boolean;
   className?: string;
 }) {
-  const mine = highlightable(item);
   // A reply wraps as the design draws it; only reading text is balanced.
   const read = compact ? '' : READ;
-  // Decided over the whole text, not run by run: if the words are together anywhere, only
-  // those places are marked.
-  const places = useMemo(() => {
-    const spans = blocks.flatMap(spansOf);
-    const ranges = findMatches(
-      spans.map((span) => span.text),
-      found,
-    );
-    return new Map(spans.map((span, i) => [span, ranges[i] ?? []]));
-  }, [blocks, found]);
-  const run = (spans: readonly Span[]) =>
-    spans.map((span, i) => (
-      <Run key={i} span={span} quotes={quotes} found={places.get(span) ?? []} />
-    ));
+  // The number of each block's first unit. A highlight is stored by its unit's number.
+  const first = useMemo(() => firstUnits(blocks), [blocks]);
+  /** The runs of one unit, each given the part of the unit's marks that falls in it. */
+  const run = (unit: number, spans: readonly Span[]) =>
+    startsOf(spans).map((at, i) => {
+      const span = spans[i];
+      return (
+        span && (
+          <Run
+            key={i}
+            span={span}
+            marked={within(marks?.[unit]?.marked ?? [], at, span.text.length)}
+            found={within(marks?.[unit]?.found ?? [], at, span.text.length)}
+          />
+        )
+      );
+    });
 
   return (
     // A long address has nowhere to break, and would run out of a narrow pane.
-    <div className={cx('flex flex-col wrap-anywhere', compact ? 'gap-6' : 'gap-12', className)}>
+    <div
+      data-highlight-item={where.item}
+      data-highlight-reply={where.reply ?? ''}
+      className={cx('flex flex-col wrap-anywhere', compact ? 'gap-6' : 'gap-12', className)}
+    >
       {blocks.map((block, i) => {
+        const unit = first[i] ?? 0;
         switch (block.type) {
           case 'paragraph':
             // pre-line keeps the line breaks an author put inside a paragraph, as in verse.
             return (
-              <p key={i} className={cx(read, 'whitespace-pre-line')} {...mine}>
-                {run(block.spans)}
+              <p key={i} data-unit={unit} className={cx(read, 'whitespace-pre-line')}>
+                {run(unit, block.spans)}
               </p>
             );
           case 'heading':
             return block.level === 2 ? (
-              <h3 key={i} className="pt-6 text-title leading-title font-semibold" {...mine}>
-                {run(block.spans)}
+              <h3 key={i} data-unit={unit} className="pt-6 text-title leading-title font-semibold">
+                {run(unit, block.spans)}
               </h3>
             ) : (
-              <h4 key={i} className="text-read font-semibold" {...mine}>
-                {run(block.spans)}
+              <h4 key={i} data-unit={unit} className="text-read font-semibold">
+                {run(unit, block.spans)}
               </h4>
             );
           case 'quote': {
@@ -97,8 +95,8 @@ export function Blocks({
                 className={cx(read, 'flex flex-col gap-12 border-l-2 border-line pl-12 text-mute')}
               >
                 {paragraphs.map((spans, n) => (
-                  <p key={n} className="whitespace-pre-line" {...mine}>
-                    {run(spans)}
+                  <p key={n} data-unit={unit + n} className="whitespace-pre-line">
+                    {run(unit + n, spans)}
                   </p>
                 ))}
               </blockquote>
@@ -116,8 +114,8 @@ export function Blocks({
                 )}
               >
                 {block.items.map((spans, n) => (
-                  <li key={n} className="whitespace-pre-line" {...mine}>
-                    {run(spans)}
+                  <li key={n} data-unit={unit + n} className="whitespace-pre-line">
+                    {run(unit + n, spans)}
                   </li>
                 ))}
               </List>
@@ -145,14 +143,14 @@ export function Blocks({
 
 function Run({
   span,
-  quotes,
+  marked,
   found,
 }: {
   span: Span;
-  quotes: readonly string[];
+  marked: readonly Range[];
   found: readonly Range[];
 }) {
-  const text = <Marked text={span.text} quotes={quotes} found={found} />;
+  const text = <Marked text={span.text} marked={marked} found={found} />;
   const { marks } = span;
   const styled = (
     <span

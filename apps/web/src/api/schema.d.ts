@@ -294,6 +294,67 @@ export interface paths {
     patch: operations['reader_api_change_item'];
     trace?: never;
   };
+  '/api/highlights': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Highlights
+     * @description Every highlight, newest first.
+     */
+    get: operations['reader_api_list_highlights'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/items/{item_id}/highlights': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Add Highlight
+     * @description Marks a passage. Marking the same place twice gives back the first highlight.
+     */
+    post: operations['reader_api_add_highlight'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/highlights/{highlight_id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Remove Highlight */
+    delete: operations['reader_api_remove_highlight'];
+    options?: never;
+    head?: never;
+    /**
+     * Change Highlight
+     * @description Sets the note. An empty note removes it.
+     */
+    patch: operations['reader_api_change_highlight'];
+    trace?: never;
+  };
   '/api/sources/hacker-news': {
     parameters: {
       query?: never;
@@ -534,6 +595,24 @@ export interface components {
       /** Spans */
       spans: components['schemas']['Span'][];
     };
+    /**
+     * HighlightPlace
+     * @description A highlight as the text it is in needs it: where it is, and its words.
+     */
+    HighlightPlace: {
+      /** Id */
+      id: number;
+      /** Reply */
+      reply: number | null;
+      /** Unit */
+      unit: number;
+      /** Start */
+      start: number;
+      /** End */
+      end: number;
+      /** Quote */
+      quote: string;
+    };
     /** Image */
     Image: {
       /**
@@ -594,6 +673,8 @@ export interface components {
       )[];
       /** Comments */
       comments: components['schemas']['Comment'][];
+      /** Highlights */
+      highlights: components['schemas']['HighlightPlace'][];
       /** Found */
       found: string[][];
     };
@@ -657,6 +738,60 @@ export interface components {
       later?: boolean | null;
     };
     /**
+     * HighlightOut
+     * @description A highlight in the list of them all: with its note and what it was taken from.
+     */
+    HighlightOut: {
+      /** Id */
+      id: number;
+      /** Reply */
+      reply: number | null;
+      /** Unit */
+      unit: number;
+      /** Start */
+      start: number;
+      /** End */
+      end: number;
+      /** Quote */
+      quote: string;
+      /** Note */
+      note: string;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Item Id */
+      item_id: number;
+      /**
+       * Source
+       * @enum {string}
+       */
+      source: 'RD' | 'X' | 'IG' | 'HN' | 'YT' | 'RSS';
+      /** Title */
+      title: string;
+      /** Origin */
+      origin: string;
+    };
+    /** HighlightIn */
+    HighlightIn: {
+      /** Reply */
+      reply?: number | null;
+      /** Unit */
+      unit: number;
+      /** Start */
+      start: number;
+      /** End */
+      end: number;
+      /** Quote */
+      quote: string;
+    };
+    /** NoteIn */
+    NoteIn: {
+      /** Note */
+      note: string;
+    };
+    /**
      * ConnectionOut
      * @description A source that is switched on as a whole.
      */
@@ -681,6 +816,8 @@ export interface components {
       later: number;
       /** Saved */
       saved: number;
+      /** Highlights */
+      highlights: number;
       /** Sources */
       sources: {
         [key: string]: number;
@@ -1210,6 +1347,107 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['ItemOut'];
+        };
+      };
+    };
+  };
+  reader_api_list_highlights: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HighlightOut'][];
+        };
+      };
+    };
+  };
+  reader_api_add_highlight: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        item_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['HighlightIn'];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HighlightOut'];
+        };
+      };
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+    };
+  };
+  reader_api_remove_highlight: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        highlight_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  reader_api_change_highlight: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        highlight_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['NoteIn'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HighlightOut'];
         };
       };
     };
