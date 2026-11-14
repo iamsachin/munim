@@ -1,5 +1,6 @@
 """The reader's API: feeds, and the items in the stream."""
 
+import re
 from datetime import datetime
 from typing import Annotated, Any, Literal
 
@@ -201,6 +202,40 @@ def add_feed(request: HttpRequest, body: FeedIn) -> Status[FeedOut] | Status[Err
     return Status(201, _feed_out(feed, feed.items.count()))
 
 
+_WORD = re.compile(r"[^\W_]+")
+# A quoted phrase, an exclusion (-word) or an alternative (OR): the owner is writing a query.
+_OPERATORS = re.compile(r'"|(^|\s)-\w|\bor\b', re.IGNORECASE)
+
+
+def _matching(typed: str) -> tuple[Q, Q | None]:
+    """What the search box finds: the first choice, and what to fall back on if that finds
+    nothing.
+
+    The words typed are looked for together, in that order, in the title or the text: "movement
+    of data" finds the article that says so, not every article with both words somewhere. Only
+    if none does are articles with all the words, anywhere, shown instead. Words match in any
+    form ("protocols" finds "protocol"); the last may still be being typed, so it also matches
+    as the start of a word, never as the middle of one. A feed is found by its own name.
+    """
+    words = _WORD.findall(typed)
+    if _OPERATORS.search(typed) or not words:
+        # Phrases, OR and -exclusions, as written. Anything typed is accepted without error.
+        written = SearchQuery(typed, search_type="websearch", config=SEARCH_LANGUAGE)
+        return Q(search=written), None
+
+    def all_words(joined_by: str) -> Q:
+        terms = joined_by.join([*words[:-1], f"{words[-1]}:*"])
+        return Q(search=SearchQuery(terms, search_type="raw", config=SEARCH_LANGUAGE))
+
+    # A word half typed is not yet a form the text search knows, so titles are also matched
+    # letter by letter from the start of each word.
+    in_title, in_feed = Q(), Q()
+    for word in words:
+        in_title &= Q(title__iregex=rf"\m{word}")
+        in_feed &= Q(feed__title__iregex=rf"\m{word}")
+    return all_words(" <-> ") | in_feed, all_words(" & ") | in_title | in_feed
+
+
 # shortcut: a list is capped rather than paged, add paging when a stream outgrows the cap.
 MAX_ITEMS = 200
 
@@ -226,13 +261,11 @@ def list_items(
     if feed is not None:
         items = items.filter(feed_id=feed)
     if q.strip():
-        # Whole words anywhere in the title or the text, in any form ("protocols" finds
-        # "protocol"), with "quoted phrases", OR and -exclusions. The part of a word typed so
-        # far still finds titles and feeds, so the list narrows while the owner types.
-        words = SearchQuery(q.strip(), search_type="websearch", config=SEARCH_LANGUAGE)
-        items = items.filter(
-            Q(search=words) | Q(title__icontains=q.strip()) | Q(feed__title__icontains=q.strip())
-        )
+        together, anywhere = _matching(q.strip())
+        found = items.filter(together)
+        if anywhere is not None and not found.exists():
+            found = items.filter(anywhere)
+        items = found
     return [ItemOut(**_row(item)) for item in items[:MAX_ITEMS]]
 
 

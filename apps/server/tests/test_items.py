@@ -89,6 +89,28 @@ def test_search_looks_inside_the_text_and_understands_word_forms(stream: Client)
     assert titles(stream, "?q=nothing-says-this") == []
 
 
+def test_words_typed_together_are_looked_for_together_first(stream: Client) -> None:
+    feed = Feed.objects.first()
+
+    def article(title: str, body: str) -> None:
+        Item.objects.create(feed=feed, guid=title, title=title, body=body, published_at=BASE)
+
+    article("Pipelines", "A note on the movement of data between systems.")
+    article("Warehouses", "Data is kept here. There is little movement.")
+    article("Queues", "Data arrives; its movement is tracked.")
+
+    # Three articles have both words. One says them together, and that is the one meant.
+    assert titles(stream, "?q=movement of data") == ["Pipelines"]
+    assert titles(stream, "?q=movements of data") == ["Pipelines"]
+    assert titles(stream, "?q=movement of da") == ["Pipelines"]
+    # No article says these together, so the ones with all of them are shown.
+    assert sorted(titles(stream, "?q=data movement")) == ["Pipelines", "Queues", "Warehouses"]
+    assert sorted(titles(stream, "?q=tracked data")) == ["Queues"]
+    # A feed is still found by its name, even when an article's text has the word too.
+    article("Radio", "A wireless set, repaired.")
+    assert titles(stream, "?q=wire") == ["Radio", "Sync", "Reading"]
+
+
 def test_search_takes_phrases_alternatives_and_exclusions(stream: Client) -> None:
     assert titles(stream, '?q="second paragraph"') == ["Sync"]
     assert titles(stream, '?q="second first"') == []
@@ -96,9 +118,21 @@ def test_search_takes_phrases_alternatives_and_exclusions(stream: Client) -> Non
     assert titles(stream, "?q=text -encryption") == ["Reading"]
 
 
-def test_part_of_a_word_still_finds_titles_while_typing(stream: Client) -> None:
-    assert titles(stream, "?q=encr") == ["Encryption"]
+def test_the_start_of_a_word_finds_it_while_typing_but_its_middle_does_not(
+    stream: Client,
+) -> None:
+    for typed in ("en", "encr", "encrypti", "encryption"):
+        assert titles(stream, f"?q={typed}") == ["Encryption"], typed
     assert titles(stream, "?q=eveni") == ["Reading"]
+    # In the text too: "para" is the start of "paragraph".
+    assert titles(stream, "?q=second para") == ["Sync"]
+    # Not the middle or the end of a word, in a title, a text or a feed's name.
+    assert titles(stream, "?q=ncrypt") == []
+    assert titles(stream, "?q=ading") == []
+    assert titles(stream, "?q=ire") == []
+    assert titles(stream, "?q=graph") == []
+    # Every word must be there, not any one of them.
+    assert titles(stream, "?q=encryption evening") == []
 
 
 @pytest.mark.parametrize("typed", ['"unclosed', "a & | ! b", "(((", "-", ":*", "'", "%", "\\"])
