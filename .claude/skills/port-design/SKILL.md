@@ -66,6 +66,10 @@ Density: `--dn` is 1 (Compact), 1.7 (Comfortable, default) or 2.4 (Roomy). Row p
 - Screens live in their module folder (`reader/`, `account/`), start with `ScreenHeader`, and are routed in `App.tsx`. Mock state and its selectors are in `reader/store.tsx`; fixtures are generated from the handoff into `reader/fixtures.ts`.
 - Every screen gets an entry in `SCREENS` in `apps/web/e2e/screens.spec.ts` (five baselines and two axe scans) and a behaviour test for anything it lets the owner do.
 
+## Keyboard
+
+Single-key shortcuts are registered with `useKeys` from `shell/keys.ts`, which ignores keys typed in a field, behind a dialog, or with a modifier. Give it the owner's `theme.shortcuts` setting. `g`, `/` and `?` belong to the shell. Any new key must be added to `HELP` in `shell/shortcuts.ts`, and a new view to `GO`, which also feeds the command palette.
+
 ## Where the port departs from the handoff, on purpose
 
 - Rows are never faded. The handoff drops unavailable or switched-off rows to 55% opacity, which makes their text fail contrast; mute the name instead (planned rows in Connections, an off watch). Only a truly disabled control dims.
@@ -78,11 +82,12 @@ Density: `--dn` is 1 (Compact), 1.7 (Comfortable, default) or 2.4 (Roomy). Row p
 - Nothing is summarised automatically (owner's decision). Where the handoff shows an AI summary, the port shows `AskCard`: an ask field and a "Summarize this ..." suggestion.
 - The Ask scope "Open thread" is "Open item", since it also covers articles.
 - Security and settings drops "Unlock with Touch ID or Face ID" and "Hide previews in notifications" (a web app has neither), lists browsers rather than apps under Devices, and adds idle-lock timing, "Lock now" and "Change passphrase".
+- The sidebar's bottom slot, the handoff's encryption status button, is the "Commands" button; it is pinned and the navigation scrolls above it.
 - Counts are computed from the data (the sidebar's RSS count is 7, not the handoff's hard-coded 9).
 
 ## Shared components
 
-Build each once and reuse; the prototype repeats their inline styles dozens of times. AI badge, AI card, section label, ghost button, primary button, filter chip, On/Off toggle pill, nav row, table header, table row (hover, selected with 2px inset accent bar, unread weight 600), source code tag, text input, status dot, highlight mark, citation row, media thumb, section card. Added with the owner's approval: select (a native dropdown dressed like the small input, for choices too many for chips) and suggestion chip (a question the AI will be asked).
+Build each once and reuse; the prototype repeats their inline styles dozens of times. AI badge, AI card, section label, ghost button, primary button, filter chip, On/Off toggle pill, nav row, table header, table row (hover, selected with 2px inset accent bar, unread weight 600), source code tag, text input, status dot, highlight mark, citation row, media thumb, section card. Added with the owner's approval: select (a native dropdown dressed like the small input, for choices too many for chips) suggestion chip (a question the AI will be asked), modal (`ui/Modal.tsx`, every dialog uses it) and kbd (a keyboard key).
 
 ## Rules
 
