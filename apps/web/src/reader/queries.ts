@@ -47,7 +47,8 @@ function useHighlightChange<In, Out>(mutationFn: (input: In) => Promise<Out>) {
     mutationFn,
     onSuccess: () =>
       Promise.all(
-        ['highlights', 'item', 'counts'].map((key) =>
+        // The feeds too: each says how many of its articles would outlive it.
+        ['highlights', 'item', 'counts', 'feeds'].map((key) =>
           queries.invalidateQueries({ queryKey: [key] }),
         ),
       ),
@@ -77,7 +78,10 @@ export function useChangeItem() {
     mutationFn: ({ id, ...patch }: ItemPatch & { id: number }) => api.changeItem(id, patch),
     onSuccess: () =>
       Promise.all(
-        ['items', 'item', 'counts'].map((key) => queries.invalidateQueries({ queryKey: [key] })),
+        // The feeds too: each says how many of its articles would outlive it.
+        ['items', 'item', 'counts', 'feeds'].map((key) =>
+          queries.invalidateQueries({ queryKey: [key] }),
+        ),
       ),
   });
 }
