@@ -6,9 +6,7 @@ Last updated: 2026-11-14
 
 ## Now
 
-Milestone 3 in progress. Merged: the Django scaffold (#6), the account API (#8), the web app signing in against the server (#9), RSS (#10), background polling (#11), the Stream on real items (#12), feed articles readable in the thread pane (#13), rich text as blocks with images fetched through the server (#14), Hacker News with its discussions (#15), sealed storage for secrets with the AI provider keys on the server (#16), the Docker Compose install (#17), and full-text search in the Stream (#18).
-
-Open for the owner's approval: search matches marked in the open article.
+Milestone 3 in progress. Merged: the Django scaffold (#6), the account API (#8), the web app signing in against the server (#9), RSS (#10), background polling (#11), the Stream on real items (#12), feed articles readable in the thread pane (#13), rich text as blocks with images fetched through the server (#14), Hacker News with its discussions (#15), sealed storage for secrets with the AI provider keys on the server (#16), the Docker Compose install (#17), full-text search in the Stream (#18), and search matches marked in the open article (#19).
 
 Still on sample data in the browser: highlights, watches, digest, Ask, every Connections row except Hacker News, and on the AI screen the models, usage and limit (the provider keys are real).
 
@@ -99,7 +97,7 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] Saving an item (full text of feed articles)
 - [ ] Saving: comment threads, transcripts, thumbnails
 - [x] Search (Postgres full-text) in the Stream: the words typed are looked for together first, then anywhere, in titles and article text, in any form; quoted phrases, OR and exclusions as written. Replies are not searched yet.
-- [ ] Search matches shown in the open article: marked words, a tick for each down the edge, and a stepper (built; waits for the owner's approval of the design)
+- [x] Search matches shown in the open article: marked words, a tick for each down the edge, and a stepper (approved)
 - [ ] Highlights stored with their position in the text, so a short quote is not also marked inside other words
 - [ ] **Approved by owner**
 
