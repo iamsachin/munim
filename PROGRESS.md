@@ -96,7 +96,7 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [ ] Reddit (official OAuth)
 - [x] Saving an item (full text of feed articles)
 - [ ] Saving: comment threads, transcripts, thumbnails
-- [ ] Search (Postgres full-text)
+- [x] Search (Postgres full-text) in the Stream: words in titles and article text, in any form, with phrases, OR and exclusions. Replies are not searched yet.
 - [ ] Highlights stored with their position in the text, so a short quote is not also marked inside other words
 - [ ] **Approved by owner**
 
