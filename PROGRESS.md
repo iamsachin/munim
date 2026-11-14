@@ -6,7 +6,7 @@ Last updated: 2026-11-14
 
 ## Now
 
-Milestone 3 in progress. Merged: the Django scaffold (#6), the account API (#8), the web app signing in against the server (#9), RSS (#10), background polling (#11), the Stream on real items (#12), and feed articles readable in the thread pane (#13).
+Milestone 3 in progress. Merged: the Django scaffold (#6), the account API (#8), the web app signing in against the server (#9), RSS (#10), background polling (#11), the Stream on real items (#12), and feed articles readable in the thread pane (#13). Open for the owner's approval: rich text as blocks, with images fetched through the server.
 
 Still on sample data in the browser: highlights, watches, digest, Ask, connections, AI settings.
 
@@ -89,6 +89,7 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] RSS: add a feed, fetch and parse it safely, read its articles; every feed is polled every fifteen minutes
 - [ ] RSS: remove a feed from the app (only possible in the admin now; needs a design)
 - [x] RSS articles in the Stream, with unread state
+- [x] Rich text: every source's text becomes blocks on the server (headings, lists, quotes, code, links, bold and italic), with images fetched through the server and kept in the data folder
 - [ ] Hacker News
 - [ ] YouTube
 - [ ] Reddit (official OAuth)

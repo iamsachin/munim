@@ -1,16 +1,16 @@
 """The reader's API: feeds, and the items in the stream."""
 
 from datetime import datetime
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from django.db.models import Count, Q
-from django.http import HttpRequest
+from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from ninja import Field, Router, Schema, Status
 
 from account.auth import Open
-from reader import feeds
+from reader import feeds, images
 from reader.models import Feed, Item, Source
 
 router = Router(tags=["reader"], auth=Open())
@@ -64,12 +64,59 @@ class Comment(Schema):
     depth: int
 
 
+class Span(Schema):
+    """A run of text with the same look."""
+
+    text: str
+    marks: list[Literal["bold", "italic", "code"]] = []
+    # Where it links to, if it is a link.
+    href: str | None = None
+
+
+class Paragraph(Schema):
+    type: Literal["paragraph"]
+    spans: list[Span]
+
+
+class Heading(Schema):
+    type: Literal["heading"]
+    level: Literal[2, 3]
+    spans: list[Span]
+
+
+class Quote(Schema):
+    type: Literal["quote"]
+    spans: list[Span]
+
+
+class ListBlock(Schema):
+    type: Literal["list"]
+    ordered: bool
+    items: list[list[Span]]
+
+
+class Code(Schema):
+    type: Literal["code"]
+    text: str
+
+
+class Image(Schema):
+    type: Literal["image"]
+    src: str
+    alt: str
+
+
+Block = Annotated[
+    Paragraph | Heading | Quote | ListBlock | Code | Image, Field(discriminator="type")
+]
+
+
 class ItemDetail(ItemOut):
-    """An item opened: its own page's address, its text, and its replies."""
+    """An item opened: its own page's address, its text as blocks, and its replies."""
 
     # Empty if the source gave none.
     url: str
-    paragraphs: list[str]
+    blocks: list[Block]
     comments: list[Comment]
 
 
@@ -169,12 +216,40 @@ def list_items(
 @router.get("/items/{item_id}", response=ItemDetail)
 def get_item(request: HttpRequest, item_id: int) -> ItemDetail:
     item = get_object_or_404(Item.objects.select_related("feed"), pk=item_id)
-    return ItemDetail(
-        **_row(item),
-        url=item.url,
-        paragraphs=[p for p in item.body.split("\n\n") if p],
-        comments=[],
+    # Validated on the way out: what is stored was written by our own converter, and this
+    # checks that it still has the shape the app expects.
+    return ItemDetail.model_validate(
+        {**_row(item), "url": item.url, "blocks": _shown(item), "comments": []}
     )
+
+
+def _shown(item: Item) -> list[dict[str, Any]]:
+    """The item's blocks as the browser gets them: each image's address is Munim's own, so the
+    browser asks this server for it and never the publisher."""
+    blocks, images = [], 0
+    for block in item.blocks:
+        if block["type"] == "image":
+            block = {**block, "src": f"/api/items/{item.pk}/images/{images}"}
+            images += 1
+        blocks.append(block)
+    return blocks
+
+
+@router.get("/items/{item_id}/images/{index}", include_in_schema=False)
+def get_image(request: HttpRequest, item_id: int, index: int) -> HttpResponse:
+    """One of an item's images, fetched through this server and kept on disk."""
+    item = get_object_or_404(Item, pk=item_id)
+    try:
+        content, kind = images.fetch(images.source_of(item, index))
+    except images.ImageProblem as problem:
+        return HttpResponse(str(problem), status=404, content_type="text/plain")
+    response = HttpResponse(content, content_type=kind)
+    # It will not change, so the browser may keep it; but only this browser, not a shared cache.
+    response["Cache-Control"] = "private, max-age=31536000, immutable"
+    # Belt and braces: served only as the picture it claims to be, and inert if opened directly.
+    response["X-Content-Type-Options"] = "nosniff"
+    response["Content-Security-Policy"] = "default-src 'none'; sandbox"
+    return response
 
 
 @router.patch("/items/{item_id}", response=ItemOut)

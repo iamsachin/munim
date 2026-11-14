@@ -617,6 +617,15 @@
         "title": "ItemOut",
         "type": "object"
       },
+      "Code": {
+        "properties": {
+          "type": { "const": "code", "title": "Type", "type": "string" },
+          "text": { "title": "Text", "type": "string" }
+        },
+        "required": ["type", "text"],
+        "title": "Code",
+        "type": "object"
+      },
       "Comment": {
         "properties": {
           "who": { "title": "Who", "type": "string" },
@@ -628,8 +637,32 @@
         "title": "Comment",
         "type": "object"
       },
+      "Heading": {
+        "properties": {
+          "type": { "const": "heading", "title": "Type", "type": "string" },
+          "level": { "enum": [2, 3], "title": "Level", "type": "integer" },
+          "spans": {
+            "items": { "$ref": "#/components/schemas/Span" },
+            "title": "Spans",
+            "type": "array"
+          }
+        },
+        "required": ["type", "level", "spans"],
+        "title": "Heading",
+        "type": "object"
+      },
+      "Image": {
+        "properties": {
+          "type": { "const": "image", "title": "Type", "type": "string" },
+          "src": { "title": "Src", "type": "string" },
+          "alt": { "title": "Alt", "type": "string" }
+        },
+        "required": ["type", "src", "alt"],
+        "title": "Image",
+        "type": "object"
+      },
       "ItemDetail": {
-        "description": "An item opened: its own page's address, its text, and its replies.",
+        "description": "An item opened: its own page's address, its text as blocks, and its replies.",
         "properties": {
           "id": { "title": "Id", "type": "integer" },
           "source": {
@@ -657,7 +690,31 @@
             "title": "Media"
           },
           "url": { "title": "Url", "type": "string" },
-          "paragraphs": { "items": { "type": "string" }, "title": "Paragraphs", "type": "array" },
+          "blocks": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "code": "#/components/schemas/Code",
+                  "heading": "#/components/schemas/Heading",
+                  "image": "#/components/schemas/Image",
+                  "list": "#/components/schemas/ListBlock",
+                  "paragraph": "#/components/schemas/Paragraph",
+                  "quote": "#/components/schemas/Quote"
+                },
+                "propertyName": "type"
+              },
+              "oneOf": [
+                { "$ref": "#/components/schemas/Paragraph" },
+                { "$ref": "#/components/schemas/Heading" },
+                { "$ref": "#/components/schemas/Quote" },
+                { "$ref": "#/components/schemas/ListBlock" },
+                { "$ref": "#/components/schemas/Code" },
+                { "$ref": "#/components/schemas/Image" }
+              ]
+            },
+            "title": "Blocks",
+            "type": "array"
+          },
           "comments": {
             "items": { "$ref": "#/components/schemas/Comment" },
             "title": "Comments",
@@ -678,10 +735,66 @@
           "later_at",
           "media",
           "url",
-          "paragraphs",
+          "blocks",
           "comments"
         ],
         "title": "ItemDetail",
+        "type": "object"
+      },
+      "ListBlock": {
+        "properties": {
+          "type": { "const": "list", "title": "Type", "type": "string" },
+          "ordered": { "title": "Ordered", "type": "boolean" },
+          "items": {
+            "items": { "items": { "$ref": "#/components/schemas/Span" }, "type": "array" },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": ["type", "ordered", "items"],
+        "title": "ListBlock",
+        "type": "object"
+      },
+      "Paragraph": {
+        "properties": {
+          "type": { "const": "paragraph", "title": "Type", "type": "string" },
+          "spans": {
+            "items": { "$ref": "#/components/schemas/Span" },
+            "title": "Spans",
+            "type": "array"
+          }
+        },
+        "required": ["type", "spans"],
+        "title": "Paragraph",
+        "type": "object"
+      },
+      "Quote": {
+        "properties": {
+          "type": { "const": "quote", "title": "Type", "type": "string" },
+          "spans": {
+            "items": { "$ref": "#/components/schemas/Span" },
+            "title": "Spans",
+            "type": "array"
+          }
+        },
+        "required": ["type", "spans"],
+        "title": "Quote",
+        "type": "object"
+      },
+      "Span": {
+        "description": "A run of text with the same look.",
+        "properties": {
+          "text": { "title": "Text", "type": "string" },
+          "marks": {
+            "default": [],
+            "items": { "enum": ["bold", "italic", "code"], "type": "string" },
+            "title": "Marks",
+            "type": "array"
+          },
+          "href": { "anyOf": [{ "type": "string" }, { "type": "null" }], "title": "Href" }
+        },
+        "required": ["text"],
+        "title": "Span",
         "type": "object"
       },
       "ItemPatch": {

@@ -8,8 +8,8 @@ import { cx } from '../ui/cx';
 import { Input } from '../ui/Input';
 import { EmptyState, ErrorState, LoadingRows } from '../ui/States';
 import { AskCard } from './AskCard';
+import { Blocks } from './Blocks';
 import { EMPTY } from './copy';
-import { highlightable, Marked } from './Marked';
 import { age, useChangeItem, useFeeds, useItem, useItems } from './queries';
 import { useReader } from './store';
 
@@ -202,20 +202,16 @@ export function Rss() {
             {article.isError && (
               <ErrorState what="the article" onRetry={() => void article.refetch()} />
             )}
-            {article.data?.paragraphs.map((text, i) => (
-              <p
-                key={i}
-                className="max-w-[62ch] text-read leading-read text-pretty"
-                {...highlightable({ src: 'RSS', title: current.title, from: feed.title })}
-              >
-                <Marked
-                  text={text}
-                  quotes={state.highlights
-                    .filter((h) => h.title === current.title)
-                    .map((h) => h.quote)}
-                />
-              </p>
-            ))}
+            {article.data && (
+              <Blocks
+                blocks={article.data.blocks}
+                item={{ src: 'RSS', title: current.title, from: feed.title }}
+                quotes={state.highlights
+                  .filter((h) => h.title === current.title)
+                  .map((h) => h.quote)}
+                className="max-w-[62ch]"
+              />
+            )}
           </>
         ) : (
           feeds.data?.length === 0 && (

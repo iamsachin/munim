@@ -207,6 +207,8 @@ test('stream: opening an item marks it read; the default row is left alone', asy
 
 test('stream: an empty stream, a failed one, and a failed item each say so', async ({ page }) => {
   await fakeServer(page);
+  // The rows show ages, so the picture must not depend on when the test runs.
+  await page.clock.setFixedTime(NOW);
   await page.route('**/api/items?*', (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }),
   );
@@ -480,6 +482,19 @@ test('rss: choosing a feed and an article', async ({ page }) => {
     'Designing a calendar that does less',
   );
   await expect(page.getByRole('link', { name: /^RSS/ })).toHaveText(/7$/);
+
+  // The article is drawn from blocks. A link in it leaves Munim in a new tab, telling the site
+  // nothing about where the reader came from.
+  const link = page.getByRole('link', { name: 'An earlier note' });
+  await expect(link).toHaveAttribute('href', 'https://fieldnotes.example/earlier');
+  await expect(link).toHaveAttribute('target', '_blank');
+  await expect(link).toHaveAttribute('rel', 'noreferrer');
+  // An image that cannot be had says so where it would have been.
+  const missing = page.getByText('An image could not be loaded: The month view it replaces');
+  await missing.scrollIntoViewIfNeeded();
+  await expect(page).toHaveScreenshot('rss-article-end-dark.png');
+  expect(await axeFailures(page)).toEqual([]);
+
   await page.getByRole('button', { name: /^Wire Notes/ }).click();
   await expect(page.getByRole('heading', { level: 2 })).toHaveText(
     'The case for boring sync protocols',

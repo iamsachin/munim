@@ -9,7 +9,6 @@ import ipaddress
 import socket
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from html.parser import HTMLParser
 from time import struct_time
 from urllib.parse import urljoin, urlsplit
 
@@ -19,6 +18,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
+from reader.blocks import Block, from_html, text_of
 from reader.models import Feed, Item
 
 MAX_BYTES = 5_000_000
@@ -38,7 +38,7 @@ class Entry:
     guid: str
     url: str
     title: str
-    body: str
+    blocks: list[Block]
     published_at: datetime
 
 
@@ -52,6 +52,8 @@ class Parsed:
 @dataclass
 class Download:
     content: bytes
+    # The media type the server declared, without parameters, in lower case.
+    content_type: str
     etag: str
     last_modified: str
 
@@ -80,9 +82,17 @@ def check_address(url: str) -> None:
 
 
 def download(
-    url: str, etag: str = "", last_modified: str = "", *, client: httpx.Client | None = None
+    url: str,
+    etag: str = "",
+    last_modified: str = "",
+    *,
+    limit: int = MAX_BYTES,
+    what: str = "feed",
+    client: httpx.Client | None = None,
 ) -> Download | None:
-    """The feed's bytes, or None if its server says nothing has changed.
+    """The bytes at an address, or None if its server says nothing has changed.
+
+    Used for feeds and for the images in them; `what` names the thing in messages.
 
     Redirects are followed by hand, so each hop is checked like the first address.
     """
@@ -105,22 +115,24 @@ def download(
                     url = urljoin(url, response.headers["Location"])
                     continue
                 if response.status_code != 200:
-                    raise FeedProblem(f"The feed's server answered {response.status_code}.")
+                    raise FeedProblem(f"The {what}'s server answered {response.status_code}.")
                 content = b""
                 for chunk in response.iter_bytes():
                     content += chunk
-                    if len(content) > MAX_BYTES:
-                        raise FeedProblem("That feed is too large to read.")
+                    if len(content) > limit:
+                        raise FeedProblem(f"That {what} is too large to read.")
+                kind = response.headers.get("Content-Type", "").split(";")[0].strip().lower()
                 return Download(
                     content=content,
+                    content_type=kind,
                     etag=response.headers.get("ETag", "")[:300],
                     last_modified=response.headers.get("Last-Modified", "")[:100],
                 )
         raise FeedProblem("That address redirects too many times.")
     except httpx.TimeoutException:
-        raise FeedProblem("The feed's server took too long to answer.") from None
+        raise FeedProblem(f"The {what}'s server took too long to answer.") from None
     except httpx.HTTPError:
-        raise FeedProblem("The feed's server could not be reached.") from None
+        raise FeedProblem(f"The {what}'s server could not be reached.") from None
     finally:
         if own:
             client.close()
@@ -129,46 +141,9 @@ def download(
 # --- reading
 
 
-class _Text(HTMLParser):
-    """Collects the text of an HTML fragment, with a paragraph break at each block element."""
-
-    BLOCKS = frozenset(
-        "p div br li ul ol h1 h2 h3 h4 h5 h6 blockquote pre tr table section article".split()
-    )
-    SKIPPED = frozenset(["script", "style"])
-
-    def __init__(self) -> None:
-        super().__init__(convert_charrefs=True)
-        self.pieces: list[str] = []
-        self.skipping = 0
-
-    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        if tag in self.SKIPPED:
-            self.skipping += 1
-        elif tag in self.BLOCKS:
-            self.pieces.append("\n\n")
-
-    def handle_endtag(self, tag: str) -> None:
-        if tag in self.SKIPPED:
-            self.skipping = max(0, self.skipping - 1)
-        elif tag in self.BLOCKS:
-            self.pieces.append("\n\n")
-
-    def handle_data(self, data: str) -> None:
-        if not self.skipping:
-            self.pieces.append(data)
-
-
-def to_text(html: str) -> str:
-    """Plain text from HTML: tags dropped, paragraphs kept, runs of space collapsed.
-
-    Articles are stored and shown as text only, so nothing a feed sends can run in the browser.
-    """
-    parser = _Text()
-    parser.feed(html)
-    parser.close()
-    paragraphs = (" ".join(p.split()) for p in "".join(parser.pieces).split("\n\n"))
-    return "\n\n".join(p for p in paragraphs if p)
+def plain(html: str) -> str:
+    """One line of plain text from a fragment of HTML, for titles."""
+    return " ".join(text_of(from_html(html)).split())
 
 
 def _when(entry: object) -> datetime:
@@ -185,11 +160,14 @@ def parse(content: bytes) -> Parsed:
     # An empty response gives a result with no version at all, hence get().
     if not document.get("version"):
         raise FeedProblem("That address is not an RSS or Atom feed.")
+    site = str(document.feed.get("link", ""))
     entries: list[Entry] = []
     seen: set[str] = set()
     for item in document.entries[:MAX_ARTICLES]:
         url = str(item.get("link", ""))[:1000]
-        title = to_text(str(item.get("title", ""))) or "Untitled"
+        if not url.startswith(("http://", "https://")):
+            url = ""
+        title = plain(str(item.get("title", ""))) or "Untitled"
         guid = str(item.get("id") or url or title)[:1000]
         if guid in seen:
             continue
@@ -199,15 +177,15 @@ def parse(content: bytes) -> Parsed:
         entries.append(
             Entry(
                 guid=guid,
-                url=url if url.startswith(("http://", "https://")) else "",
+                url=url,
                 title=title[:500],
-                body=to_text(html),
+                # Relative links and images in the entry are relative to its own page.
+                blocks=from_html(html, url or site),
                 published_at=_when(item),
             )
         )
-    site = str(document.feed.get("link", ""))
     return Parsed(
-        title=(to_text(str(document.feed.get("title", ""))) or "Untitled feed")[:300],
+        title=(plain(str(document.feed.get("title", ""))) or "Untitled feed")[:300],
         site_url=site[:1000] if site.startswith(("http://", "https://")) else "",
         entries=entries,
     )
@@ -238,7 +216,8 @@ def store(feed: Feed, parsed: Parsed, fetched: Download) -> None:
                 defaults={
                     "url": entry.url,
                     "title": entry.title,
-                    "body": entry.body,
+                    "blocks": entry.blocks,
+                    "body": text_of(entry.blocks),
                     "published_at": entry.published_at,
                 },
             )

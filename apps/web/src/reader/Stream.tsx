@@ -11,6 +11,7 @@ import { Input } from '../ui/Input';
 import { EmptyState, ErrorState, LoadingRows } from '../ui/States';
 import { Cell, RowButton, Table, TableBody, TableHeader, TableRow, Th } from '../ui/Table';
 import { AskCard } from './AskCard';
+import { Blocks } from './Blocks';
 import { EMPTY } from './copy';
 import { highlightable, Marked } from './Marked';
 import { NO_REPLY } from './marks';
@@ -281,18 +282,13 @@ function Thread({ id, now }: { id: number; now: number }) {
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
         {/* An article is read here, in the reading size the RSS screen uses. */}
-        {it.paragraphs.length > 0 && (
-          <div className="flex flex-col gap-12 pb-12">
-            {it.paragraphs.map((text, n) => (
-              <p
-                key={n}
-                className="text-read leading-read text-pretty"
-                {...highlightable({ src: it.source, title: it.title, from: it.origin })}
-              >
-                <Marked text={text} quotes={quotes} />
-              </p>
-            ))}
-          </div>
+        {it.blocks.length > 0 && (
+          <Blocks
+            blocks={it.blocks}
+            item={{ src: it.source, title: it.title, from: it.origin }}
+            quotes={quotes}
+            className="pb-12"
+          />
         )}
         {it.comments.map((c, n) => (
           <div

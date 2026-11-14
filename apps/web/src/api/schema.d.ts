@@ -427,6 +427,16 @@ export interface components {
       /** Media */
       media: ('Video' | 'Image') | null;
     };
+    /** Code */
+    Code: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      type: 'code';
+      /** Text */
+      text: string;
+    };
     /** Comment */
     Comment: {
       /** Who */
@@ -438,9 +448,36 @@ export interface components {
       /** Depth */
       depth: number;
     };
+    /** Heading */
+    Heading: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      type: 'heading';
+      /**
+       * Level
+       * @enum {integer}
+       */
+      level: 2 | 3;
+      /** Spans */
+      spans: components['schemas']['Span'][];
+    };
+    /** Image */
+    Image: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      type: 'image';
+      /** Src */
+      src: string;
+      /** Alt */
+      alt: string;
+    };
     /**
      * ItemDetail
-     * @description An item opened: its own page's address, its text, and its replies.
+     * @description An item opened: its own page's address, its text as blocks, and its replies.
      */
     ItemDetail: {
       /** Id */
@@ -475,10 +512,64 @@ export interface components {
       media: ('Video' | 'Image') | null;
       /** Url */
       url: string;
-      /** Paragraphs */
-      paragraphs: string[];
+      /** Blocks */
+      blocks: (
+        | components['schemas']['Paragraph']
+        | components['schemas']['Heading']
+        | components['schemas']['Quote']
+        | components['schemas']['ListBlock']
+        | components['schemas']['Code']
+        | components['schemas']['Image']
+      )[];
       /** Comments */
       comments: components['schemas']['Comment'][];
+    };
+    /** ListBlock */
+    ListBlock: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      type: 'list';
+      /** Ordered */
+      ordered: boolean;
+      /** Items */
+      items: components['schemas']['Span'][][];
+    };
+    /** Paragraph */
+    Paragraph: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      type: 'paragraph';
+      /** Spans */
+      spans: components['schemas']['Span'][];
+    };
+    /** Quote */
+    Quote: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      type: 'quote';
+      /** Spans */
+      spans: components['schemas']['Span'][];
+    };
+    /**
+     * Span
+     * @description A run of text with the same look.
+     */
+    Span: {
+      /** Text */
+      text: string;
+      /**
+       * Marks
+       * @default []
+       */
+      marks: ('bold' | 'italic' | 'code')[];
+      /** Href */
+      href?: string | null;
     };
     /**
      * ItemPatch

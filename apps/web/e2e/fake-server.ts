@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import type { Page } from '@playwright/test';
 import { FAKE_ITEMS } from './fake-items';
 
@@ -12,6 +13,48 @@ export const GOOD = 'four unrelated words';
 export type State = 'setup' | 'signed_out' | 'locked' | 'open';
 
 const HOUR = 3_600_000;
+
+const SAMPLE_PNG = readFileSync(new URL('./sample.png', import.meta.url));
+
+const text = (value: string, extra: object = {}) => ({
+  text: value,
+  marks: [],
+  href: null,
+  ...extra,
+});
+const paragraph = (value: string) => ({ type: 'paragraph', spans: [text(value)] });
+
+/** The one article that shows every kind of block, so the screenshots cover them all. */
+const RICH_TITLE = 'Designing a calendar that does less';
+const richBlocks = (id: number) => [
+  {
+    type: 'paragraph',
+    spans: [
+      text('Most calendar views answer a question '),
+      text('nobody asked', { marks: ['italic'] }),
+      text(': what does the whole month look like. The question people ask is '),
+      text('what is next', { marks: ['bold'] }),
+      text(', and how long until it starts. '),
+      text('An earlier note', { href: 'https://fieldnotes.example/earlier' }),
+      text(' has the background.'),
+    ],
+  },
+  { type: 'heading', level: 2, spans: [text('What it shows')] },
+  {
+    type: 'list',
+    ordered: false,
+    items: [[text('Today, and nothing else')], [text('The next thing, with a countdown')]],
+  },
+  { type: 'image', src: `/api/items/${String(id)}/images/0`, alt: 'The one-day view' },
+  { type: 'quote', spans: [text('A calendar is a list with opinions about time.')] },
+  { type: 'heading', level: 3, spans: [text('Configuration')] },
+  {
+    type: 'paragraph',
+    spans: [text('Set '), text('view: next', { marks: ['code'] }), text(' and remove the rest:')],
+  },
+  { type: 'code', text: 'calendar:\n  view: next\n  show_month: false' },
+  { type: 'image', src: `/api/items/${String(id)}/images/1`, alt: 'The month view it replaces' },
+];
 
 /** The moment every screen test runs at, so ages and dates in screenshots never change. */
 export const NOW = Date.parse('2026-11-14T12:00:00Z');
@@ -198,6 +241,10 @@ export async function fakeServer(page: Page, start: State = 'open') {
         sources,
       });
     }
+    if (/^GET items\/\d+\/images\/0$/.test(call)) {
+      return route.fulfill({ status: 200, contentType: 'image/png', body: SAMPLE_PNG });
+    }
+    if (/^GET items\/\d+\/images\/\d+$/.test(call)) return refuse(404, 'Not Found');
     const oneItem = /^(GET|PATCH) items\/(\d+)$/.exec(call);
     if (oneItem) {
       const item = items.find((candidate) => candidate.id === Number(oneItem[2]));
@@ -216,7 +263,7 @@ export async function fakeServer(page: Page, start: State = 'open') {
       return reply(200, {
         ...row(item),
         url: `https://example.com/items/${String(item.id)}`,
-        paragraphs: item.paragraphs,
+        blocks: item.title === RICH_TITLE ? richBlocks(item.id) : item.paragraphs.map(paragraph),
         comments: item.comments,
       });
     }

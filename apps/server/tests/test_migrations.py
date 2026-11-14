@@ -35,5 +35,15 @@ def test_articles_stored_before_the_rename_are_still_there_as_items() -> None:
     # What is new starts in the only state that is true of an article nobody has opened.
     assert (item.source, item.read_at, item.saved_at, item.later_at) == ("RSS", None, None, None)
 
+    # The next migration gives the stored text its blocks: one paragraph each.
+    executor = MigrationExecutor(connection)
+    executor.migrate([("reader", "0003_blocks")])
+    newer = executor.loader.project_state([("reader", "0003_blocks")]).apps
+    (item,) = newer.get_model("reader", "Item").objects.all()
+    assert item.blocks == [
+        {"type": "paragraph", "spans": [{"text": "I started the year with 130 feeds."}]}
+    ]
+    assert item.body == "I started the year with 130 feeds."
+
     # Leave the database as every other test expects it: fully migrated.
     MigrationExecutor(connection).migrate(MigrationExecutor(connection).loader.graph.leaf_nodes())

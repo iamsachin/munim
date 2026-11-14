@@ -99,6 +99,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Finished jobs are deleted, so the queue's tables hold only what is waiting or has failed.
 PROCRASTINATE_WORKER_DEFAULTS = {"delete_jobs": "successful"}
 
+# Where Munim keeps files: fetched images now, the master key later. One folder to back up.
+DATA_DIR = Path(env("DATA_DIR", str(BASE_DIR / "data")))
+
 # Feeds on private networks (a service on the same LAN, say) are refused unless this is set,
 # because a feed address can also be used to make the server reach things only it can reach.
 ALLOW_PRIVATE_FEEDS = env("ALLOW_PRIVATE_FEEDS", "0") == "1"
