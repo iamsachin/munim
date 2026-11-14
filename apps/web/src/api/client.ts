@@ -88,7 +88,9 @@ export const api = {
     const search = new URLSearchParams(wanted.map(([key, value]) => [key, String(value)]));
     return call<Item[]>('GET', `items?${search.toString()}`);
   },
-  item: (id: number) => call<ItemDetail>('GET', `items/${String(id)}`),
+  /** One item. `q` is the search it was opened from, so the server can say what matched. */
+  item: (id: number, q = '') =>
+    call<ItemDetail>('GET', `items/${String(id)}${q && `?q=${encodeURIComponent(q)}`}`),
   changeItem: (id: number, patch: ItemPatch) => call<Item>('PATCH', `items/${String(id)}`, patch),
   counts: () => call<Counts>('GET', 'counts'),
   aiKeys: () => call<AiKey[]>('GET', 'ai/keys'),

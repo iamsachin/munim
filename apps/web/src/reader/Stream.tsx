@@ -1,4 +1,11 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import {
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+  type CSSProperties,
+  type RefObject,
+} from 'react';
 import { Navigate, useParams } from 'react-router';
 import { useTheme } from '../settings';
 import { focusId, useKeys } from '../shell/keys';
@@ -204,7 +211,7 @@ export function Stream() {
       </main>
 
       {current ? (
-        <Thread key={current.id} id={current.id} now={now} />
+        <Thread key={current.id} id={current.id} now={now} q={query.trim()} />
       ) : (
         <aside aria-label="Thread" className="border-l border-line bg-panel" />
       )}
@@ -226,10 +233,75 @@ export function Stream() {
   );
 }
 
+/**
+ * The words a search matched in the open item: how many, where each is down the text (0 at the
+ * top, 1 at the bottom), which one the owner is at, and a way to go to another. They are found
+ * in the page itself, by the mark each one is drawn with.
+ */
+function useFoundMarks(
+  scroller: RefObject<HTMLDivElement | null>,
+  text: RefObject<HTMLDivElement | null>,
+  key: string,
+) {
+  const [tops, setTops] = useState<readonly number[]>([]);
+  const [at, setAt] = useState(0);
+  const marks = () => [...(text.current?.querySelectorAll<HTMLElement>('mark[data-found]') ?? [])];
+  const place = (mark: HTMLElement, within: HTMLElement) =>
+    mark.getBoundingClientRect().top - within.getBoundingClientRect().top + within.scrollTop;
+
+  const go = (to: number) => {
+    const all = marks();
+    const within = scroller.current;
+    if (!within || all.length === 0) return;
+    const index = (to + all.length) % all.length;
+    all.forEach((mark, n) => mark.toggleAttribute('data-current', n === index));
+    const mark = all[index];
+    // A third of the way down, so what leads up to the match can be read too.
+    if (mark) within.scrollTo({ top: place(mark, within) - within.clientHeight / 3 });
+    setAt(index);
+  };
+  const measure = () => {
+    const within = scroller.current;
+    if (within) setTops(marks().map((mark) => place(mark, within) / within.scrollHeight));
+  };
+  const onChange = useEffectEvent(() => {
+    measure();
+    go(0);
+  });
+  const onResize = useEffectEvent(measure);
+
+  useEffect(() => {
+    // After the marks are drawn: the first match is brought into view.
+    const frame = requestAnimationFrame(onChange);
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, [key, scroller, text]);
+  useEffect(() => {
+    // An image arriving, or the window changing size, moves every match.
+    const watcher = new ResizeObserver(onResize);
+    if (scroller.current) watcher.observe(scroller.current);
+    if (text.current) watcher.observe(text.current);
+    return () => {
+      watcher.disconnect();
+    };
+  }, [key, scroller, text]);
+
+  return { count: tops.length, tops, at, go };
+}
+
 /** The open item: a question field, its text and replies, and where to go next. Keyed by item. */
-function Thread({ id, now }: { id: number; now: number }) {
+function Thread({ id, now, q }: { id: number; now: number; q: string }) {
   const { state } = useReader();
-  const item = useItem(id);
+  const item = useItem(id, q);
+  const scroller = useRef<HTMLDivElement>(null);
+  const text = useRef<HTMLDivElement>(null);
+  // Counted again whenever the text or what was searched for changes.
+  const matches = useFoundMarks(
+    scroller,
+    text,
+    `${String(id)} ${JSON.stringify(item.data?.found)}`,
+  );
   const change = useChangeItem();
   const frame = 'flex min-h-0 min-w-0 flex-col gap-12 border-l border-line bg-panel p-14';
 
@@ -279,34 +351,85 @@ function Thread({ id, now }: { id: number; now: number }) {
 
       <AskCard what={isArticle ? 'article' : 'thread'} />
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-        {/* An article is read here, in the reading size the RSS screen uses. */}
-        {it.blocks.length > 0 && (
-          <Blocks
-            blocks={it.blocks}
-            item={{ src: it.source, title: it.title, from: it.origin }}
-            quotes={quotes}
-            className="pb-12"
-          />
-        )}
-        {it.comments.map((c, n) => (
-          <div
-            key={n}
-            style={{ '--depth': c.depth } as CSSProperties}
-            className="thread-indent border-b border-l border-b-rule border-l-line py-dn-4 pl-10"
+      {matches.count > 0 && (
+        <div className="flex items-center gap-6 font-mono text-meta text-mute">
+          <span role="status">
+            Match {matches.at + 1} of {matches.count}
+          </span>
+          <Button
+            className="ml-auto font-sans"
+            aria-label="Previous match"
+            onClick={() => {
+              matches.go(matches.at - 1);
+            }}
           >
-            <span className="font-semibold">{c.who}</span>{' '}
-            <span className="font-mono text-code text-mute">{c.meta}</span>
-            <Blocks
-              compact
-              blocks={c.blocks}
-              item={{ src: it.source, title: it.title, from: it.origin }}
-              quotes={quotes}
-            />
+            ↑
+          </Button>
+          <Button
+            className="font-sans"
+            aria-label="Next match"
+            onClick={() => {
+              matches.go(matches.at + 1);
+            }}
+          >
+            ↓
+          </Button>
+        </div>
+      )}
+
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
+          <div ref={text} className="flex flex-col">
+            {/* An article is read here, in the reading size the RSS screen uses. */}
+            {it.blocks.length > 0 && (
+              <Blocks
+                blocks={it.blocks}
+                item={{ src: it.source, title: it.title, from: it.origin }}
+                quotes={quotes}
+                found={it.found}
+                className="pb-12"
+              />
+            )}
+            {it.comments.map((c, n) => (
+              <div
+                key={n}
+                style={{ '--depth': c.depth } as CSSProperties}
+                className="thread-indent border-b border-l border-b-rule border-l-line py-dn-4 pl-10"
+              >
+                <span className="font-semibold">{c.who}</span>{' '}
+                <span className="font-mono text-code text-mute">{c.meta}</span>
+                <Blocks
+                  compact
+                  blocks={c.blocks}
+                  item={{ src: it.source, title: it.title, from: it.origin }}
+                  quotes={quotes}
+                />
+              </div>
+            ))}
+            {/* A feed article has no replies to wait for, so it does not say "none yet". */}
+            {it.comments.length === 0 && !isArticle && (
+              <EmptyState compact>{EMPTY.replies}</EmptyState>
+            )}
           </div>
-        ))}
-        {/* A feed article has no replies to wait for, so it does not say "none yet". */}
-        {it.comments.length === 0 && !isArticle && <EmptyState compact>{EMPTY.replies}</EmptyState>}
+        </div>
+        {/* Where the matches are, down the edge of the text. For the pointer: the keyboard has
+            the two buttons above. It sits in the pane's own margin, so the text does not move. */}
+        {matches.count > 0 && (
+          <div aria-hidden="true" className="absolute inset-y-0 -right-12 w-8">
+            {matches.tops.map((top, n) => (
+              <button
+                key={n}
+                type="button"
+                tabIndex={-1}
+                style={{ '--at': top } as CSSProperties}
+                className="found-tick absolute h-3 w-8 cursor-pointer rounded-pill bg-a2"
+                onClick={() => {
+                  matches.go(n);
+                }}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-8">

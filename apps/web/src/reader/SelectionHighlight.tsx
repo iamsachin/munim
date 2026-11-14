@@ -26,7 +26,7 @@ export function SelectionHighlight() {
     const within = node instanceof Element ? node : node?.parentElement;
     // The whole selection must sit inside one highlightable element, and not inside text that is
     // already highlighted: that would store a second, redundant highlight.
-    const home = within?.closest('mark')
+    const home = within?.closest('mark:not([data-found])')
       ? null
       : within?.closest<HTMLElement>('[data-highlight-title]');
     const { highlightSrc: src, highlightTitle: title, highlightFrom: from } = home?.dataset ?? {};

@@ -276,7 +276,11 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Get Item */
+    /**
+     * Get Item
+     * @description One item. With `q`, the search it was opened from, it also says which of its words
+     *     matched, so they can be marked where they are.
+     */
     get: operations['reader_api_get_item'];
     put?: never;
     post?: never;
@@ -590,6 +594,8 @@ export interface components {
       )[];
       /** Comments */
       comments: components['schemas']['Comment'][];
+      /** Found */
+      found: string[][];
     };
     /** ListBlock */
     ListBlock: {
@@ -1160,7 +1166,9 @@ export interface operations {
   };
   reader_api_get_item: {
     parameters: {
-      query?: never;
+      query?: {
+        q?: string;
+      };
       header?: never;
       path: {
         item_id: number;

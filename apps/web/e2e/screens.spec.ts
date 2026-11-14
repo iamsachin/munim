@@ -304,6 +304,56 @@ test('saved: an item saved in the stream is listed first, an unsaved one is not 
   await expect(saved.getByRole('row').nth(1)).toContainText('Full text');
 });
 
+test('stream: an article opened from a search shows where the search matched', async ({ page }) => {
+  await open(page, '/stream');
+  await page.getByPlaceholder('Search the stream').fill('calendar');
+  await expect(rows(page)).toHaveCount(2);
+  const pane = page.getByRole('complementary', { name: 'Thread' });
+  await expect(pane.getByRole('heading', { level: 2 })).toHaveText(
+    'Designing a calendar that does less',
+  );
+
+  // Every "calendar" in the text is marked, the first is in view, and each has a tick.
+  const marks = pane.locator('mark[data-found]');
+  await expect(marks).toHaveCount(2);
+  await expect(marks.first()).toBeInViewport();
+  await expect(pane.getByRole('status')).toHaveText('Match 1 of 2');
+  await expect(pane.locator('.found-tick')).toHaveCount(2);
+  await expect(page).toHaveScreenshot('stream-found-dark.png');
+  expect(await axeFailures(page)).toEqual([]);
+
+  // The buttons step through them, round and round; a tick goes straight to its match.
+  await pane.getByRole('button', { name: 'Next match' }).click();
+  await expect(pane.getByRole('status')).toHaveText('Match 2 of 2');
+  await expect(marks.nth(1)).toBeInViewport();
+  await pane.getByRole('button', { name: 'Next match' }).click();
+  await expect(pane.getByRole('status')).toHaveText('Match 1 of 2');
+  await pane.locator('.found-tick').nth(1).click();
+  await expect(pane.getByRole('status')).toHaveText('Match 2 of 2');
+  await pane.getByRole('button', { name: 'Previous match' }).click();
+  await expect(pane.getByRole('status')).toHaveText('Match 1 of 2');
+
+  // Words searched for together are marked only where they are together.
+  await page.getByPlaceholder('Search the stream').fill('a calendar');
+  await expect(marks).toHaveCount(1);
+  await expect(marks).toHaveText('A calendar');
+  await expect(pane.getByRole('status')).toHaveText('Match 1 of 1');
+
+  // With the search cleared, nothing is marked and the stepper is gone.
+  await page.getByPlaceholder('Search the stream').fill('');
+  await expect(marks).toHaveCount(0);
+  await expect(pane.getByRole('status')).toHaveCount(0);
+});
+
+test('stream: match marks hold their contrast in the light theme', async ({ page }) => {
+  await open(page, '/stream', 'Light');
+  await page.getByPlaceholder('Search the stream').fill('calendar');
+  const pane = page.getByRole('complementary', { name: 'Thread' });
+  await expect(pane.locator('mark[data-found]')).toHaveCount(2);
+  await expect(page).toHaveScreenshot('stream-found-light.png');
+  expect(await axeFailures(page)).toEqual([]);
+});
+
 test('media preview opens from a thumbnail, closes on Escape, and can open the thread', async ({
   page,
 }) => {

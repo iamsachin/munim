@@ -23,11 +23,13 @@ export const useItems = (query: ItemQuery = {}, enabled = true) =>
   });
 
 /** One item opened: its text, replies and address. Not asked for until there is an id. */
-export const useItem = (id: number | undefined) =>
+export const useItem = (id: number | undefined, q = '') =>
   useQuery({
-    queryKey: ['item', id],
-    queryFn: () => api.item(id ?? 0),
+    queryKey: ['item', id, q],
+    queryFn: () => api.item(id ?? 0, q),
     enabled: id !== undefined,
+    // While the search that opened it is still being typed, the same item stays on screen.
+    placeholderData: (previous, was) => (was?.queryKey[1] === id ? previous : undefined),
   });
 
 /** The numbers beside the sidebar's rows. */

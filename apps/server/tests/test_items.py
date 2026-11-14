@@ -111,6 +111,33 @@ def test_words_typed_together_are_looked_for_together_first(stream: Client) -> N
     assert titles(stream, "?q=wire") == ["Radio", "Sync", "Reading"]
 
 
+def test_an_item_opened_from_a_search_says_which_of_its_words_matched(stream: Client) -> None:
+    item = Item.objects.create(
+        feed=Feed.objects.first(),
+        guid="pipelines",
+        title="Pipelines",
+        body="The movements of data between systems. Databases move too.",
+        published_at=BASE,
+    )
+
+    def found(typed: str) -> Any:
+        return stream.get(f"/api/items/{item.pk}", {"q": typed}).json()["found"]
+
+    # One list per word searched for, in order: the forms it takes in this article. The last
+    # word may be unfinished, so it also stands for words it starts.
+    assert found("movement of data") == [["movements"], ["of"], ["data", "databases"]]
+    assert found("movement of da") == [["movements"], ["of"], ["data", "databases"]]
+    assert found("PIPELINE") == [["pipelines"]]
+    # A written query means what it says: whole words, and nothing for what is excluded.
+    assert found('"movement of data"') == [["movements"], ["of"], ["data"]]
+    assert found("data -systems") == [["data"]]
+    assert found("systems or nothing") == [["systems"], []]
+    # No search, no words.
+    assert found("") == []
+    assert found("(((") == []
+    assert stream.get(f"/api/items/{item.pk}").json()["found"] == []
+
+
 def test_search_takes_phrases_alternatives_and_exclusions(stream: Client) -> None:
     assert titles(stream, '?q="second paragraph"') == ["Sync"]
     assert titles(stream, '?q="second first"') == []
