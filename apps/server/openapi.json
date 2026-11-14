@@ -334,7 +334,7 @@
             }
           }
         },
-        "description": "Fetches the feed first; it is only added if it can be read.",
+        "description": "Fetches the feed first; it is only added if it can be read. The worker keeps it fresh.",
         "tags": ["reader"],
         "requestBody": {
           "content": {
@@ -342,31 +342,6 @@
           },
           "required": true
         },
-        "security": [{ "Open": [] }]
-      }
-    },
-    "/api/feeds/{feed_id}/refresh": {
-      "post": {
-        "operationId": "reader_api_refresh_feed",
-        "summary": "Refresh Feed",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "feed_id",
-            "schema": { "title": "Feed Id", "type": "integer" },
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/FeedOut" } }
-            }
-          }
-        },
-        "description": "Fetches the feed again. If that fails, the reason is in `problem`.",
-        "tags": ["reader"],
         "security": [{ "Open": [] }]
       }
     },

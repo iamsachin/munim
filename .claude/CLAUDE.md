@@ -40,7 +40,7 @@ The quality bar is the point of this project. Prefer a smaller thing finished pr
 | Distribution | Docker Compose: app container plus Postgres. `docker compose up` is the whole install. |
 | Licence | AGPL-3.0. |
 
-Tooling, confirmed by the owner: uv for Python dependencies (its lockfile is committed); Docker Postgres for development and tests. Chosen by Claude and still open to change: ruff, mypy in strict mode with django-stubs, and pytest with pytest-django, matching the owner's duhview project; for the Postgres job queue, Django's own tasks framework if its database backend is ready, otherwise Procrastinate's Django integration (check both before adopting one); `openapi-typescript` to generate the front end's types; the page polls for new items at first, server-sent events later if polling proves too slow; Vitest and Playwright on the front end.
+Tooling, confirmed by the owner: uv for Python dependencies (its lockfile is committed); Docker Postgres for development and tests. Chosen by Claude and still open to change: ruff, mypy in strict mode with django-stubs, and pytest with pytest-django, matching the owner's duhview project; Procrastinate as the Postgres job queue (Django 6.1 ships no database-backed runner and no scheduling; checked 2026-11-14); `openapi-typescript` to generate the front end's types; the page polls for new items at first, server-sent events later if polling proves too slow; Vitest and Playwright on the front end.
 
 Version pins with a reason: TypeScript stays on 6.0 until typescript-eslint supports 7. ESLint is 10 with a peer allowance for eslint-plugin-jsx-a11y in `pnpm-workspace.yaml`.
 
@@ -81,7 +81,7 @@ A piece of work is done only when all of these pass, and the result has been loo
 ## Commands
 
 - `pnpm db`: start the development Postgres (Docker, port 5433) and wait until it is healthy. Everything below needs it.
-- `pnpm dev`: the web app at http://localhost:5173 and the Django server at http://localhost:8000, together. The web app proxies `/api` and `/admin` to the server and shows "Munim is not answering" without it. The design-system gallery is at `/gallery`; API docs at `/api/docs`.
+- `pnpm dev`: the web app at http://localhost:5173, the Django server at http://localhost:8000 and the job worker, together. The web app proxies `/api` and `/admin` to the server and shows "Munim is not answering" without it. The design-system gallery is at `/gallery`; API docs at `/api/docs`.
 - `pnpm dev:web`, `pnpm dev:server`: either one on its own.
 - `pnpm gen:api`: regenerate `apps/server/openapi.json` and the web app's types (`apps/web/src/api/schema.d.ts`) from the server's code. Run it after changing any endpoint or schema; `pnpm check` fails if they are stale.
 - `pnpm check`: for the web app, types, lint, format, unit tests, then a production build with Playwright visual regression and axe; for the server, mypy, ruff and pytest; and that the generated API types are current. Playwright also starts the real server on its own database (`munim_e2e`) for `real-server.spec.ts`.
@@ -105,6 +105,7 @@ Baselines are recorded on macOS Chromium and are platform-specific; other platfo
 - Every migration must be safe to run on a stranger's existing data.
 - Anything the server fetches because of an address someone typed (feeds now, more sources later) goes through `download()` in `reader/feeds.py` or the same checks: http(s) only, private networks refused at every redirect, size and time capped. `MUNIM_ALLOW_PRIVATE_FEEDS=1` is the only way round it.
 - Content from outside is stored and shown as plain text. Nothing a feed sends is rendered as HTML.
+- Background work is a Procrastinate task in the app's `tasks.py`, run by the worker (`manage.py procrastinate worker`). A scheduled task takes both a `queueing_lock` and a `lock`, so missed runs do not pile up and runs never overlap. Reading the API never fetches from the outside world; only tasks and the add-a-feed call do.
 - Server data in the web app is read with TanStack Query (`apps/web/src/api/queries.tsx`); each screen shows `LoadingRows`, `ErrorState` and `EmptyState` for its own reads.
 - An install reached through a reverse proxy must list its public address in `MUNIM_TRUSTED_ORIGINS`, or Django refuses its calls as cross-site.
 - Everything an install can change is a `MUNIM_*` environment variable read through `env()` in `munim/settings.py`. A secret has no default outside development mode (`MUNIM_DEBUG=1`): the server must fail to start rather than run on a guessable value.

@@ -240,29 +240,9 @@ export interface paths {
     put?: never;
     /**
      * Add Feed
-     * @description Fetches the feed first; it is only added if it can be read.
+     * @description Fetches the feed first; it is only added if it can be read. The worker keeps it fresh.
      */
     post: operations['reader_api_add_feed'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/feeds/{feed_id}/refresh': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Refresh Feed
-     * @description Fetches the feed again. If that fails, the reason is in `problem`.
-     */
-    post: operations['reader_api_refresh_feed'];
     delete?: never;
     options?: never;
     head?: never;
@@ -817,28 +797,6 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['Error'];
-        };
-      };
-    };
-  };
-  reader_api_refresh_feed: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        feed_id: number;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['FeedOut'];
         };
       };
     };

@@ -7,11 +7,13 @@ import httpx
 import pytest
 from django.test import Client
 from django.utils import timezone
+from procrastinate.contrib.django import app
 
 from reader import feeds
-from reader.models import Article, Feed
+from reader.models import Feed
+from reader.tasks import poll_feeds
 
-from .conftest import post
+from .conftest import PASSPHRASE, post
 
 RSS = b"""<?xml version="1.0"?>
 <rss version="2.0"><channel>
@@ -238,7 +240,7 @@ def test_a_feed_is_added_only_once_and_only_if_it_can_be_read(
     assert Feed.objects.count() == 1
 
 
-def test_refreshing_adds_new_entries_and_updates_old_ones_without_duplicates(
+def test_polling_adds_new_entries_and_updates_old_ones_without_duplicates(
     owner_client: Client, web: Any
 ) -> None:
     web(ok(RSS, ETag='"v1"'))
@@ -257,10 +259,12 @@ def test_refreshing_adds_new_entries_and_updates_old_ones_without_duplicates(
         return httpx.Response(200, content=changed)
 
     web(handler)
-    refreshed = post(owner_client, f"feeds/{feed['id']}/refresh").json()
-    assert refreshed["articles"] == 3
+    poll_feeds(timestamp=0)
+
+    # The feed's server was told what we already have, so it can answer "nothing new".
     assert seen == ['"v1"']
-    titles = list(Article.objects.values_list("title", flat=True))
+    assert owner_client.get("/api/feeds").json()[0]["articles"] == 3
+    titles = [a["title"] for a in owner_client.get(f"/api/feeds/{feed['id']}/articles").json()]
     assert titles == ["New today", "A year of running my own feed reader", "Reading at night"]
 
 
@@ -268,38 +272,88 @@ def test_a_feed_that_says_nothing_changed_or_fails_keeps_its_articles(
     owner_client: Client, web: Any
 ) -> None:
     web(ok(RSS))
-    feed = post(owner_client, "feeds", {"url": "https://lowtech.example/feed"}).json()
+    post(owner_client, "feeds", {"url": "https://lowtech.example/feed"})
 
     web(lambda request: httpx.Response(304))
-    assert post(owner_client, f"feeds/{feed['id']}/refresh").json()["problem"] == ""
+    poll_feeds(timestamp=0)
+    assert owner_client.get("/api/feeds").json()[0]["problem"] == ""
 
     web(lambda request: httpx.Response(500))
-    failed = post(owner_client, f"feeds/{feed['id']}/refresh").json()
+    poll_feeds(timestamp=0)
+    (failed,) = owner_client.get("/api/feeds").json()
     assert failed["problem"] == "The feed's server answered 500."
     assert failed["articles"] == 2
-    assert owner_client.get("/api/feeds").json()[0]["problem"] == "The feed's server answered 500."
+
+    # It recovers by itself once the feed's server does.
+    web(ok(RSS))
+    poll_feeds(timestamp=0)
+    assert owner_client.get("/api/feeds").json()[0]["problem"] == ""
 
 
-def test_opening_a_feed_fetches_it_again_only_if_the_last_fetch_is_old(
+def test_one_failing_feed_does_not_stop_the_others_being_polled(
     owner_client: Client, web: Any
 ) -> None:
     web(ok(RSS))
+    post(owner_client, "feeds", {"url": "https://a.example/feed"})
+    web(ok(ATOM))
+    post(owner_client, "feeds", {"url": "https://b.example/feed"})
+    polled = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        polled.append(request.url.host)
+        if request.url.host == "a.example":
+            raise httpx.ConnectError("down")
+        return httpx.Response(304)
+
+    web(handler)
+    poll_feeds(timestamp=0)
+    assert sorted(polled) == ["a.example", "b.example"]
+    problems = {f["url"]: f["problem"] for f in owner_client.get("/api/feeds").json()}
+    assert problems == {
+        "https://a.example/feed": "The feed's server could not be reached.",
+        "https://b.example/feed": "",
+    }
+
+
+def test_reading_articles_does_not_fetch_anything(owner_client: Client, web: Any) -> None:
+    web(ok(RSS))
     feed = post(owner_client, "feeds", {"url": "https://lowtech.example/feed"}).json()
-    calls = []
+    Feed.objects.update(fetched_at=timezone.now() - timedelta(days=3))
+    calls: list[int] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
         calls.append(1)
         return httpx.Response(304)
 
     web(handler)
-    owner_client.get(f"/api/feeds/{feed['id']}/articles")
+    assert len(owner_client.get(f"/api/feeds/{feed['id']}/articles").json()) == 2
     assert calls == []
 
-    Feed.objects.update(fetched_at=timezone.now() - timedelta(minutes=16))
-    assert len(owner_client.get(f"/api/feeds/{feed['id']}/articles").json()) == 2
-    assert calls == [1]
-    owner_client.get(f"/api/feeds/{feed['id']}/articles")
-    assert calls == [1]
+
+def test_the_poll_is_scheduled_every_fifteen_minutes() -> None:
+    scheduled = {
+        periodic.task.name: periodic.cron
+        for periodic in app.periodic_registry.periodic_tasks.values()
+    }
+    assert scheduled == {"reader.tasks.poll_feeds": "*/15 * * * *"}
+
+
+@pytest.mark.django_db(transaction=True)
+def test_a_queued_poll_is_run_by_the_worker(client: Client, web: Any) -> None:
+    """The whole path: a job row in Postgres, picked up and run by a real worker."""
+    post(client, "setup", {"passphrase": PASSPHRASE})
+    web(ok(RSS))
+    post(client, "feeds", {"url": "https://lowtech.example/feed"})
+    web(lambda request: httpx.Response(500))
+
+    # Two things the library's types do not describe: the timestamp a scheduled job is given,
+    # and the worker's own connection, which Django's command sets up the same way.
+    poll_feeds.defer(timestamp=0)  # type: ignore[call-arg]
+    worker = app.connector.get_worker_connector()  # type: ignore[attr-defined]
+    with app.replace_connector(worker) as worker_app:
+        worker_app.run_worker(wait=False, install_signal_handlers=False, listen_notify=False)
+
+    assert client.get("/api/feeds").json()[0]["problem"] == "The feed's server answered 500."
 
 
 def test_feeds_need_an_open_session(owner_client: Client, web: Any) -> None:
