@@ -7,8 +7,9 @@ export function Highlights() {
   return (
     <main className="flex min-h-0 flex-1 flex-col">
       <ScreenHeader title="Highlights">
+        {/* The handoff's hint here ("Select text in any article...") returns when that is built. */}
         <span className="text-note text-mute">
-          Select text in any article, post or comment to highlight it.
+          Highlighting by selecting text is not built yet.
         </span>
       </ScreenHeader>
       <div className="flex min-h-0 flex-1 flex-col gap-10 overflow-y-auto p-16">

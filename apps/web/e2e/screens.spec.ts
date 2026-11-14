@@ -68,9 +68,37 @@ test('sidebar navigates and marks the current view', async ({ page }) => {
   await expect(page).toHaveTitle('Saved · Munim');
 });
 
-test('an unknown address goes to Today', async ({ page }) => {
+test('an unknown address, or an unknown stream source, goes to Today', async ({ page }) => {
   await open(page, '/no-such-page');
   await expect(page).toHaveURL(/\/today$/);
+  await page.goto('/stream/mastodon');
+  await expect(page).toHaveURL(/\/today$/);
+});
+
+test('a source stream opens a thread from that source, not the last one selected', async ({
+  page,
+}) => {
+  await open(page, '/stream');
+  const thread = page.getByRole('complementary', { name: 'Thread' });
+  await expect(thread.getByRole('heading')).toHaveText(/^What finally got you/); // Reddit
+  await page.getByRole('link', { name: /^Hacker News/ }).click();
+  await expect(thread.getByRole('heading')).toHaveText(/^Show HN/);
+  await expect(rows(page).filter({ hasText: 'Show HN' })).toHaveAttribute('aria-current', 'true');
+  // Going back to the whole stream restores the owner's own selection.
+  await page.getByRole('link', { name: /^Stream/ }).click();
+  await expect(thread.getByRole('heading')).toHaveText(/^What finally got you/);
+});
+
+test('an item already in the read-later queue shows as queued and is not added twice', async ({
+  page,
+}) => {
+  await open(page, '/stream');
+  await page.getByRole('button', { name: /^Notes on end-to-end encryption/ }).click();
+  const queued = page.getByRole('button', { name: 'Queued' });
+  await expect(queued).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('link', { name: /^Read later/ })).toHaveText(/6$/);
+  await queued.click();
+  await expect(page.getByRole('link', { name: /^Read later/ })).toHaveText(/5$/);
 });
 
 test('stream: source, filter and search narrow the list', async ({ page }) => {

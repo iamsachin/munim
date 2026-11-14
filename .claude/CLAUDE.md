@@ -84,7 +84,8 @@ Baselines are recorded on macOS Chromium and are platform-specific; other platfo
 
 - Work on a feature branch. Commit each finished piece yourself once the gates pass. Small conventional commits.
 - Never merge to `main` or push unless asked.
-- Pull requests are reviewed by duhview (`.github/workflows/duhview.yml`, settings in `.duhview/`). It reads its settings from the base branch. Fix or answer its findings before asking for a merge.
+- Pull requests are reviewed by duhview (`.github/workflows/duhview.yml`, settings in `.duhview/`). It reads its settings from the base branch. Fix or answer its findings before asking for a merge. Each push re-runs it and costs up to the budget in `.duhview/config.yaml`, so batch fixes into one push.
+- The Playwright gate runs a production build. Anything that behaves differently in development (React StrictMode runs effects twice) must also be tried against `pnpm dev`.
 
 ## Engineering rules
 

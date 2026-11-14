@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { useState, type CSSProperties } from 'react';
+import { Navigate, useNavigate, useParams } from 'react-router';
 import { ScreenHeader } from '../shell/ScreenHeader';
 import { AiBadge, MediaThumb, SaveDot, SourceTag, SOURCES, type Source } from '../ui/atoms';
 import { Button } from '../ui/Button';
@@ -10,24 +10,29 @@ import { Input } from '../ui/Input';
 import { Cell, RowButton, Table, TableBody, TableHeader, TableRow, Th } from '../ui/Table';
 import { ITEMS } from './fixtures';
 import { MediaPreview } from './MediaPreview';
-import { ask, itemAt, toggled, useReader } from './store';
+import { ask, itemAt, laterRowFor, toggled, useReader, withoutLater } from './store';
 
 const COLS = 'grid-cols-[34px_minmax(0,1fr)_40px_30px_16px]';
 const FILTERS = ['All', 'Unread', 'Saved', 'Video'] as const;
 type Filter = (typeof FILTERS)[number];
 
-/** The `:source` URL segment as a source code, or undefined for the whole stream or an unknown value. */
-function sourceFrom(param: string | undefined): Source | undefined {
-  const code = param?.toUpperCase();
-  return code !== undefined && Object.hasOwn(SOURCES, code) ? (code as Source) : undefined;
-}
+const isSource = (code: string): code is Source => Object.hasOwn(SOURCES, code);
 
 export function Stream() {
   const { state, update } = useReader();
-  const source = sourceFrom(useParams().source);
+  const param = useParams().source?.toUpperCase();
   const [filter, setFilter] = useState<Filter>('All');
   const [query, setQuery] = useState('');
   const [zoom, setZoom] = useState<number | null>(null);
+
+  // An address like /stream/mastodon names no source we have.
+  if (param !== undefined && !isSource(param)) return <Navigate to="/today" replace />;
+  const source = param;
+
+  // The open thread must belong to the stream being shown: if the selected item is from another
+  // source, show this source's first item instead.
+  const first = source ? ITEMS.findIndex((item) => item.src === source) : -1;
+  const current = first >= 0 && itemAt(state.selected).src !== source ? first : state.selected;
 
   const q = query.trim().toLowerCase();
   const rows = ITEMS.map((item, i) => ({ item, i })).filter(
@@ -84,7 +89,7 @@ export function Stream() {
               return (
                 <TableRow
                   key={i}
-                  selected={i === state.selected}
+                  selected={i === current}
                   className={cx(COLS, 'min-h-44 items-center')}
                 >
                   <Cell>
@@ -133,7 +138,7 @@ export function Stream() {
         </Table>
       </main>
 
-      <Thread key={state.selected} />
+      <Thread key={current} index={current} />
 
       {zoom !== null && (
         <MediaPreview
@@ -152,16 +157,15 @@ export function Stream() {
 }
 
 /** The selected item: summary, a question field, replies and the reply box. Keyed by item, so drafts reset. */
-function Thread() {
+function Thread({ index: i }: { index: number }) {
   const { state, update } = useReader();
   const navigate = useNavigate();
   const [question, setQuestion] = useState('');
   const [draft, setDraft] = useState('');
 
-  const i = state.selected;
   const item = itemAt(i);
   const saved = state.saved.has(i);
-  const queued = state.laterAdded.includes(i);
+  const queued = laterRowFor(state, i);
   const comments = [
     ...item.comments,
     ...(state.replies[i] ?? []).map((text) => ({ who: 'you', meta: 'now', text, depth: 0 })),
@@ -189,11 +193,11 @@ function Thread() {
         </Button>
         <Button
           className="font-sans"
-          aria-pressed={queued}
+          aria-pressed={!!queued}
           onClick={() => {
-            update((s) => ({
-              laterAdded: queued ? s.laterAdded.filter((x) => x !== i) : [i, ...s.laterAdded],
-            }));
+            update((s) =>
+              queued ? withoutLater(s, queued) : { laterAdded: [i, ...s.laterAdded] },
+            );
           }}
         >
           {queued ? 'Queued' : 'Read later'}
@@ -237,9 +241,9 @@ function Thread() {
         {comments.map((c, n) => (
           <div
             key={n}
-            style={{ marginLeft: c.depth * 16 }}
+            style={{ '--depth': c.depth } as CSSProperties}
             className={cx(
-              'border-b border-l border-b-rule py-dn-4 pl-10',
+              'thread-indent border-b border-l border-b-rule py-dn-4 pl-10',
               c.who === 'you' ? 'border-l-accent' : 'border-l-line',
             )}
           >

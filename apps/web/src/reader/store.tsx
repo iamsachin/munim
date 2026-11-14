@@ -95,6 +95,19 @@ export function laterRows(s: ReaderState): LaterRow[] {
   return [...queued, ...stored.filter((l) => !s.laterDone.has(l.key))];
 }
 
+/** The queue row for a stream item, whether it was queued this session or was already stored. */
+export function laterRowFor(s: ReaderState, index: number): LaterRow | undefined {
+  const { src, title } = itemAt(index);
+  return laterRows(s).find((r) => r.item === index || (r.src === src && r.title === title));
+}
+
+/** The state change that takes `row` out of the queue. */
+export function withoutLater(s: ReaderState, row: LaterRow): Partial<ReaderState> {
+  return row.item === undefined
+    ? { laterDone: new Set(s.laterDone).add(row.key) }
+    : { laterAdded: s.laterAdded.filter((x) => x !== row.item) };
+}
+
 /** "6 items · 1 h 30 min". Reading time is unknown for freshly queued items and counts as zero. */
 export function laterTotal(rows: readonly LaterRow[]) {
   const mins = rows.reduce((n, r) => n + r.mins, 0);

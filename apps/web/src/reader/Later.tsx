@@ -2,7 +2,7 @@ import { ScreenHeader } from '../shell/ScreenHeader';
 import { SourceTag } from '../ui/atoms';
 import { Button } from '../ui/Button';
 import { Cell, Table, TableBody, TableHeader, TableRow, Th } from '../ui/Table';
-import { laterRows, laterTotal, toggled, useReader } from './store';
+import { laterRows, laterTotal, useReader, withoutLater } from './store';
 
 const COLS = 'grid-cols-[40px_minmax(0,1fr)_160px_70px_90px_70px]';
 const META = 'font-mono text-meta text-mute';
@@ -41,11 +41,7 @@ export function Later() {
                 <Button
                   aria-label={`Done: ${l.title}`}
                   onClick={() => {
-                    update((s) =>
-                      l.item === undefined
-                        ? { laterDone: toggled(s.laterDone, l.key) }
-                        : { laterAdded: s.laterAdded.filter((x) => x !== l.item) },
-                    );
+                    update((s) => withoutLater(s, l));
                   }}
                 >
                   Done

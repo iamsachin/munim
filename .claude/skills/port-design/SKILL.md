@@ -68,7 +68,9 @@ Density: `--dn` is 1 (Compact), 1.7 (Comfortable, default) or 2.4 (Roomy). Row p
 
 ## Where the port departs from the handoff, on purpose
 
-- Fading a whole row to 55% opacity makes its text fail contrast. Rows for things that are unavailable carry `aria-disabled`; rows that are merely switched off (an off watch) mute the name instead of fading.
+- Rows are never faded. The handoff drops unavailable or switched-off rows to 55% opacity, which makes their text fail contrast; mute the name instead (planned rows in Connections, an off watch). Only a truly disabled control dims.
+- The thread pane always shows an item from the stream on screen: in a source stream, if the selected item is from another source, the source's first item is shown.
+- An item that is already in the read-later queue shows as "Queued" and cannot be added twice.
 - A control the mock cannot honour is disabled with a `title` giving the reason (RSS "Save" and "Open original").
 - Buttons never wrap, and the thread's metadata line truncates, so the 920px minimum width holds together.
 - Counts are computed from the data (the sidebar's RSS count is 7, not the handoff's hard-coded 9).
