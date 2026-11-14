@@ -6,7 +6,7 @@ const DENSITIES = ['Compact', 'Comfortable', 'Roomy'];
 const ACCENTS = ['Amber', 'Blue', 'Green', 'Coral', 'Gray'];
 
 async function open(page: Page, theme: string, accent: string, density: string) {
-  await page.goto('/');
+  await page.goto('/gallery');
   for (const [group, name] of [
     ['Theme', theme],
     ['Accent', accent],
@@ -40,7 +40,7 @@ for (const [theme, accent, density] of cases) {
 }
 
 test('keyboard focus shows the themed ring', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/gallery');
   await page.keyboard.press('Tab');
   const outline = await page.evaluate(() => {
     const el = document.activeElement;
@@ -54,7 +54,7 @@ test('keyboard focus shows the themed ring', async ({ page }) => {
 test('stream row: the whole row selects, nested controls keep their own action', async ({
   page,
 }) => {
-  await page.goto('/');
+  await page.goto('/gallery');
   const row = page.getByRole('row').filter({ hasText: 'New studio shelving finally up' });
   // Far from the title text: only the stretched hit area can catch this.
   await row.click({ position: { x: 4, y: 4 } });

@@ -1,12 +1,6 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import {
-  ACCENTS,
-  applyTheme,
-  DEFAULT_THEME,
-  DENSITIES,
-  THEMES,
-  type ThemeSettings,
-} from '../theme';
+import { useState, type ReactNode } from 'react';
+import { useTheme } from '../settings';
+import { ACCENTS, DENSITIES, THEMES } from '../theme';
 import {
   AiBadge,
   Highlight,
@@ -155,21 +149,13 @@ function Section({
 }
 
 export function Gallery() {
-  const [theme, setTheme] = useState(DEFAULT_THEME);
+  const { theme, setTheme: set } = useTheme();
   const [filter, setFilter] = useState('All');
   const [lock, setLock] = useState(true);
   const [previews, setPreviews] = useState(false);
-  const [nav, setNav] = useState('Stream');
   const [selected, setSelected] = useState(0);
   const [saved, setSaved] = useState<ReadonlySet<number>>(new Set([0, 2]));
 
-  useEffect(() => {
-    applyTheme(theme);
-  }, [theme]);
-
-  const set = (patch: Partial<ThemeSettings>) => {
-    setTheme((t) => ({ ...t, ...patch }));
-  };
   const toggleSaved = (i: number) => {
     setSaved((s) => {
       const next = new Set(s);
@@ -180,6 +166,7 @@ export function Gallery() {
 
   return (
     <main className="mx-auto flex max-w-1120 flex-col gap-12 p-16">
+      <title>Design system · Munim</title>
       <header className="flex flex-wrap items-center gap-x-20 gap-y-8 border-b border-line pb-12">
         <h1 className="text-title font-semibold">Munim design system</h1>
         <div role="group" aria-label="Theme" className="flex gap-6">
@@ -301,7 +288,7 @@ export function Gallery() {
             <Button variant="accent">Ask</Button>
           </div>
           <div className="flex gap-6">
-            <Input size="md" className="flex-1" aria-label="Reply" placeholder="Reply on Reddit" />
+            <Input size="lg" className="flex-1" aria-label="Reply" placeholder="Reply on Reddit" />
             <Button variant="primary">Reply</Button>
           </div>
         </Section>
@@ -392,40 +379,12 @@ export function Gallery() {
           <SectionLabel as="h2" className="px-8 pb-4">
             Views
           </SectionLabel>
-          <NavRow
-            name="Today"
-            on={nav === 'Today'}
-            onClick={() => {
-              setNav('Today');
-            }}
-          />
-          <NavRow
-            name="Stream"
-            count={18}
-            on={nav === 'Stream'}
-            onClick={() => {
-              setNav('Stream');
-            }}
-          />
-          <NavRow
-            name="Reddit"
-            count={4}
-            dot="accent"
-            on={nav === 'Reddit'}
-            onClick={() => {
-              setNav('Reddit');
-            }}
-          />
-          <NavRow
-            name="YouTube"
-            count={3}
-            dot="a4"
-            on={nav === 'YouTube'}
-            onClick={() => {
-              setNav('YouTube');
-            }}
-          />
-          <NavRow name="Calendar" disabled />
+          <NavRow name="Today" to="/today" />
+          <NavRow name="Stream" count={18} to="/stream" />
+          <NavRow name="Design system" to="/gallery" />
+          <NavRow name="Reddit" count={4} dot="accent" to="/stream/rd" />
+          <NavRow name="YouTube" count={3} dot="a4" to="/stream/yt" />
+          <NavRow name="Calendar" />
         </nav>
 
         <div className="rounded-6 border border-line">

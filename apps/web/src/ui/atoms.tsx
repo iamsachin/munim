@@ -55,11 +55,14 @@ export function SectionLabel({
   );
 }
 
-/** Two- or three-letter source code in the source's colour; the full name is read to screen readers. */
-export function SourceTag({ src }: { src: Source }) {
+/**
+ * Two- or three-letter source code in the source's colour; the full name is read to screen readers.
+ * `inheritSize` is for metadata lines, where the design sets it at the line's own size.
+ */
+export function SourceTag({ src, inheritSize = false }: { src: Source; inheritSize?: boolean }) {
   const { name, tone } = SOURCES[src];
   return (
-    <span className={cx('font-mono text-code font-medium', TEXT[tone])}>
+    <span className={cx('font-mono font-medium', !inheritSize && 'text-code', TEXT[tone])}>
       <span aria-hidden="true">{src}</span>
       <span className="sr-only">{name}</span>
     </span>

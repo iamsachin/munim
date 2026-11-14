@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { applyTheme, DEFAULT_THEME } from './theme';
+import { applyTheme, DEFAULT_THEME, parseTheme } from './theme';
 
 function fakeRoot() {
   const vars: Record<string, string> = {};
@@ -20,4 +20,20 @@ test('theme, accent and density are applied independently', () => {
   applyTheme({ theme: 'Light', accent: 'Blue', density: 'Roomy' }, root);
   expect(dataset).toEqual({ theme: 'light' });
   expect(vars).toEqual({ '--accent': 'oklch(0.76 0.12 250)', '--dn': '2.4' });
+});
+
+test('saved settings are restored', () => {
+  const saved = { theme: 'Light', accent: 'Coral', density: 'Compact' } as const;
+  expect(parseTheme(JSON.stringify(saved))).toEqual(saved);
+});
+
+test('missing, malformed or unknown saved settings fall back to defaults', () => {
+  expect(parseTheme(null)).toEqual(DEFAULT_THEME);
+  expect(parseTheme('{not json')).toEqual(DEFAULT_THEME);
+  expect(parseTheme('"Light"')).toEqual(DEFAULT_THEME);
+  // Inherited object keys must not pass as valid choices.
+  expect(parseTheme('{"theme":"toString","accent":"constructor","density":7}')).toEqual(
+    DEFAULT_THEME,
+  );
+  expect(parseTheme('{"accent":"Blue"}')).toEqual({ ...DEFAULT_THEME, accent: 'Blue' });
 });

@@ -31,3 +31,22 @@ export function applyTheme(
   root.style.setProperty('--accent', ACCENTS[settings.accent]);
   root.style.setProperty('--dn', String(DENSITIES[settings.density]));
 }
+
+const own = <T extends object>(table: T, key: unknown, fallback: keyof T): keyof T =>
+  typeof key === 'string' && Object.hasOwn(table, key) ? (key as keyof T) : fallback;
+
+/** Reads settings saved by an earlier visit. Anything missing or unrecognised falls back to the default. */
+export function parseTheme(raw: string | null): ThemeSettings {
+  let saved: unknown;
+  try {
+    saved = JSON.parse(raw ?? 'null');
+  } catch {
+    saved = null;
+  }
+  const v = (typeof saved === 'object' && saved !== null ? saved : {}) as Record<string, unknown>;
+  return {
+    theme: own(THEMES, v.theme, DEFAULT_THEME.theme),
+    accent: own(ACCENTS, v.accent, DEFAULT_THEME.accent),
+    density: own(DENSITIES, v.density, DEFAULT_THEME.density),
+  };
+}
