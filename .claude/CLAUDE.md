@@ -78,6 +78,8 @@ A piece of work is done only when all of these pass, and the result has been loo
 
 `pnpm check` runs all of the above. Report failures with their output; never describe unverified work as done.
 
+While working, run only the tests the change touches (one pytest file, one Playwright test by name). Run the whole of `pnpm check` once before a pull request is opened, and again before it is merged if anything changed since (owner's decision, 2026-11-15: the full gate on every step was slowing the work down).
+
 ## Commands
 
 - `pnpm db`: start the development Postgres (Docker, port 5433) and wait until it is healthy. Everything below needs it.
@@ -106,7 +108,8 @@ The development database (`munim`, behind `pnpm dev` on ports 5173 and 8000) is 
 
 - Solve the whole task with the least new code. No abstraction, option or dependency that nothing needs yet. In particular: no plugin framework for modules until a second module exists; a module is a folder with its routes, screens and data.
 - Never hard-code model names or lists. Read them from the provider's models endpoint. Consult the `claude-api` skill before writing any Anthropic code.
-- Secrets never reach the browser, logs, error messages or test fixtures.
+- Secrets never reach the browser, logs, error messages or test fixtures. A stored secret (an AI key now, source tokens later) is sealed with `seal()` in `munim/vault.py` before it is saved and read back only with `unseal()`; the browser is told at most its last four characters. The master key is `MUNIM_MASTER_KEY`, or `master.key` in the data folder, made on first use. Tests get an empty data folder of their own (`own_data_folder` in `conftest.py`).
+- AI providers are reached only through `ai/providers.py`, with the official SDKs. Their HTTP library is `httpx2`, not `httpx`; tests replace `ai.providers.TRANSPORT` so nothing reaches a real provider.
 - Every migration must be safe to run on a stranger's existing data. Read every generated migration before keeping it: when a model is renamed and changed at once, Django writes "delete the old table, create a new one", which destroys the data. Write the rename by hand (`RenameModel`, then the field changes) and prove it with a test that migrates real rows, as `tests/test_migrations.py` does.
 - Anything the server fetches because of an address someone typed (feeds now, more sources later) goes through `download()` in `reader/feeds.py` or the same checks: http(s) only, private networks refused at every redirect, size and time capped. `MUNIM_ALLOW_PRIVATE_FEEDS=1` is the only way round it.
 - Content from outside is stored as blocks (`reader/blocks.py`: paragraph, heading, list, quote, code, image, with bold, italic, code and link marks) and drawn by `Blocks.tsx`. Every source's text is converted to blocks on the server; nothing a source sends is rendered as HTML, and no new block or mark is added without a converter test.

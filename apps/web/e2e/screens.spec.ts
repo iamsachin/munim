@@ -410,12 +410,47 @@ test('ai: a rejected key is reported and Cancel leaves things alone', async ({ p
   await expect(page.getByRole('row').filter({ hasText: 'Anthropic' })).toContainText('No key');
 
   await page.getByRole('button', { name: 'Replace key for OpenAI' }).click();
+  // Too short to be a key at all: it is not saved, and the row says why.
   await page.getByLabel('OpenAI API key').fill('short');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('alert')).toHaveText('That is too short to be an API key.');
+  // Long enough to ask the provider, which rejects it: it is saved, marked as rejected.
+  await page.getByLabel('OpenAI API key').fill('sk-too-short');
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByRole('row').filter({ hasText: 'OpenAI' })).toContainText('Key rejected');
   await expect(page.getByLabel('Model for Ask')).toBeDisabled();
   await expect(page).toHaveScreenshot('ai-no-working-key-dark.png');
   expect(await axeFailures(page)).toEqual([]);
+});
+
+test('ai: if the provider cannot be asked, the key is not saved and the row says so', async ({
+  page,
+}) => {
+  await open(page, '/ai');
+  await page.route('**/api/ai/keys/anthropic', (route) =>
+    route.fulfill({
+      status: 502,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        detail: 'Anthropic could not be reached, so the key was not checked.',
+      }),
+    }),
+  );
+  await page.getByRole('button', { name: 'Add key for Anthropic' }).click();
+  await page.getByLabel('Anthropic API key').fill('sk-ant-0123456789abcdefWXYZ');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('alert')).toHaveText(
+    'Anthropic could not be reached, so the key was not checked.',
+  );
+  await expect(page.getByLabel('Anthropic API key')).toBeVisible();
+  expect(await axeFailures(page)).toEqual([]);
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await expect(page.getByRole('row').filter({ hasText: 'Anthropic' })).toContainText('No key');
+
+  // If the keys cannot be read at all, the table says so.
+  await page.route('**/api/ai/keys', (route) => route.fulfill({ status: 500, body: '' }));
+  await page.reload();
+  await expect(page.getByRole('alert')).toContainText('Could not load the providers.');
 });
 
 test('ai: reaching the monthly limit pauses AI and says so; no limit never pauses', async ({

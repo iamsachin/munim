@@ -3,6 +3,7 @@
 import os
 from pathlib import Path
 
+from cryptography.fernet import Fernet
 from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -46,6 +47,7 @@ INSTALLED_APPS = [
     "procrastinate.contrib.django",  # the job queue, in Postgres
     "account",
     "reader",
+    "ai",
 ]
 
 MIDDLEWARE = [
@@ -99,8 +101,21 @@ AUTH_PASSWORD_VALIDATORS = [
 # Finished jobs are deleted, so the queue's tables hold only what is waiting or has failed.
 PROCRASTINATE_WORKER_DEFAULTS = {"delete_jobs": "successful"}
 
-# Where Munim keeps files: fetched images now, the master key later. One folder to back up.
+# Where Munim keeps files: fetched images and the master key. One folder to back up.
 DATA_DIR = Path(env("DATA_DIR", str(BASE_DIR / "data")))
+
+# Seals stored secrets (see munim/vault.py). Left unset, a key is made in the data folder the
+# first time one is needed. Set it to keep the key out of that folder; it must then never change,
+# or what was sealed with the old one cannot be read.
+MASTER_KEY = env("MASTER_KEY", "")
+if MASTER_KEY:
+    try:
+        Fernet(MASTER_KEY)
+    except ValueError:
+        raise ImproperlyConfigured(
+            "MUNIM_MASTER_KEY is not a valid key. It is 32 random bytes in URL-safe base64, "
+            "as made by: openssl rand -base64 32 | tr '+/' '-_'"
+        ) from None
 
 # Feeds on private networks (a service on the same LAN, say) are refused unless this is set,
 # because a feed address can also be used to make the server reach things only it can reach.

@@ -1,4 +1,6 @@
-// AI settings: mock data and the rules that go with it. Replaced by server data in milestone 4.
+// AI settings: the rules, and mock data for what the server does not hold yet (models, usage,
+// the limit). Provider keys are the server's.
+import type { AiKey } from '../api/client';
 
 export const PROVIDERS = {
   openai: { name: 'OpenAI', code: 'OAI' },
@@ -95,14 +97,7 @@ export const usd = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 export const providerOf = (model: string) =>
   (Object.keys(MODELS) as Provider[]).find((p) => MODELS[p].includes(model));
 
-/** A stored key is never kept or shown in full: only its last four characters, and whether it works. */
-export interface StoredKey {
-  tail: string;
-  ok: boolean;
-}
-
 export interface AiState {
-  keys: Record<Provider, StoredKey | null>;
   /** null: no model chosen, so the feature is off. */
   models: Record<Feature, string | null>;
   /** Monthly limit in whole dollars; null for no limit. */
@@ -110,7 +105,6 @@ export interface AiState {
 }
 
 export const AI_INITIAL: AiState = {
-  keys: { openai: { tail: '4f2a', ok: true }, anthropic: null },
   models: { digest: 'gpt-5.4-mini', ask: 'gpt-5.5', watch: 'gpt-5.4-mini' },
   limit: 10,
 };
@@ -119,34 +113,16 @@ export const AI_INITIAL: AiState = {
 export const aiPaused = (ai: AiState) =>
   ai.limit !== null && totalCents(USAGE['This month']) >= ai.limit * 100;
 
-/** The providers whose models can be chosen: those with a working key. */
-export const usableProviders = (ai: AiState) =>
-  (Object.keys(PROVIDERS) as Provider[]).filter((p) => ai.keys[p]?.ok);
+/** The providers whose models can be chosen: those with a key the provider accepted. */
+export const usableProviders = (keys: readonly AiKey[]) =>
+  keys.filter((key) => key.ok).map((key) => key.provider);
 
-// Mock stand-in for the server's test call: real keys are long.
-const looksValid = (key: string) => key.length >= 20;
-
-/** Stores a pasted key. Blank input changes nothing. */
-export function withKey(ai: AiState, provider: Provider, pasted: string): AiState {
-  const key = pasted.trim();
-  if (!key) return ai;
-  const next = {
-    ...ai,
-    keys: { ...ai.keys, [provider]: { tail: key.slice(-4), ok: looksValid(key) } },
-  };
-  return looksValid(key) ? next : withoutModelsOf(next, provider);
-}
-
-/** Removes a provider's key. Features that were using one of its models are left with none. */
-export function withoutKey(ai: AiState, provider: Provider): AiState {
-  return withoutModelsOf({ ...ai, keys: { ...ai.keys, [provider]: null } }, provider);
-}
-
-function withoutModelsOf(ai: AiState, provider: Provider): AiState {
-  const models = { ...ai.models };
-  for (const f of Object.keys(models) as Feature[]) {
-    const model = models[f];
-    if (model !== null && providerOf(model) === provider) models[f] = null;
-  }
-  return { ...ai, models };
+/**
+ * The model a feature runs on, or null if it is off: none was chosen, or the one chosen belongs
+ * to a provider whose key is missing or rejected.
+ */
+export function modelFor(ai: AiState, feature: Feature, usable: readonly Provider[]) {
+  const model = ai.models[feature];
+  const provider = model === null ? undefined : providerOf(model);
+  return provider !== undefined && usable.includes(provider) ? model : null;
 }

@@ -514,6 +514,85 @@
         "tags": ["reader"],
         "security": [{ "Open": [] }]
       }
+    },
+    "/api/ai/keys": {
+      "get": {
+        "operationId": "ai_api_list_keys",
+        "summary": "List Keys",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/KeyOut" },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["ai"],
+        "security": [{ "Open": [] }]
+      }
+    },
+    "/api/ai/keys/{provider}": {
+      "put": {
+        "operationId": "ai_api_set_key",
+        "summary": "Set Key",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "provider",
+            "schema": { "enum": ["openai", "anthropic"], "title": "Provider", "type": "string" },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/KeyOut" } }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          }
+        },
+        "description": "Stores a key, sealed, after asking the provider whether it accepts it. A key the provider\nrejects is stored too, marked as rejected, so the owner sees which key that was.",
+        "tags": ["ai"],
+        "requestBody": {
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/KeyIn" } } },
+          "required": true
+        },
+        "security": [{ "Open": [] }]
+      },
+      "delete": {
+        "operationId": "ai_api_remove_key",
+        "summary": "Remove Key",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "provider",
+            "schema": { "enum": ["openai", "anthropic"], "title": "Provider", "type": "string" },
+            "required": true
+          }
+        ],
+        "responses": { "204": { "description": "No Content" } },
+        "tags": ["ai"],
+        "security": [{ "Open": [] }]
+      }
     }
   },
   "components": {
@@ -903,6 +982,23 @@
         },
         "required": ["stream", "later", "saved", "sources"],
         "title": "Counts",
+        "type": "object"
+      },
+      "KeyOut": {
+        "description": "What the browser may know about a stored key. Never the key.",
+        "properties": {
+          "provider": { "enum": ["openai", "anthropic"], "title": "Provider", "type": "string" },
+          "tail": { "anyOf": [{ "type": "string" }, { "type": "null" }], "title": "Tail" },
+          "ok": { "title": "Ok", "type": "boolean" }
+        },
+        "required": ["provider", "tail", "ok"],
+        "title": "KeyOut",
+        "type": "object"
+      },
+      "KeyIn": {
+        "properties": { "key": { "maxLength": 500, "title": "Key", "type": "string" } },
+        "required": ["key"],
+        "title": "KeyIn",
         "type": "object"
       }
     },

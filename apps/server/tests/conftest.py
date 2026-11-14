@@ -20,6 +20,14 @@ def owner_client(client: Client, db: None) -> Client:
     return client
 
 
+@pytest.fixture(autouse=True)
+def own_data_folder(settings: Any, tmp_path: Any) -> None:
+    """Every test gets an empty data folder: none may read or write the install's master key
+    or its images."""
+    settings.DATA_DIR = tmp_path
+    settings.MASTER_KEY = ""
+
+
 Handler = Callable[[httpx.Request], httpx.Response]
 
 
