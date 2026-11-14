@@ -7,7 +7,10 @@ from django.db import OperationalError, connection
 from django.http import HttpRequest
 from ninja import NinjaAPI, Schema, Status
 
+from account.api import router as account_router
+
 api = NinjaAPI(title="Munim", version="0.1.0")
+api.add_router("", account_router)
 
 
 class Health(Schema):

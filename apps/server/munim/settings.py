@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "account",
 ]
 
 MIDDLEWARE = [
@@ -40,6 +41,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "account.auth.AdminLock",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -80,6 +82,11 @@ AUTH_PASSWORD_VALIDATORS = [
         "OPTIONS": {"min_length": 12},
     },
 ]
+
+# Sessions last 30 days. Cookies are sent over HTTPS only, unless an install on a private network
+# without HTTPS opts out, accepting that anyone on that network can then read the session cookie.
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 30
+SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = not DEBUG and env("INSECURE_COOKIES", "0") != "1"
 
 LANGUAGE_CODE = "en"
 TIME_ZONE = "UTC"

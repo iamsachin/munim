@@ -6,9 +6,12 @@ Last updated: 2026-11-14
 
 ## Now
 
-Milestone 3 has started. On branch `milestone-3-server` (pull request #6): the Django scaffold, a health endpoint, the OpenAPI document, and the development database.
+Milestone 3 in progress. Two pull requests are open, the second stacked on the first:
 
-Next: passphrase sign-in and sessions with server-side rate limiting, which is a critical pull request and gets a duhview review.
+- #6 `milestone-3-server`: the Django scaffold, health endpoint, OpenAPI document, development database.
+- #7 `milestone-3-sign-in`: the account API (first run, sign-in and out, lock and unlock, idle lock, devices, change passphrase) with server-side rate limiting on every passphrase check. Critical, so a duhview review was requested.
+
+The web app still runs on sample data. Next: generate the front-end client from the OpenAPI document and wire setup, sign-in, lock, devices and settings to the server.
 
 ## 0. Preparation
 
@@ -71,9 +74,11 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [ ] Postgres job queue and scheduler
 - [ ] Docker Compose: one app container serving web, API and jobs, plus Postgres
 - [ ] Master key file, generated on first run
-- [ ] Passphrase sign-in, sessions, device list with Revoke, idle lock (Django auth and sessions)
-- [ ] Server-side rate limiting on every passphrase check (sign-in, unlock, change passphrase, delete-all), with growing waits, counted on the server so reloading or scripting cannot skip it; tested by attempting a brute force
-- [ ] Idle timer in the browser, with the server refusing requests while locked
+- [x] Server: passphrase sign-in, sessions, device list with Revoke, lock and idle lock, change passphrase (Django auth and sessions)
+- [x] Server-side rate limiting on every passphrase check, with growing waits, counted in the database; tested by attempting a brute force from one address and from many
+- [ ] Delete-all, when it exists, must confirm the passphrase through the same check
+- [ ] Trusted reverse-proxy setting, so the limit sees real client addresses behind a proxy
+- [ ] Web app wired to the account API: setup, sign-in, lock screen with an idle timer, devices, lock settings, change passphrase
 - [ ] Encryption card on Security and settings, designed once the claims are true
 - [ ] Change passphrase, export and delete-all wired to the server (the mock says it did nothing)
 - [ ] Encrypted storage for source tokens and AI keys; then restore the sidebar status button and the Connections note with truthful wording

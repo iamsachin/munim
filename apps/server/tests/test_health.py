@@ -23,10 +23,3 @@ def test_the_openapi_document_describes_the_api(client: Client) -> None:
     document = client.get("/api/openapi.json").json()
     assert document["info"]["title"] == "Munim"
     assert "/api/health" in document["paths"]
-
-
-@pytest.mark.django_db
-def test_the_admin_asks_for_a_sign_in(client: Client) -> None:
-    response = client.get("/admin/", follow=True)
-    assert response.status_code == 200
-    assert response.redirect_chain[-1][0].startswith("/admin/login/")

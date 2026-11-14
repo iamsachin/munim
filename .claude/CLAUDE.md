@@ -104,6 +104,8 @@ Baselines are recorded on macOS Chromium and are platform-specific; other platfo
 - Every migration must be safe to run on a stranger's existing data.
 - Everything an install can change is a `MUNIM_*` environment variable read through `env()` in `munim/settings.py`. A secret has no default outside development mode (`MUNIM_DEBUG=1`): the server must fail to start rather than run on a guessable value.
 - Server tests treat warnings as errors. Fix a deprecation when it appears.
+- The passphrase is compared in exactly one place: `_check` in `account/api.py`, which runs it under `attempt()` from `account/throttle.py`. Any new endpoint that asks for the passphrase calls `_check`; never call `check_password` anywhere else. The admin has no sign-in form of its own for the same reason.
+- API endpoints declare who may call them: `Open()` (signed in and unlocked) by default, `SignedIn()` only for what a locked session must still reach, `Csrf()` only for what happens before sign-in.
 - Validate at trust boundaries with Pydantic on the server: HTTP input, source API responses, feed XML, AI output that drives UI. The browser validates what it reads from its own storage.
 - Respect each source's rate limits and terms. Cache and poll conservatively.
 
