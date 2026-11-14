@@ -118,7 +118,10 @@ export function Rss() {
       <article className="flex min-h-0 flex-col gap-12 overflow-y-auto bg-panel px-24 py-20">
         <div className="flex items-center gap-8 font-mono text-meta text-mute">
           <span className="font-medium text-a2">RSS</span>
-          <span>{article ? `${feed.name} · ${article.meta}` : 'New feed'}</span>
+          {/* Truncates at narrow widths so the buttons keep their place. */}
+          <span className="min-w-0 truncate">
+            {article ? `${feed.name} · ${article.meta}` : 'New feed'}
+          </span>
           {/* Not wired in the mock, so disabled with the reason rather than left looking live. */}
           <Button className="ml-auto font-sans" disabled title={NOT_YET}>
             Save
