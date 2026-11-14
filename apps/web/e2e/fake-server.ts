@@ -47,6 +47,7 @@ const richBlocks = (id: number) => [
   },
   { type: 'image', src: `/api/items/${String(id)}/images/0`, alt: 'The one-day view' },
   { type: 'quote', spans: [text('A calendar is a list with opinions about time.')] },
+  { type: 'quote', spans: [text('Take the opinions away and the list is enough.')] },
   { type: 'heading', level: 3, spans: [text('Configuration')] },
   {
     type: 'paragraph',
