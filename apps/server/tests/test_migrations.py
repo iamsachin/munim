@@ -45,5 +45,13 @@ def test_articles_stored_before_the_rename_are_still_there_as_items() -> None:
     ]
     assert item.body == "I started the year with 130 feeds."
 
+    # The one after makes room for sources that are not feeds; an article is still its feed's.
+    executor = MigrationExecutor(connection)
+    executor.migrate([("reader", "0004_hacker_news")])
+    newest = executor.loader.project_state([("reader", "0004_hacker_news")]).apps
+    (item,) = newest.get_model("reader", "Item").objects.all()
+    assert item.feed.title == "Low Tech Notes"
+    assert (item.origin, item.replies, item.comments) == ("", 0, [])
+
     # Leave the database as every other test expects it: fully migrated.
     MigrationExecutor(connection).migrate(MigrationExecutor(connection).loader.graph.leaf_nodes())

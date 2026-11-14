@@ -339,7 +339,10 @@ def test_the_poll_is_scheduled_every_fifteen_minutes() -> None:
         periodic.task.name: periodic.cron
         for periodic in app.periodic_registry.periodic_tasks.values()
     }
-    assert scheduled == {"reader.tasks.poll_feeds": "*/15 * * * *"}
+    assert scheduled == {
+        "reader.tasks.poll_feeds": "*/15 * * * *",
+        "reader.tasks.poll_hacker_news": "*/15 * * * *",
+    }
 
 
 @pytest.mark.django_db(transaction=True)

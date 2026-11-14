@@ -17,6 +17,7 @@ export function Blocks({
   blocks,
   item,
   quotes,
+  compact = false,
   className,
 }: {
   blocks: readonly Block[];
@@ -24,20 +25,25 @@ export function Blocks({
   item: { src: string; title: string; from: string };
   /** The owner's highlights in this item, marked where they appear. */
   quotes: readonly string[];
+  /** For a reply: the size of the text around it, and less space between blocks. */
+  compact?: boolean;
   className?: string;
 }) {
   const mine = highlightable(item);
+  // A reply wraps as the design draws it; only reading text is balanced.
+  const read = compact ? '' : READ;
   const run = (spans: readonly Span[]) =>
     spans.map((span, i) => <Run key={i} span={span} quotes={quotes} />);
 
   return (
-    <div className={cx('flex flex-col gap-12', className)}>
+    // A long address has nowhere to break, and would run out of a narrow pane.
+    <div className={cx('flex flex-col wrap-anywhere', compact ? 'gap-6' : 'gap-12', className)}>
       {blocks.map((block, i) => {
         switch (block.type) {
           case 'paragraph':
             // pre-line keeps the line breaks an author put inside a paragraph, as in verse.
             return (
-              <p key={i} className={cx(READ, 'whitespace-pre-line')} {...mine}>
+              <p key={i} className={cx(read, 'whitespace-pre-line')} {...mine}>
                 {run(block.spans)}
               </p>
             );
@@ -62,7 +68,7 @@ export function Blocks({
             return (
               <blockquote
                 key={i}
-                className={cx(READ, 'flex flex-col gap-12 border-l-2 border-line pl-12 text-mute')}
+                className={cx(read, 'flex flex-col gap-12 border-l-2 border-line pl-12 text-mute')}
               >
                 {paragraphs.map((spans, n) => (
                   <p key={n} className="whitespace-pre-line" {...mine}>
@@ -78,7 +84,7 @@ export function Blocks({
               <List
                 key={i}
                 className={cx(
-                  READ,
+                  read,
                   'flex flex-col gap-4 pl-20',
                   block.ordered ? 'list-decimal' : 'list-disc',
                 )}

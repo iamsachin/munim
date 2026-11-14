@@ -9,6 +9,7 @@ export type Item = Schemas['ItemOut'];
 export type ItemDetail = Schemas['ItemDetail'];
 export type ItemPatch = Schemas['ItemPatch'];
 export type Counts = Schemas['Counts'];
+export type Connection = Schemas['ConnectionOut'];
 
 /** Which items to list. Everything left out means "do not narrow by this". */
 export interface ItemQuery {
@@ -81,6 +82,11 @@ export const api = {
   item: (id: number) => call<ItemDetail>('GET', `items/${String(id)}`),
   changeItem: (id: number, patch: ItemPatch) => call<Item>('PATCH', `items/${String(id)}`, patch),
   counts: () => call<Counts>('GET', 'counts'),
+  hackerNews: () => call<Connection>('GET', 'sources/hacker-news'),
+  setHackerNews: (enabled: boolean) =>
+    call<Connection>('PUT', 'sources/hacker-news', {
+      enabled,
+    } satisfies Schemas['ConnectionIn']),
   setLockSettings: (minutes: LockMinutes) =>
     call<Schemas['LockSettings']>('PUT', 'lock-settings', {
       minutes,

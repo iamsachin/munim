@@ -568,6 +568,29 @@ test('connections: disconnect and reconnect', async ({ page }) => {
   ).toBeDisabled();
 });
 
+test('connections: Hacker News is switched off and on at the server', async ({ page }) => {
+  await open(page, '/connections');
+  const row = page.getByRole('row').filter({ hasText: 'Hacker News' });
+  await expect(row).toContainText('Front page');
+  await expect(row).toContainText('2 min ago');
+  await expect(row).toContainText('Connected');
+  await page.getByRole('button', { name: 'Disconnect Hacker News' }).click();
+  await expect(row).toContainText('Disconnected');
+  // It is the server's state, so it is still off after a reload.
+  await page.reload();
+  await expect(row).toContainText('Disconnected');
+  await page.getByRole('button', { name: 'Connect Hacker News' }).click();
+  await expect(row).toContainText('Connected');
+
+  // If the server cannot be asked, the row says so and its button does nothing.
+  await page.route('**/api/sources/hacker-news', (route) =>
+    route.fulfill({ status: 500, body: '' }),
+  );
+  await page.reload();
+  await expect(row).toContainText('Could not load');
+  await expect(page.getByRole('button', { name: 'Connect Hacker News' })).toBeDisabled();
+});
+
 test('settings: appearance applies at once and survives a reload', async ({ page }) => {
   // Not open(): its init script would reset the saved theme on reload.
   await fakeServer(page);
