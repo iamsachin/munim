@@ -18,6 +18,8 @@ services:
       # The names this install answers to, and the address people type if it is behind a proxy.
       MUNIM_ALLOWED_HOSTS: ${MUNIM_ALLOWED_HOSTS:-localhost,127.0.0.1}
       MUNIM_TRUSTED_ORIGINS: ${MUNIM_TRUSTED_ORIGINS:-}
+      # How many reverse proxies are in front, so the passphrase limit sees each visitor.
+      MUNIM_TRUSTED_PROXIES: ${MUNIM_TRUSTED_PROXIES:-0}
       # 1 only if it is reached over plain http from another machine. Use https instead.
       MUNIM_INSECURE_COOKIES: ${MUNIM_INSECURE_COOKIES:-0}
       # Left empty, both are made on first start and kept in the data volume.

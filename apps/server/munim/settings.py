@@ -118,6 +118,17 @@ if MASTER_KEY:
             "as made by: openssl rand -base64 32 | tr '+/' '-_'"
         ) from None
 
+# How many reverse proxies stand between visitors and Munim. Each one adds the address it saw to
+# the X-Forwarded-For header, so with N proxies the visitor's own address is the Nth from the
+# end. Anything further left was written by the visitor and proves nothing. At 0 the header is
+# ignored altogether: without a proxy, anyone could put any address in it.
+try:
+    TRUSTED_PROXIES = int(env("TRUSTED_PROXIES", "0"))
+except ValueError:
+    raise ImproperlyConfigured("MUNIM_TRUSTED_PROXIES is a whole number, such as 1.") from None
+if TRUSTED_PROXIES < 0:
+    raise ImproperlyConfigured("MUNIM_TRUSTED_PROXIES cannot be negative.")
+
 # Feeds on private networks (a service on the same LAN, say) are refused unless this is set,
 # because a feed address can also be used to make the server reach things only it can reach.
 ALLOW_PRIVATE_FEEDS = env("ALLOW_PRIVATE_FEEDS", "0") == "1"

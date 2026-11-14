@@ -1,12 +1,14 @@
 import time
 from datetime import timedelta
+from typing import Any
 
 import pytest
 from django.contrib.auth.models import User
-from django.test import Client
+from django.test import Client, RequestFactory
 from django.utils import timezone
 
 from account.models import Device, Throttle
+from account.throttle import address
 
 from .conftest import PASSPHRASE, post
 
@@ -16,16 +18,22 @@ def state(client: Client) -> str:
 
 
 def sign_in(
-    passphrase: str = PASSPHRASE, *, address: str = "127.0.0.1", user_agent: str = ""
+    passphrase: str = PASSPHRASE,
+    *,
+    address: str = "127.0.0.1",
+    user_agent: str = "",
+    forwarded: str = "",
 ) -> tuple[Client, int]:
     """Signs in from a fresh browser. Returns it and the response status."""
     client = Client()
+    headers = {"HTTP_X_FORWARDED_FOR": forwarded} if forwarded else {}
     response = post(
         client,
         "sign-in",
         {"passphrase": passphrase},
         REMOTE_ADDR=address,
         HTTP_USER_AGENT=user_agent,
+        **headers,
     )
     return client, response.status_code
 
@@ -341,3 +349,59 @@ def test_the_admin_follows_the_session(owner_client: Client) -> None:
     post(owner_client, "lock")
     locked = owner_client.get("/admin/")
     assert (locked.status_code, locked["Location"]) == (302, "/")
+
+
+# --- behind a reverse proxy
+
+
+def seen(settings: Any, proxies: int, forwarded: str = "", remote: str = "172.18.0.1") -> str:
+    """The address the limit would count a request against."""
+    settings.TRUSTED_PROXIES = proxies
+    request = RequestFactory().get("/", REMOTE_ADDR=remote)
+    if forwarded:
+        request.META["HTTP_X_FORWARDED_FOR"] = forwarded
+    return address(request)
+
+
+def test_without_a_proxy_the_forwarded_header_is_never_believed(settings: Any) -> None:
+    assert seen(settings, 0) == "172.18.0.1"
+    assert seen(settings, 0, "203.0.113.9") == "172.18.0.1"
+
+
+def test_behind_proxies_the_address_is_counted_back_from_the_end(settings: Any) -> None:
+    # One proxy: it appended the address it saw. What the visitor sent before that is ignored.
+    assert seen(settings, 1, "203.0.113.9") == "203.0.113.9"
+    assert seen(settings, 1, "10.9.9.9, 203.0.113.9") == "203.0.113.9"
+    # Two proxies: the outer one saw the visitor, the inner one saw the outer.
+    assert seen(settings, 2, "6.6.6.6, 203.0.113.9, 198.51.100.2") == "203.0.113.9"
+    # A header with fewer entries than there are proxies did not come through them.
+    assert seen(settings, 2, "203.0.113.9") == "172.18.0.1"
+    assert seen(settings, 1, " , ") == "172.18.0.1"
+
+
+@pytest.mark.django_db
+def test_behind_a_proxy_each_visitor_has_their_own_three_guesses(
+    owner_client: Client, settings: Any
+) -> None:
+    settings.TRUSTED_PROXIES = 1
+    for _ in range(3):
+        assert sign_in("a guess", address="172.18.0.1", forwarded="203.0.113.9")[1] == 401
+    # The guesser now waits, though everyone arrives from the proxy's own address.
+    assert sign_in(address="172.18.0.1", forwarded="203.0.113.9")[1] == 429
+    assert sign_in(address="172.18.0.1", forwarded="198.51.100.7")[1] == 200
+
+
+@pytest.mark.django_db
+def test_a_made_up_forwarded_address_does_not_buy_more_guesses(
+    owner_client: Client, settings: Any
+) -> None:
+    # No proxy: the header is the guesser's own invention, a new one each time.
+    for n in range(3):
+        assert sign_in("a guess", forwarded=f"203.0.113.{n}")[1] == 401
+    assert sign_in(forwarded="203.0.113.99")[1] == 429
+    # One proxy: the invention sits before the address the proxy really saw.
+    settings.TRUSTED_PROXIES = 1
+    for n in range(3):
+        guess = sign_in("a guess", forwarded=f"10.0.0.{n}, 192.0.2.50")
+        assert guess[1] == 401
+    assert sign_in(forwarded="10.0.0.200, 192.0.2.50")[1] == 429

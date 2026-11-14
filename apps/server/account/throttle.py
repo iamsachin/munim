@@ -9,6 +9,7 @@ import math
 from collections.abc import Callable
 from datetime import datetime, timedelta
 
+from django.conf import settings
 from django.db import transaction
 from django.http import HttpRequest
 from django.utils import timezone
@@ -35,8 +36,18 @@ class TooManyAttempts(Exception):
 
 
 def address(request: HttpRequest) -> str:
-    # shortcut: behind a reverse proxy every client shares the proxy's address, which only makes
-    # the limit stricter; read a trusted X-Forwarded-For when the install docs cover proxies.
+    """The visitor's address, which the limit is counted against.
+
+    Behind reverse proxies everyone arrives from the proxy, so the address is read from
+    X-Forwarded-For instead: as many entries back from the end as the install says it has
+    proxies (see TRUSTED_PROXIES in the settings). Entries before that are whatever the visitor
+    chose to send, so they are never believed.
+    """
+    hops = settings.TRUSTED_PROXIES
+    header = str(request.META.get("HTTP_X_FORWARDED_FOR", ""))
+    forwarded = [part.strip() for part in header.split(",") if part.strip()]
+    if 0 < hops <= len(forwarded):
+        return forwarded[-hops][:64]
     return str(request.META.get("REMOTE_ADDR", "unknown"))[:64]
 
 
