@@ -77,6 +77,7 @@ Density: `--dn` is 1 (Compact), 1.7 (Comfortable, default) or 2.4 (Roomy). Row p
 - The light theme's media-preview veil is light, so the caption under the preview stays readable.
 - Nothing is summarised automatically (owner's decision). Where the handoff shows an AI summary, the port shows `AskCard`: an ask field and a "Summarize this ..." suggestion.
 - The Ask scope "Open thread" is "Open item", since it also covers articles.
+- Security and settings drops "Unlock with Touch ID or Face ID" and "Hide previews in notifications" (a web app has neither), lists browsers rather than apps under Devices, and adds idle-lock timing, "Lock now" and "Change passphrase".
 - Counts are computed from the data (the sidebar's RSS count is 7, not the handoff's hard-coded 9).
 
 ## Shared components

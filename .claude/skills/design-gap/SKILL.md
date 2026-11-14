@@ -16,6 +16,8 @@ The owner chose "I design, you approve". Nothing undesigned is built on until th
    - lists of things with status and an action: the "Connections" table (the AI screen at `account/AiSettings.tsx` is the worked example of a designed gap);
    - on/off choices: the 52px On/Off pill; one-of-many: filter chips;
    - AI content: the AI badge and AI card, nothing else;
+   - anything before the app is open (first run, sign-in, lock): `account/AuthCard.tsx`;
+   - an action only the server can perform, while the app runs on sample data: do the checks, then show `SAMPLE_ONLY` from `account/auth.ts`;
    - empty states: one line of muted text, as in "Nothing matches this filter."
    A new component is a last resort and is itself part of what gets approved.
 4. **Build it for real, with mock data**, in the app, not as a separate mockup. Include every state: empty, loading, error, disabled, long content, each density.
