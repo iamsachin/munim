@@ -698,6 +698,19 @@ test('rss: a removed feed is gone, with its articles, except what was kept', asy
   await expect(page.getByRole('button', { name: /^What a retry budget is/ })).toHaveCount(0);
 });
 
+test('rss: the removal dialog counts an article saved a moment ago', async ({ page }) => {
+  await open(page, '/rss');
+  await page.getByRole('button', { name: /^Wire Notes/ }).click();
+  await page.getByRole('button', { name: /What a retry budget is/ }).click();
+  await page.getByRole('article').getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('article').getByRole('button', { name: 'Saved' })).toBeVisible();
+  await page.getByRole('button', { name: 'Remove feed: Wire Notes' }).click();
+  // Its other article was already highlighted, so now both stay.
+  await expect(page.getByRole('dialog', { name: 'Remove feed' })).toContainText(
+    'Its 2 articles you saved, queued or highlighted are kept. Nothing is deleted.',
+  );
+});
+
 test('rss: if a feed cannot be removed, the dialog says so and stays', async ({ page }) => {
   await open(page, '/rss');
   await page.route('**/api/feeds/*', (route) => route.abort());
