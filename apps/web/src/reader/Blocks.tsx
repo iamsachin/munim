@@ -1,10 +1,21 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { ItemDetail } from '../api/client';
 import { cx } from '../ui/cx';
+import { findMatches, type Range } from './found';
 import { highlightable, Marked } from './Marked';
 
 export type Block = ItemDetail['blocks'][number];
 type Span = Extract<Block, { type: 'paragraph' }>['spans'][number];
+
+const NOTHING: readonly (readonly string[])[] = [];
+
+/** The runs of text in a block that a search can match. Code is shown as written, unmarked. */
+const spansOf = (block: Block): readonly Span[] =>
+  block.type === 'list'
+    ? block.items.flat()
+    : block.type === 'paragraph' || block.type === 'heading' || block.type === 'quote'
+      ? block.spans
+      : [];
 
 const READ = 'text-read leading-read text-pretty';
 
@@ -17,6 +28,7 @@ export function Blocks({
   blocks,
   item,
   quotes,
+  found = NOTHING,
   compact = false,
   className,
 }: {
@@ -25,6 +37,8 @@ export function Blocks({
   item: { src: string; title: string; from: string };
   /** The owner's highlights in this item, marked where they appear. */
   quotes: readonly string[];
+  /** From the server, when the item was opened from a search: the words that matched it. */
+  found?: readonly (readonly string[])[];
   /** For a reply: the size of the text around it, and less space between blocks. */
   compact?: boolean;
   className?: string;
@@ -32,8 +46,20 @@ export function Blocks({
   const mine = highlightable(item);
   // A reply wraps as the design draws it; only reading text is balanced.
   const read = compact ? '' : READ;
+  // Decided over the whole text, not run by run: if the words are together anywhere, only
+  // those places are marked.
+  const places = useMemo(() => {
+    const spans = blocks.flatMap(spansOf);
+    const ranges = findMatches(
+      spans.map((span) => span.text),
+      found,
+    );
+    return new Map(spans.map((span, i) => [span, ranges[i] ?? []]));
+  }, [blocks, found]);
   const run = (spans: readonly Span[]) =>
-    spans.map((span, i) => <Run key={i} span={span} quotes={quotes} />);
+    spans.map((span, i) => (
+      <Run key={i} span={span} quotes={quotes} found={places.get(span) ?? []} />
+    ));
 
   return (
     // A long address has nowhere to break, and would run out of a narrow pane.
@@ -117,8 +143,16 @@ export function Blocks({
   );
 }
 
-function Run({ span, quotes }: { span: Span; quotes: readonly string[] }) {
-  const text = <Marked text={span.text} quotes={quotes} />;
+function Run({
+  span,
+  quotes,
+  found,
+}: {
+  span: Span;
+  quotes: readonly string[];
+  found: readonly Range[];
+}) {
+  const text = <Marked text={span.text} quotes={quotes} found={found} />;
   const { marks } = span;
   const styled = (
     <span

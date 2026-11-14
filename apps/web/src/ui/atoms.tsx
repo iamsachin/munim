@@ -87,6 +87,21 @@ export function Highlight(props: ComponentProps<'mark'>) {
   );
 }
 
+/**
+ * A word a search matched, marked where it is. The one the owner has stepped to is outlined.
+ * `data-found` is how the thread pane counts them and finds where they are.
+ */
+export function Found(props: ComponentProps<'mark'>) {
+  return (
+    <mark
+      data-found
+      // Ink, whatever the text around it: a match in a muted quotation must still be readable.
+      className="rounded-2 bg-found box-decoration-clone px-2 py-1 text-ink data-current:outline data-current:outline-a2"
+      {...props}
+    />
+  );
+}
+
 /** Sits above a row's stretched RowButton, hence relative z-1. */
 export function SaveDot({ saved, onToggle }: { saved: boolean; onToggle: () => void }) {
   return (

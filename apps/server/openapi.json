@@ -415,6 +415,12 @@
             "name": "item_id",
             "schema": { "title": "Item Id", "type": "integer" },
             "required": true
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": { "default": "", "title": "Q", "type": "string" },
+            "required": false
           }
         ],
         "responses": {
@@ -425,6 +431,7 @@
             }
           }
         },
+        "description": "One item. With `q`, the search it was opened from, it also says which of its words\nmatched, so they can be marked where they are.",
         "tags": ["reader"],
         "security": [{ "Open": [] }]
       },
@@ -861,6 +868,11 @@
             "items": { "$ref": "#/components/schemas/Comment" },
             "title": "Comments",
             "type": "array"
+          },
+          "found": {
+            "items": { "items": { "type": "string" }, "type": "array" },
+            "title": "Found",
+            "type": "array"
           }
         },
         "required": [
@@ -878,7 +890,8 @@
           "media",
           "url",
           "blocks",
-          "comments"
+          "comments",
+          "found"
         ],
         "title": "ItemDetail",
         "type": "object"

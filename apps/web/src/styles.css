@@ -26,6 +26,8 @@
   --color-ask-fill: color-mix(in oklch, var(--color-accent) 10%, var(--color-bg));
   --color-ask-ring: color-mix(in oklch, var(--color-accent) 16%, transparent);
   --color-mark: color-mix(in oklch, var(--color-accent) 22%, transparent);
+  /* Not in the handoff: a word a search matched. Blue, so it is not taken for a highlight. */
+  --color-found: color-mix(in oklch, var(--color-a2) 28%, transparent);
 
   --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', monospace;
@@ -139,6 +141,12 @@
     var(--color-card) 0 14px,
     var(--color-panel) 14px 28px
   );
+}
+
+/* A tick beside an article, as far down the rail as its match is down the text. The element sets
+   --at, from 0 at the top to 1 at the bottom. */
+@utility found-tick {
+  top: calc(var(--at, 0) * 100%);
 }
 
 /* Reply nesting: one step per level, up to six; a deeper reply stays readable in a narrow pane.

@@ -303,6 +303,12 @@ export async function fakeServer(page: Page, start: State = 'open') {
           ...comment,
           blocks: [paragraph(said)],
         })),
+        // The real server knows other forms of a word; here each word stands for itself.
+        found: (
+          (new URL(request.url()).searchParams.get('q') ?? '')
+            .toLowerCase()
+            .match(/[\p{L}\p{N}]+/gu) ?? []
+        ).map((word) => [word]),
       });
     }
     if (call === 'POST passphrase') {
