@@ -53,7 +53,7 @@ Version pins with a reason: TypeScript stays on 6.0 until typescript-eslint supp
 
 ## Design gaps (need a design before code)
 
-first-run setup and sign-in; lock screen; loading, error and empty states for every screen; honest security screen; command palette and shortcut help; disabled-reply state.
+Loading, error and empty states for every screen; command palette and shortcut help; disabled-reply state; the Encryption card on Security and settings (waits for milestone 3, when its claims become true).
 
 ## Build order
 

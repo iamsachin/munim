@@ -6,17 +6,9 @@ Last updated: 2026-11-14
 
 ## Now
 
-On branch `milestone-2-gaps` (pull request #2, not merged).
+On branch `milestone-2-gaps` (pull request #2, not merged). Approved by the owner on 2026-11-14: the AI screen, on-demand summaries, first run, sign-in, the lock screen, and the Sign-in, Devices and Your data cards.
 
-Approved by the owner on 2026-11-14: the AI screen and on-demand summaries.
-
-Built, passing all gates, **waiting for the owner's approval** (`pnpm dev`):
-
-1. First run at `/setup` and sign-in at `/sign-in`.
-2. The lock screen: "Lock" under Security and settings.
-3. Three new cards on `/settings`: Sign-in and lock, Devices, Your data.
-
-Then: loading, error and empty states; keyboard navigation and command palette; disabled-reply state; highlighting by selecting text.
+Next: loading, error and empty states; then keyboard navigation and the command palette; the disabled-reply state; highlighting by selecting text.
 
 ## 0. Preparation
 
@@ -59,10 +51,10 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] Connections
 - [x] Appearance settings (theme, accent, density), remembered in the browser
 - [ ] **Designed screens approved by owner**
-- [ ] Security and settings: Sign-in and lock, Devices, Your data (design gap; built, awaiting approval)
+- [x] Security and settings: Sign-in and lock, Devices, Your data (design gap, approved)
 - [x] AI settings: keys, per-feature model, monthly limit, usage (design gap, approved)
 - [x] On-demand summaries in place of automatic ones (approved)
-- [ ] First-run setup, sign-in, lock screen (design gap; built, awaiting approval)
+- [x] First-run setup, sign-in, lock screen (design gap, approved)
 - [ ] Loading, error and empty states for every screen (design gap)
 - [ ] Keyboard navigation, command palette, shortcut help (design gap)
 - [ ] Disabled-reply state for sources without an official write API (design gap)
