@@ -62,6 +62,16 @@ Density: `--dn` is 1 (Compact), 1.7 (Comfortable, default) or 2.4 (Roomy). Row p
 - Shared components: `apps/web/src/ui/`. The gallery at `apps/web/src/gallery/Gallery.tsx` shows every one; add each new shared component to it.
 - Tables are CSS grid with ARIA table roles (`Table`, `TableHeader`, `Th`, `TableRow`, `Cell`). A row's main action is a `RowButton`, whose hit area covers the row; other controls in the row need `relative z-1`.
 - Grid templates are the one place arbitrary values are allowed (`grid-cols-[34px_minmax(0,1fr)_40px]`).
+- Navigation is a link, not a button. For a link that looks like a button use `buttonClass()` from `ui/Button.tsx` on a router `Link`.
+- Screens live in their module folder (`reader/`, `account/`), start with `ScreenHeader`, and are routed in `App.tsx`. Mock state and its selectors are in `reader/store.tsx`; fixtures are generated from the handoff into `reader/fixtures.ts`.
+- Every screen gets an entry in `SCREENS` in `apps/web/e2e/screens.spec.ts` (five baselines and two axe scans) and a behaviour test for anything it lets the owner do.
+
+## Where the port departs from the handoff, on purpose
+
+- Fading a whole row to 55% opacity makes its text fail contrast. Rows for things that are unavailable carry `aria-disabled`; rows that are merely switched off (an off watch) mute the name instead of fading.
+- A control the mock cannot honour is disabled with a `title` giving the reason (RSS "Save" and "Open original").
+- Buttons never wrap, and the thread's metadata line truncates, so the 920px minimum width holds together.
+- Counts are computed from the data (the sidebar's RSS count is 7, not the handoff's hard-coded 9).
 
 ## Shared components
 

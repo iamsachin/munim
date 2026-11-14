@@ -43,6 +43,7 @@ Version pins with a reason: TypeScript stays on 6.0 until typescript-eslint supp
 - The security copy in the prototype is false for this architecture ("End-to-end encrypted", "Keys stay on your devices", "Encrypted · keys on device", "the server cannot read your saved items"). Never ship it. The screen must describe what the app actually does; rewriting it is a design gap.
 - No control may look functional when it is not. Unbuilt features are disabled and say why.
 - AI output is always marked with the AI badge and, where it makes claims, cites the items it drew on.
+- Until a security feature is real, the UI says nothing about it. The handoff's encryption lines in the sidebar, Saved and Connections are left out for now and return, worded truthfully, when milestone 3 builds the feature.
 
 ## Design gaps (need a design before code)
 
@@ -72,7 +73,7 @@ A piece of work is done only when all of these pass, and the result has been loo
 
 ## Commands
 
-- `pnpm dev`: the web app at http://localhost:5173. Until the app shell exists this is the design-system gallery.
+- `pnpm dev`: the web app at http://localhost:5173. The design-system gallery is at `/gallery`.
 - `pnpm check`: types, lint, format, unit tests, then a production build with Playwright visual regression and axe.
 - `pnpm format`: apply Prettier.
 - `pnpm --filter web exec playwright test --update-snapshots`: re-record baselines. Only for a change the owner has approved; look at every changed image first.

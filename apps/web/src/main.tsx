@@ -6,14 +6,22 @@ import '@fontsource/ibm-plex-mono/500.css';
 import './styles.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Gallery } from './gallery/Gallery';
+import { BrowserRouter } from 'react-router';
+import { App } from './App';
+import { ReaderProvider } from './reader/store';
+import { ThemeProvider } from './settings';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('#root is missing from index.html');
 
-// shortcut: the gallery is the only page, add routing when the app shell is built
 createRoot(root).render(
   <StrictMode>
-    <Gallery />
+    <BrowserRouter>
+      <ThemeProvider>
+        <ReaderProvider>
+          <App />
+        </ReaderProvider>
+      </ThemeProvider>
+    </BrowserRouter>
   </StrictMode>,
 );
