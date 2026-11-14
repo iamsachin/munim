@@ -6,13 +6,9 @@ Last updated: 2026-11-14
 
 ## Now
 
-Milestone 3 in progress. Merged: the Django scaffold (#6) and the account API with rate-limited passphrase checks (#8).
+Milestone 3 in progress. Merged: the Django scaffold (#6), the account API with rate-limited passphrase checks (#8), and the web app signing in against the real server (#9). The reader's screens still run on sample data.
 
-On branch `milestone-3-web-auth` (pull request #9), waiting for the owner: the web app's set-up, sign-in, lock screen with idle timer, devices, lock settings and change passphrase now use the real server. The reader's screens still run on sample data.
-
-Next: Munim's own models (items, feeds, saved, highlights) and the first real source, RSS. Needs the owner's answer on YouTube access before that source.
-
-Lesson for stacked pull requests: merge the base without deleting its branch, retarget the next one to `main`, then delete. Deleting the base branch closes the pull request stacked on it.
+Next: Munim's own models (items, feeds, saved, highlights) and the first real source, RSS. The owner's answer on YouTube access is needed before that source, not before RSS.
 
 ## 0. Preparation
 
