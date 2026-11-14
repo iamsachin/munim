@@ -6,7 +6,15 @@ Last updated: 2026-11-14
 
 ## Now
 
-Milestone 1 approved by the owner on 2026-11-14, including the light theme. Next: milestone 2, starting with the typed data layer and the app shell.
+Milestone 2, first pull request: every designed screen is built on mock data and all gates pass. Waiting on the owner to review the screens (`pnpm dev`), and on the duhview review of the pull request.
+
+Decisions the owner should know about, all listed in `port-design` under "Where the port departs from the handoff":
+
+1. No security claims are shown yet (sidebar status button, Saved, Connections), because nothing is encrypted in a mock.
+2. "Security and settings" has only the Appearance card (theme, accent, density). The other cards need the honest-security design first.
+3. X and Instagram appear connected, as in the handoff's mock data. They become "Not available yet" when real sources arrive.
+
+Next: the design gaps below, each shown to the owner for approval.
 
 ## 0. Preparation
 
@@ -34,31 +42,35 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 
 ## 2. Screens on mock data
 
-- [ ] Typed data layer with fixtures from the prototype
-- [ ] App shell: sidebar, ask bar, routing
-- [ ] Today
-- [ ] Stream and thread pane
-- [ ] Media preview
-- [ ] Read later
-- [ ] Saved
-- [ ] Highlights
-- [ ] RSS
-- [ ] Digest
-- [ ] Watches
-- [ ] Ask
-- [ ] Connections
-- [ ] Security and settings (honest copy, design gap)
+- [x] Typed data layer with fixtures generated from the prototype
+- [x] App shell: sidebar, ask bar, routing
+- [x] Today
+- [x] Stream and thread pane
+- [x] Media preview
+- [x] Read later
+- [x] Saved
+- [x] Highlights (list only; highlighting by selecting text is not built)
+- [x] RSS
+- [x] Digest
+- [x] Watches
+- [x] Ask
+- [x] Connections
+- [x] Appearance settings (theme, accent, density), remembered in the browser
+- [ ] **Designed screens approved by owner**
+- [ ] Security and settings: honest Encryption, Sign-in and lock, Devices, Your data (design gap)
 - [ ] AI settings: keys, per-feature model, usage (design gap)
 - [ ] First-run setup, sign-in, lock screen (design gap)
 - [ ] Loading, error and empty states for every screen (design gap)
 - [ ] Keyboard navigation, command palette, shortcut help (design gap)
+- [ ] Disabled-reply state for sources without an official write API (design gap)
+- [ ] Highlight by selecting text, with a note
 - [ ] **Approved by owner**
 
 ## 3. Server, sign-in, sources
 
 - [ ] Server scaffold, Postgres, migrations, Docker Compose
 - [ ] Passphrase sign-in, sessions, device list with Revoke, idle lock
-- [ ] Encrypted storage for source tokens and AI keys
+- [ ] Encrypted storage for source tokens and AI keys; then restore the sidebar status button and the Connections note with truthful wording
 - [ ] RSS
 - [ ] Hacker News
 - [ ] YouTube
