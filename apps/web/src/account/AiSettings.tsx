@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { api, reason } from '../api/client';
+import { api, reason, sessionOver } from '../api/client';
 import { useReader } from '../reader/store';
 import { ScreenHeader } from '../shell/ScreenHeader';
 import { AiBadge, SectionLabel, StatusDot } from '../ui/atoms';
@@ -139,7 +139,7 @@ export function AiSettings() {
                     />
                     {/* Why it was not saved: the provider could not be asked, or it is no key. */}
                     <div role="alert" className="pt-4 text-note text-a3 empty:hidden">
-                      {save.isError ? reason(save.error) : null}
+                      {save.isError && !sessionOver(save.error) ? reason(save.error) : null}
                     </div>
                   </form>
                 ) : (

@@ -34,6 +34,13 @@ export class Refused extends Error {
 
 export const UNREACHABLE = 'Could not reach the server.';
 
+/**
+ * True if a call that needs an open session failed because the session is locked or over. The
+ * app shows that as a whole, so the screen that made the call has nothing to add.
+ */
+export const sessionOver = (error: unknown) =>
+  error instanceof Refused && (error.status === 401 || error.status === 423);
+
 /** What to show for a failed call: the server's reason, or that it could not be reached. */
 export const reason = (error: unknown) => (error instanceof Refused ? error.detail : UNREACHABLE);
 
