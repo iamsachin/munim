@@ -16,8 +16,10 @@ export function MediaPreview({
   const ref = useRef<HTMLDialogElement>(null);
 
   // showModal() gives the focus trap, Escape to close and the backdrop.
+  // Development runs effects twice; calling it on an open dialog throws.
   useEffect(() => {
-    ref.current?.showModal();
+    const dialog = ref.current;
+    if (dialog && !dialog.open) dialog.showModal();
   }, []);
 
   return (

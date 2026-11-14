@@ -74,20 +74,15 @@ export function Connections() {
             </TableRow>
           );
         })}
+        {/* The handoff fades these rows to 55%, which makes them unreadable; muted text says the same. */}
         {PLANNED.map(([code, name]) => (
-          <TableRow
-            key={code}
-            pad={6}
-            hover={false}
-            aria-disabled="true"
-            className={`${COLS} items-center opacity-55`}
-          >
+          <TableRow key={code} pad={6} hover={false} className={`${COLS} items-center`}>
             <Cell className="font-mono text-code font-medium text-mute">{code}</Cell>
-            <Cell className="font-semibold">{name}</Cell>
+            <Cell className="font-semibold text-mute">{name}</Cell>
             <Cell />
             <Cell />
             <Cell />
-            <Cell className="flex items-center gap-6 text-note">
+            <Cell className="flex items-center gap-6 text-note text-mute">
               <StatusDot tone="line" />
               Not available yet
             </Cell>

@@ -2,12 +2,14 @@ import { expect, test } from 'vitest';
 import { LATER, SAVED } from './fixtures';
 import {
   INITIAL,
+  laterRowFor,
   laterRows,
   laterTotal,
   matchCount,
   savedCount,
   toggled,
   watchRows,
+  withoutLater,
   type ReaderState,
 } from './store';
 
@@ -45,4 +47,24 @@ test('watches: new ones start with no matches, switched-off ones do not count', 
   const s = state({ watchNew: ['sqlite'], watchOff: new Set(['rate limits']) });
   expect(watchRows(s).at(-1)).toMatchObject({ name: 'sqlite', count: 0, on: true });
   expect(matchCount(s)).toBe(12);
+});
+
+test('an item already in the stored queue counts as queued, and can be taken out', () => {
+  // Item 10 is "Notes on end-to-end encryption for small apps", which is also stored row b0.
+  const stored = laterRowFor(INITIAL, 10);
+  if (!stored) throw new Error('item 10 should be in the stored queue');
+  expect(stored.key).toBe('b0');
+  expect(laterRowFor(INITIAL, 1)).toBeUndefined();
+
+  const after = state(withoutLater(INITIAL, stored));
+  expect(laterRowFor(after, 10)).toBeUndefined();
+  expect(laterRows(after)).toHaveLength(5);
+});
+
+test('an item queued this session is taken out by its index', () => {
+  const s = state({ laterAdded: [1] });
+  const row = laterRowFor(s, 1);
+  if (!row) throw new Error('item 1 should be queued');
+  expect(row).toMatchObject({ key: 'i1', item: 1 });
+  expect(state(withoutLater(s, row)).laterAdded).toEqual([]);
 });
