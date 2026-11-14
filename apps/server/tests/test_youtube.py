@@ -7,7 +7,7 @@ import pytest
 from django.test import Client
 from django.utils import timezone
 
-from reader import youtube
+from reader import images, youtube
 from reader.models import Channel, Connection, Item
 from reader.tasks import poll_youtube
 
@@ -26,7 +26,7 @@ def video(number: int, channel: str, *, days: int = 1, length: str = "PT18M24S")
         "id": f"vid{number}",
         "snippet": {
             "title": f"Video {number}",
-            "description": "First line.\n\nSecond paragraph, with 0:00 Intro.",
+            "description": "Slides: https://slides.example/talk\n\n0:00 Intro\n2:03 The pyramid",
             "channelTitle": channel,
             "publishedAt": ago(days=days),
             "liveBroadcastContent": "none",
@@ -281,18 +281,52 @@ def test_new_videos_arrive_from_subscribed_channels(connected: Client, google: G
 
     opened = connected.get(f"/api/items/{first['id']}").json()
     assert opened["url"] == "https://www.youtube.com/watch?v=vid1"
-    # Its picture is fetched through Munim, like any other; its description is its text.
+    # It can be played where it is. Its still is fetched through Munim, like any picture, and
+    # the largest one YouTube has is used.
     assert opened["blocks"][0] == {
-        "type": "image",
+        "type": "video",
         "src": f"/api/items/{first['id']}/images/0",
-        "alt": "",
+        "alt": "Video 1",
+        "video": "vid1",
     }
-    assert [block["type"] for block in opened["blocks"][1:]] == ["paragraph", "paragraph"]
+    assert images.source_of(Item.objects.get(guid="vid1"), 0) == (
+        "https://i.ytimg.com/vi/vid1/hqdefault.jpg"
+    )
+    # Its description is its text: addresses are links, and its lines stay lines.
+    link, chapters = opened["blocks"][1:]
+    assert link["spans"][1] == {
+        "text": "https://slides.example/talk",
+        "marks": [],
+        "href": "https://slides.example/talk",
+    }
+    assert chapters["spans"][0]["text"] == "0:00 Intro\n2:03 The pyramid"
     assert state(connected)["synced_at"] is not None
     assert {c.title: c.videos for c in Channel.objects.all()} == {
         "Bench Hours": 40,
         "Studio Kiln": 12,
     }
+
+
+def test_videos_stored_before_they_could_be_played_are_read_once_more(
+    connected: Client, google: Google
+) -> None:
+    poll_youtube(timestamp=0)
+    old = Item.objects.get(guid="vid1")
+    old.blocks = [{"type": "image", "src": "https://i.ytimg.com/vi/vid1/hqdefault.jpg", "alt": ""}]
+    old.read_at = timezone.now()
+    old.save()
+
+    google.asked.clear()
+    poll_youtube(timestamp=0)
+    assert google.asked == ["subscriptions?mine", "videos"]
+    again = Item.objects.get(guid="vid1")
+    assert again.blocks[0]["type"] == "video"
+    # The same item, with what the owner did to it.
+    assert (again.pk, again.read_at) == (old.pk, old.read_at)
+    # Once is enough.
+    google.asked.clear()
+    poll_youtube(timestamp=0)
+    assert google.asked == ["subscriptions?mine"]
 
 
 def test_a_channel_is_read_again_only_when_it_has_a_new_video(

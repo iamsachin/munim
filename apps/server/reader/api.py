@@ -104,8 +104,20 @@ class Image(Schema):
     alt: str
 
 
+class Video(Schema):
+    """A video that can be played where it is, in its source's own player. Until the owner
+    plays it only the still is shown, and that comes through Munim like any picture."""
+
+    type: Literal["video"]
+    # The still, and what the video is called.
+    src: str
+    alt: str
+    # The video's id at YouTube. The app builds the player's address from it, so it is checked.
+    video: str = Field(pattern=r"^[A-Za-z0-9_-]{4,32}$")
+
+
 Block = Annotated[
-    Paragraph | Heading | Quote | ListBlock | Code | Image, Field(discriminator="type")
+    Paragraph | Heading | Quote | ListBlock | Code | Image | Video, Field(discriminator="type")
 ]
 
 
@@ -373,11 +385,11 @@ def _comments(item: Item) -> list[dict[str, Any]]:
 
 
 def _shown(item: Item) -> list[dict[str, Any]]:
-    """The item's blocks as the browser gets them: each image's address is Munim's own, so the
+    """The item's blocks as the browser gets them: each picture's address is Munim's own, so the
     browser asks this server for it and never the publisher."""
     blocks, images = [], 0
     for block in item.blocks:
-        if block["type"] == "image":
+        if block["type"] in ("image", "video"):
             block = {**block, "src": f"/api/items/{item.pk}/images/{images}"}
             images += 1
         blocks.append(block)

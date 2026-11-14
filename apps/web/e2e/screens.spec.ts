@@ -362,6 +362,13 @@ test('media preview opens from a thumbnail, closes on Escape, and can open the t
   await row.getByRole('button', { name: 'Preview video' }).click();
   const dialog = page.getByRole('dialog', { name: 'Media preview' });
   await expect(dialog).toBeVisible();
+  // The video's still, with a way to play it.
+  const play = dialog.getByRole('button', {
+    name: 'Play: Building a home server rack from scratch',
+  });
+  await expect
+    .poll(() => play.locator('img').evaluate((img: HTMLImageElement) => img.naturalWidth))
+    .toBe(320);
   await expect(page).toHaveScreenshot('media-preview-dark.png');
   expect(await axeFailures(page)).toEqual([]);
 
@@ -379,8 +386,54 @@ test('media preview: light theme', async ({ page }) => {
   await open(page, '/stream', 'Light');
   await page.getByRole('button', { name: 'Preview video' }).first().click();
   await expect(page.getByRole('dialog')).toBeVisible();
+  const still = page
+    .getByRole('dialog')
+    .getByRole('button', { name: /^Play: / })
+    .locator('img');
+  await expect.poll(() => still.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(320);
   await expect(page).toHaveScreenshot('media-preview-light.png');
   expect(await axeFailures(page)).toEqual([]);
+});
+
+test("video: nothing reaches YouTube until Play is pressed, then it plays in YouTube's player", async ({
+  page,
+}) => {
+  // Stands in for YouTube, and notes everything that is asked of it.
+  const asked: string[] = [];
+  await page.route(/youtube/, (route) => {
+    asked.push(route.request().url());
+    return route.fulfill({ status: 200, contentType: 'text/html', body: '<title>player</title>' });
+  });
+  const player = 'https://www.youtube-nocookie.com/embed/munimsample?autoplay=1&rel=0';
+
+  // In the thread pane: the still is there, and YouTube has heard nothing.
+  await open(page, '/stream');
+  await page.getByRole('button', { name: /^Building a home server rack from scratch/ }).click();
+  const pane = page.getByRole('complementary', { name: 'Thread' });
+  const play = pane.getByRole('button', { name: 'Play: Building a home server rack from scratch' });
+  await expect(play).toBeVisible();
+  await expect(page).toHaveScreenshot('stream-video-dark.png');
+  expect(await axeFailures(page)).toEqual([]);
+  expect(asked).toEqual([]);
+
+  await play.click();
+  const frame = pane.locator('iframe');
+  await expect(frame).toHaveAttribute('src', player);
+  await expect(frame).toHaveAttribute('title', 'Building a home server rack from scratch');
+  await expect(play).toHaveCount(0);
+  await expect.poll(() => asked).toEqual([player]);
+
+  // The same in the preview that opens from a row.
+  asked.length = 0;
+  const row = rows(page).filter({ hasText: 'Conflict-free sync explained in 12 minutes' });
+  await row.getByRole('button', { name: 'Preview video' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Media preview' });
+  await expect(dialog.getByRole('button', { name: /^Play: Conflict-free sync/ })).toBeVisible();
+  expect(asked).toEqual([]);
+  await dialog.getByRole('button', { name: /^Play: Conflict-free sync/ }).click();
+  await expect(dialog.locator('iframe')).toHaveAttribute('src', player);
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
 });
 
 test('ask bar: a question opens Ask with an honest placeholder answer; blank does nothing', async ({

@@ -191,11 +191,33 @@ def test_a_huge_document_is_cut_off_not_refused() -> None:
 
 
 def test_plain_text_becomes_paragraphs() -> None:
-    assert from_text("One line\nsame paragraph.\n\nSecond.\n\n\n") == [
-        p("One line same paragraph."),
+    # A line break inside a paragraph is kept: in plain text it is how a list is written.
+    assert from_text("One  line\n  same paragraph.\n\nSecond.\n \n\n") == [
+        p("One line\nsame paragraph."),
         p("Second."),
     ]
     assert from_text("") == []
+    assert from_text(" \n\n ") == []
+
+
+def test_an_address_written_out_in_plain_text_becomes_a_link() -> None:
+    [block] = from_text("Slides: https://example.com/a?b=1. More (https://x.example/y) here")
+    assert block["spans"] == [
+        {"text": "Slides: "},
+        {"text": "https://example.com/a?b=1", "href": "https://example.com/a?b=1"},
+        {"text": ". More ("},
+        {"text": "https://x.example/y", "href": "https://x.example/y"},
+        {"text": ") here"},
+    ]
+    [www] = from_text("See www.example.com/talks, or example.com/talks")
+    assert www["spans"] == [
+        {"text": "See "},
+        {"text": "www.example.com/talks", "href": "https://www.example.com/talks"},
+        {"text": ", or example.com/talks"},
+    ]
+    # Only http and https are addresses; anything else stays as written.
+    [plain] = from_text("javascript:alert(1) and ftp://files.example/x")
+    assert plain["spans"] == [{"text": "javascript:alert(1) and ftp://files.example/x"}]
 
 
 def test_the_words_can_be_read_back_as_plain_text() -> None:

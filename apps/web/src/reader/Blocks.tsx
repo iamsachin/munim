@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { cx } from '../ui/cx';
 import { within, type Range } from './found';
 import { Marked } from './Marked';
+import { Player } from './Player';
 import { unitCount, type Block, type Marks, type Span } from './units';
 
 /** Running totals: where each thing starts, given how long each one is. */
@@ -135,6 +136,8 @@ export function Blocks({
             );
           case 'image':
             return <Picture key={block.src} src={block.src} alt={block.alt} />;
+          case 'video':
+            return <Player key={block.video} src={block.src} alt={block.alt} video={block.video} />;
         }
       })}
     </div>

@@ -243,10 +243,36 @@ def from_html(html: str, base: str = "") -> list[Block]:
     return reader.blocks
 
 
+# An address someone wrote out: with its scheme, or starting "www.". A bare "example.com" is
+# left as text, since guessing would also catch file names and abbreviations.
+_LINK = re.compile(r"(?:https?://|www\.)[^\s<>\"']+", re.IGNORECASE)
+
+
 def from_text(text: str) -> list[Block]:
-    """Blocks from plain text: one paragraph for each run of lines separated by a blank line."""
-    paragraphs = (" ".join(p.split()) for p in text.split("\n\n"))
-    return [{"type": "paragraph", "spans": [{"text": p}]} for p in paragraphs if p]
+    """Blocks from plain text, such as a video's description: one paragraph for each run of
+    lines separated by a blank line. The line breaks inside a paragraph are kept, since plain
+    text has no other way to make a list; and an address written out becomes a link."""
+    blocks: list[Block] = []
+    for chunk in re.split(r"\n\s*\n", text):
+        lines = (" ".join(line.split()) for line in chunk.splitlines())
+        paragraph = "\n".join(line for line in lines if line)
+        spans: list[Span] = []
+        at = 0
+        for found in _LINK.finditer(paragraph):
+            # A full stop or bracket after an address belongs to the sentence, not to it.
+            url = found.group().rstrip(".,;:!?)]}")
+            if len(url) > MAX_URL:
+                continue
+            if found.start() > at:
+                spans.append({"text": paragraph[at : found.start()]})
+            href = url if url.lower().startswith("http") else f"https://{url}"
+            spans.append({"text": url, "href": href})
+            at = found.start() + len(url)
+        if at < len(paragraph):
+            spans.append({"text": paragraph[at:]})
+        if spans and len(blocks) < MAX_BLOCKS:
+            blocks.append({"type": "paragraph", "spans": spans})
+    return blocks
 
 
 def _words(spans: list[Span]) -> str:
@@ -262,7 +288,7 @@ def text_of(blocks: list[Block]) -> str:
             parts.append("\n".join(_words(item) for item in block["items"]))
         elif kind == "code":
             parts.append(block["text"])
-        elif kind == "image":
+        elif kind in ("image", "video"):
             parts.append(block["alt"])
         else:
             parts.append(_words(block["spans"]))

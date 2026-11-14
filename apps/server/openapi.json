@@ -1009,7 +1009,8 @@
                   "image": "#/components/schemas/Image",
                   "list": "#/components/schemas/ListBlock",
                   "paragraph": "#/components/schemas/Paragraph",
-                  "quote": "#/components/schemas/Quote"
+                  "quote": "#/components/schemas/Quote",
+                  "video": "#/components/schemas/Video"
                 },
                 "propertyName": "type"
               },
@@ -1019,7 +1020,8 @@
                 { "$ref": "#/components/schemas/Quote" },
                 { "$ref": "#/components/schemas/ListBlock" },
                 { "$ref": "#/components/schemas/Code" },
-                { "$ref": "#/components/schemas/Image" }
+                { "$ref": "#/components/schemas/Image" },
+                { "$ref": "#/components/schemas/Video" }
               ]
             },
             "title": "Blocks",
@@ -1106,7 +1108,8 @@
                   "image": "#/components/schemas/Image",
                   "list": "#/components/schemas/ListBlock",
                   "paragraph": "#/components/schemas/Paragraph",
-                  "quote": "#/components/schemas/Quote"
+                  "quote": "#/components/schemas/Quote",
+                  "video": "#/components/schemas/Video"
                 },
                 "propertyName": "type"
               },
@@ -1116,7 +1119,8 @@
                 { "$ref": "#/components/schemas/Quote" },
                 { "$ref": "#/components/schemas/ListBlock" },
                 { "$ref": "#/components/schemas/Code" },
-                { "$ref": "#/components/schemas/Image" }
+                { "$ref": "#/components/schemas/Image" },
+                { "$ref": "#/components/schemas/Video" }
               ]
             },
             "title": "Blocks",
@@ -1214,6 +1218,18 @@
         },
         "required": ["text"],
         "title": "Span",
+        "type": "object"
+      },
+      "Video": {
+        "description": "A video that can be played where it is, in its source's own player. Until the owner\nplays it only the still is shown, and that comes through Munim like any picture.",
+        "properties": {
+          "type": { "const": "video", "title": "Type", "type": "string" },
+          "src": { "title": "Src", "type": "string" },
+          "alt": { "title": "Alt", "type": "string" },
+          "video": { "pattern": "^[A-Za-z0-9_-]{4,32}$", "title": "Video", "type": "string" }
+        },
+        "required": ["type", "src", "alt", "video"],
+        "title": "Video",
         "type": "object"
       },
       "ItemPatch": {
