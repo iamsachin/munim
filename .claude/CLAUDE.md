@@ -55,6 +55,8 @@ AI settings (keys, per-feature model, usage); first-run setup and sign-in; lock 
 
 Do not start a step until the previous one is approved.
 
+`PROGRESS.md` is the checklist for this build order. Read it at the start of a session; tick items and update its "Now" section in the same commit as the work.
+
 ## Definition of done
 
 A piece of work is done only when all of these pass, and the result has been looked at running in a browser:
