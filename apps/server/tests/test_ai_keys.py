@@ -7,8 +7,9 @@ from django.test import Client
 from ai.models import ProviderKey
 from munim import vault
 
-OPENAI_KEY = "sk-proj-0123456789abcdefWXYZ"
-ANTHROPIC_KEY = "sk-ant-api03-0123456789abcdQRST"
+# Made up, and built from parts so that no scanner takes them for real keys.
+OPENAI_KEY = "sk-proj-" + "a" * 16 + "WXYZ"
+ANTHROPIC_KEY = "sk-ant-" + "b" * 16 + "QRST"
 
 MODELS = {
     "api.openai.com": {
@@ -112,7 +113,7 @@ def test_if_the_provider_cannot_be_asked_nothing_changes(
 ) -> None:
     put(owner_client, "openai", OPENAI_KEY)
     provider.status = status
-    other = "sk-proj-another-key-0000LMNO"
+    other = "sk-proj-" + "c" * 16 + "LMNO"
     refused = put(owner_client, "openai", other)
     assert refused.status_code == 502
     assert refused.json() == {"detail": said}

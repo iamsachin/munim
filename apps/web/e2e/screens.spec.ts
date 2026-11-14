@@ -453,6 +453,25 @@ test('ai: if the provider cannot be asked, the key is not saved and the row says
   await expect(page.getByRole('alert')).toContainText('Could not load the providers.');
 });
 
+test('ai: a change made after the session has locked brings up the lock screen', async ({
+  page,
+}) => {
+  const server = await open(page, '/ai');
+  await page.getByRole('button', { name: 'Add key for Anthropic' }).click();
+  await page.getByLabel('Anthropic API key').fill('sk-ant-0123456789abcdefWXYZ');
+  server.lockNow();
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('heading', { name: 'Locked' })).toBeVisible();
+
+  // Unlocked, the screen does not blame the key: nothing was wrong with it.
+  await page.getByLabel('Passphrase').fill(GOOD);
+  await page.getByRole('button', { name: 'Unlock' }).click();
+  await expect(page.getByRole('heading', { name: 'Locked' })).toHaveCount(0);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('row').filter({ hasText: 'Anthropic' })).toContainText('Connected');
+});
+
 test('ai: reaching the monthly limit pauses AI and says so; no limit never pauses', async ({
   page,
 }) => {

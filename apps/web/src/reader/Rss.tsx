@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { api, reason, type Feed } from '../api/client';
+import { api, reason, sessionOver, type Feed } from '../api/client';
 import { useTheme } from '../settings';
 import { focusId, useKeys } from '../shell/keys';
 import { Button, buttonClass } from '../ui/Button';
@@ -108,7 +108,7 @@ export function Rss() {
           }}
         >
           <div role="alert" className="text-note text-a3 empty:hidden">
-            {add.isError ? reason(add.error) : null}
+            {add.isError && !sessionOver(add.error) ? reason(add.error) : null}
           </div>
           <div className="flex gap-6">
             <Input

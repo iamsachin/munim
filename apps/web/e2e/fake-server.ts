@@ -325,5 +325,9 @@ export async function fakeServer(page: Page, start: State = 'open') {
     waitIsOver() {
       wrong = 0;
     },
+    /** The server locks the session, as it does when the owner has been idle too long. */
+    lockNow() {
+      state = 'locked';
+    },
   };
 }
