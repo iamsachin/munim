@@ -2,7 +2,7 @@
 
 from procrastinate.contrib.django import app
 
-from reader import feeds, hackernews
+from reader import feeds, hackernews, youtube
 
 POLL_EVERY = "*/15 * * * *"
 
@@ -21,3 +21,11 @@ def poll_feeds(timestamp: int) -> None:
 def poll_hacker_news(timestamp: int) -> None:
     """Every fifteen minutes, and when it is switched on: fetch the Hacker News front page."""
     hackernews.refresh()
+
+
+# Hourly, not every quarter: each pass costs Google allowance (see reader/youtube.py).
+@app.periodic(cron="7 * * * *")
+@app.task(queueing_lock="poll_youtube", lock="poll_youtube")
+def poll_youtube(timestamp: int) -> None:
+    """Every hour, and when it is connected: fetch new videos from subscribed channels."""
+    youtube.refresh()

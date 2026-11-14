@@ -21,6 +21,7 @@ from account.models import Device, Preferences
 from account.throttle import TooManyAttempts, address, attempt
 from ai.models import ProviderKey
 from munim import data, vault
+from reader.models import Connection
 
 router = Router(tags=["account"])
 
@@ -63,8 +64,9 @@ class SecurityOut(Schema):
     # Where the master key that seals secrets comes from: MUNIM_MASTER_KEY, or a file in the
     # data folder, which is made when the first secret is sealed ("unmade" until then).
     master_key: Literal["environment", "file", "unmade"]
-    # How many secrets are sealed with it now (API keys so far).
+    # How many secrets are sealed with it now: API keys, and sign-ins to sources.
     sealed: int
+    sign_ins: int
 
 
 class LockSettings(Schema):
@@ -246,7 +248,11 @@ def put_lock_settings(request: HttpRequest, body: LockSettings) -> LockSettings:
 @router.get("/security", auth=Open(), response=SecurityOut)
 def security(request: HttpRequest) -> SecurityOut:
     return SecurityOut.model_validate(
-        {"master_key": vault.kept_in(), "sealed": ProviderKey.objects.count()}
+        {
+            "master_key": vault.kept_in(),
+            "sealed": ProviderKey.objects.count(),
+            "sign_ins": Connection.objects.exclude(sealed="").count(),
+        }
     )
 
 

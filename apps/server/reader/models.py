@@ -50,9 +50,28 @@ class Connection(models.Model):
     synced_at = models.DateTimeField(null=True, blank=True)
     # Why the last fetch failed, in words for the owner. Empty if it worked.
     problem = models.CharField(max_length=300, blank=True)
+    # For a source the owner signs in to: whose account it is, to show; and what Munim needs to
+    # act for them, sealed (see munim/vault.py) and never sent to the browser.
+    account = models.CharField(max_length=300, blank=True)
+    sealed = models.TextField(blank=True)
 
     def __str__(self) -> str:
         return self.get_source_display()
+
+
+class Channel(models.Model):
+    """A YouTube channel the owner subscribes to, and how much of it has been seen."""
+
+    channel_id = models.CharField(max_length=64, primary_key=True)
+    title = models.CharField(max_length=300)
+    # The playlist that holds its uploads, which is where new videos are read from.
+    uploads = models.CharField(max_length=64)
+    # How many videos YouTube said it had when it was last read. It is read again only when
+    # this changes, which is what keeps Munim inside Google's daily allowance.
+    videos = models.PositiveIntegerField(null=True, blank=True)
+
+    def __str__(self) -> str:
+        return self.title
 
 
 class Item(models.Model):
@@ -74,6 +93,10 @@ class Item(models.Model):
     published_at = models.DateTimeField()
     # Where it came from, for sources that are not feeds: "612 points", a subreddit, a channel.
     origin = models.CharField(max_length=300, blank=True)
+    # A second line beside that, such as "video 18:24". Often empty.
+    sub = models.CharField(max_length=100, blank=True)
+    # What it mainly is, if not text: "Video" or "Image".
+    media = models.CharField(max_length=5, blank=True)
     # How many replies the source says it has, which can be more than are kept below.
     replies = models.PositiveIntegerField(default=0)
     # The discussion, flattened in reading order: who, at, depth, blocks.

@@ -434,6 +434,48 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/sources/youtube': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Youtube State */
+    get: operations['reader_api_youtube_state'];
+    put?: never;
+    post?: never;
+    /**
+     * Disconnect Youtube
+     * @description Forgets the Google sign-in. Videos already fetched stay.
+     */
+    delete: operations['reader_api_disconnect_youtube'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/sources/youtube/credentials': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Set Youtube Credentials
+     * @description Stores the Google Cloud project's client ID and secret, sealed. A sign-in made with other
+     *     credentials is of no use with these, so it is forgotten.
+     */
+    put: operations['reader_api_set_youtube_credentials'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/counts': {
     parameters: {
       query?: never;
@@ -568,6 +610,8 @@ export interface components {
       master_key: 'environment' | 'file' | 'unmade';
       /** Sealed */
       sealed: number;
+      /** Sign Ins */
+      sign_ins: number;
     };
     /** FeedOut */
     FeedOut: {
@@ -880,6 +924,33 @@ export interface components {
     ConnectionIn: {
       /** Enabled */
       enabled: boolean;
+    };
+    /**
+     * YouTubeOut
+     * @description Where the YouTube connection stands. Nothing here is a secret.
+     */
+    YouTubeOut: {
+      /** Configured */
+      configured: boolean;
+      /** Connected */
+      connected: boolean;
+      /** Account */
+      account: string;
+      /** Synced At */
+      synced_at: string | null;
+      /** Problem */
+      problem: string;
+      /** Redirect Uri */
+      redirect_uri: string;
+      /** Redirect Ok */
+      redirect_ok: boolean;
+    };
+    /** YouTubeCredentials */
+    YouTubeCredentials: {
+      /** Client Id */
+      client_id: string;
+      /** Client Secret */
+      client_secret: string;
     };
     /** Counts */
     Counts: {
@@ -1645,6 +1716,70 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['ConnectionOut'];
+        };
+      };
+    };
+  };
+  reader_api_youtube_state: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['YouTubeOut'];
+        };
+      };
+    };
+  };
+  reader_api_disconnect_youtube: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['YouTubeOut'];
+        };
+      };
+    };
+  };
+  reader_api_set_youtube_credentials: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['YouTubeCredentials'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['YouTubeOut'];
         };
       };
     };

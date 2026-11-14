@@ -71,3 +71,13 @@ export function connection(protocol: string, host: string) {
     ? { says: 'Not encrypted, and it never leaves this machine', plain: false }
     : { says: 'Not encrypted (http): others on the network can read it', plain: true };
 }
+
+/** "1 API key, 1 source sign-in": what is sealed now, or that nothing is yet. */
+export function sealedNow(keys: number, signIns: number) {
+  const count = (n: number, one: string, many: string) => `${String(n)} ${n === 1 ? one : many}`;
+  const parts = [
+    keys > 0 && count(keys, 'API key', 'API keys'),
+    signIns > 0 && count(signIns, 'source sign-in', 'source sign-ins'),
+  ].filter(Boolean);
+  return parts.join(', ') || 'Nothing yet';
+}

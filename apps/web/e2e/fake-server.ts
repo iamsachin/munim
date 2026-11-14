@@ -130,6 +130,16 @@ export async function fakeServer(page: Page, start: State = 'open') {
     start: 0,
     end: 0,
   }));
+  // YouTube, connected as the design shows it. `youtubeFresh()` below puts it back to nothing.
+  let youtube = {
+    configured: true,
+    connected: true,
+    account: 'Your subscriptions',
+    synced_at: ago(9 * 60_000) as string | null,
+    problem: '',
+    redirect_uri: 'http://localhost:4173/api/sources/youtube/callback',
+    redirect_ok: true,
+  };
   let hackerNews: { enabled: boolean; synced_at: string | null; problem: string } = {
     enabled: true,
     synced_at: ago(2 * 60_000),
@@ -251,7 +261,7 @@ export async function fakeServer(page: Page, start: State = 'open') {
     if (call === 'GET lock-settings') return reply(200, { minutes });
     if (call === 'GET security') {
       const sealed = Object.values(aiKeys).filter(Boolean).length;
-      return reply(200, { master_key: 'file', sealed });
+      return reply(200, { master_key: 'file', sealed, sign_ins: youtube.configured ? 1 : 0 });
     }
     if (call === 'PUT lock-settings') {
       minutes = body.minutes as number | null;
@@ -323,6 +333,18 @@ export async function fakeServer(page: Page, start: State = 'open') {
       const saved = { tail: key.slice(-4), ok: key.length >= 20 };
       aiKeys[provider] = saved;
       return reply(200, { provider, ...saved });
+    }
+    if (call === 'GET sources/youtube') return reply(200, youtube);
+    if (call === 'PUT sources/youtube/credentials') {
+      if (String(body.client_id).length < 10 || String(body.client_secret).length < 10) {
+        return refuse(422, 'That is too short to be a client ID and secret.');
+      }
+      youtube = { ...youtube, configured: true, connected: false, account: '', problem: '' };
+      return reply(200, youtube);
+    }
+    if (call === 'DELETE sources/youtube') {
+      youtube = { ...youtube, connected: false, account: '', synced_at: null, problem: '' };
+      return reply(200, youtube);
     }
     if (call === 'GET sources/hacker-news') return reply(200, hackerNews);
     if (call === 'PUT sources/hacker-news') {
@@ -447,6 +469,13 @@ export async function fakeServer(page: Page, start: State = 'open') {
       highlights = [];
       for (const provider of Object.keys(aiKeys)) aiKeys[provider] = null;
       hackerNews = { enabled: false, synced_at: null, problem: '' };
+      youtube = {
+        ...youtube,
+        configured: false,
+        connected: false,
+        account: '',
+        synced_at: null,
+      };
       return reply(204);
     }
     if (call === 'POST passphrase') {
@@ -468,6 +497,17 @@ export async function fakeServer(page: Page, start: State = 'open') {
     /** The wait after too many wrong passphrases is over. */
     waitIsOver() {
       wrong = 0;
+    },
+    /** YouTube as on a new install (nothing set up), or as left by a sign-in that failed. */
+    youtubeFresh(problem = '') {
+      youtube = {
+        ...youtube,
+        configured: problem !== '',
+        connected: false,
+        account: '',
+        synced_at: null,
+        problem,
+      };
     },
     /** The server locks the session, as it does when the owner has been idle too long. */
     lockNow() {

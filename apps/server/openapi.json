@@ -675,6 +675,63 @@
         "security": [{ "Open": [] }]
       }
     },
+    "/api/sources/youtube": {
+      "get": {
+        "operationId": "reader_api_youtube_state",
+        "summary": "Youtube State",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/YouTubeOut" } }
+            }
+          }
+        },
+        "tags": ["reader"],
+        "security": [{ "Open": [] }]
+      },
+      "delete": {
+        "operationId": "reader_api_disconnect_youtube",
+        "summary": "Disconnect Youtube",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/YouTubeOut" } }
+            }
+          }
+        },
+        "description": "Forgets the Google sign-in. Videos already fetched stay.",
+        "tags": ["reader"],
+        "security": [{ "Open": [] }]
+      }
+    },
+    "/api/sources/youtube/credentials": {
+      "put": {
+        "operationId": "reader_api_set_youtube_credentials",
+        "summary": "Set Youtube Credentials",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/YouTubeOut" } }
+            }
+          }
+        },
+        "description": "Stores the Google Cloud project's client ID and secret, sealed. A sign-in made with other\ncredentials is of no use with these, so it is forgotten.",
+        "tags": ["reader"],
+        "requestBody": {
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/YouTubeCredentials" } }
+          },
+          "required": true
+        },
+        "security": [{ "Open": [] }]
+      }
+    },
     "/api/counts": {
       "get": {
         "operationId": "reader_api_counts",
@@ -857,9 +914,10 @@
             "title": "Master Key",
             "type": "string"
           },
-          "sealed": { "title": "Sealed", "type": "integer" }
+          "sealed": { "title": "Sealed", "type": "integer" },
+          "sign_ins": { "title": "Sign Ins", "type": "integer" }
         },
-        "required": ["master_key", "sealed"],
+        "required": ["master_key", "sealed", "sign_ins"],
         "title": "SecurityOut",
         "type": "object"
       },
@@ -1244,6 +1302,51 @@
         "properties": { "enabled": { "title": "Enabled", "type": "boolean" } },
         "required": ["enabled"],
         "title": "ConnectionIn",
+        "type": "object"
+      },
+      "YouTubeOut": {
+        "description": "Where the YouTube connection stands. Nothing here is a secret.",
+        "properties": {
+          "configured": { "title": "Configured", "type": "boolean" },
+          "connected": { "title": "Connected", "type": "boolean" },
+          "account": { "title": "Account", "type": "string" },
+          "synced_at": {
+            "anyOf": [{ "format": "date-time", "type": "string" }, { "type": "null" }],
+            "title": "Synced At"
+          },
+          "problem": { "title": "Problem", "type": "string" },
+          "redirect_uri": { "title": "Redirect Uri", "type": "string" },
+          "redirect_ok": { "title": "Redirect Ok", "type": "boolean" }
+        },
+        "required": [
+          "configured",
+          "connected",
+          "account",
+          "synced_at",
+          "problem",
+          "redirect_uri",
+          "redirect_ok"
+        ],
+        "title": "YouTubeOut",
+        "type": "object"
+      },
+      "YouTubeCredentials": {
+        "properties": {
+          "client_id": {
+            "maxLength": 300,
+            "minLength": 10,
+            "title": "Client Id",
+            "type": "string"
+          },
+          "client_secret": {
+            "maxLength": 300,
+            "minLength": 10,
+            "title": "Client Secret",
+            "type": "string"
+          }
+        },
+        "required": ["client_id", "client_secret"],
+        "title": "YouTubeCredentials",
         "type": "object"
       },
       "Counts": {

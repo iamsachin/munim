@@ -8,9 +8,11 @@ Last updated: 2026-11-14
 
 Milestone 3 in progress. Merged: the Django scaffold (#6), the account API (#8), the web app signing in against the server (#9), RSS (#10), background polling (#11), the Stream on real items (#12), feed articles readable in the thread pane (#13), rich text as blocks with images fetched through the server (#14), Hacker News with its discussions (#15), sealed storage for secrets with the AI provider keys on the server (#16), the Docker Compose install (#17), full-text search in the Stream (#18), search matches marked in the open article (#19), highlights on the server (#20), removing a feed (#21), the Encryption card (#22), export and delete-all (#23), and the trusted-proxies setting (#24).
 
+Open for the owner's approval and first real test: YouTube through OAuth.
+
 Still on sample data in the browser: watches, digest, Ask, every Connections row except Hacker News, and on the AI screen the models, usage and limit (the provider keys are real).
 
-Next: YouTube, once the owner has chosen between an API key and OAuth.
+Next: Reddit (needs the owner to register an app), then the AI features.
 
 ## 0. Preparation
 
@@ -86,13 +88,13 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] Encryption card on Security and settings, saying what this install does; and a line on the AI screen about how keys are kept (approved)
 - [x] Export (a zip of JSON and text files, with no secrets in it) and delete-all (feeds, items, highlights, connections and API keys; the account stays)
 - [x] Encrypted storage for secrets (`munim/vault.py`), first used by the AI provider keys, which the server checks with the provider and stores sealed
-- [ ] The Connections note about stored tokens returns when a source stores one (YouTube or Reddit); the sidebar's status slot stays the Commands button
+- [x] The Connections note about stored sign-ins is back, worded truthfully; the sidebar's status slot stays the Commands button
 - [x] RSS: add a feed, fetch and parse it safely, read its articles; every feed is polled every fifteen minutes
 - [x] RSS: remove a feed from the app; what the owner saved, queued or highlighted stays (approved)
 - [x] RSS articles in the Stream, with unread state
 - [x] Rich text: every source's text becomes blocks on the server (headings, lists, quotes, code, links, bold and italic), with images fetched through the server and kept in the data folder
 - [x] Hacker News: the front page and each story's discussion, switched on and off in Connections
-- [ ] YouTube
+- [ ] YouTube: the owner's subscriptions through OAuth, set up and connected on Connections (built against a stand-in for Google; waits for the owner's approval and a first real sign-in)
 - [ ] Reddit (official OAuth)
 - [x] Saving an item (full text of feed articles)
 - [ ] Saving: comment threads, transcripts, thumbnails

@@ -342,6 +342,7 @@ def test_the_poll_is_scheduled_every_fifteen_minutes() -> None:
     assert scheduled == {
         "reader.tasks.poll_feeds": "*/15 * * * *",
         "reader.tasks.poll_hacker_news": "*/15 * * * *",
+        "reader.tasks.poll_youtube": "7 * * * *",
     }
 
 

@@ -41,6 +41,23 @@ by everyone rather than counted per visitor. The proxy must add to the `X-Forwar
 as nginx, Caddy and Traefik do by default. Never set it without a proxy: the header would then be
 whatever a visitor chose to send.
 
+## Connecting YouTube
+
+Munim reads your YouTube subscriptions by signing in to Google as you, with read-only access.
+Google requires each install to do that through a Google Cloud project of its own:
+
+1. In [Google Cloud](https://console.cloud.google.com/), create a project and switch on the
+   **YouTube Data API v3**.
+2. Set up the OAuth consent screen (external), and add your own Google account as a test user.
+3. Create an **OAuth client ID** of the type **Web application**. As its authorized redirect URI,
+   give the address Munim shows under Connections, YouTube, Set up. Google accepts only an https
+   address, or `http://localhost`.
+4. Paste the client ID and secret into Munim, then choose Connect and sign in.
+
+While the Google project's publishing status is "Testing", Google ends the sign-in after 7 days
+and you connect again. Publishing the project removes that limit. Munim checks for new videos
+every hour and stays within Google's free daily allowance.
+
 ## Upgrade
 
 ```sh
