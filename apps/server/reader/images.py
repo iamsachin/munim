@@ -7,6 +7,7 @@ first time it is wanted and then served from disk.
 
 import hashlib
 import os
+import uuid
 from pathlib import Path
 
 from django.conf import settings
@@ -55,7 +56,8 @@ def fetch(url: str) -> tuple[bytes, str]:
     place.parent.mkdir(parents=True, exist_ok=True)
     # Written under another name and moved into place, so a half-written file is never served.
     for path, data in ((place, got.content), (kind_file, got.content_type.encode())):
-        part = path.with_suffix(path.suffix + ".part")
+        # Its own name, so two requests for one image cannot move each other's file.
+        part = path.with_name(f"{path.name}.{uuid.uuid4().hex}.part")
         part.write_bytes(data)
         os.replace(part, path)
     return got.content, got.content_type

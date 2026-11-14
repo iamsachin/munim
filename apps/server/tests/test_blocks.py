@@ -208,3 +208,14 @@ def test_the_words_can_be_read_back_as_plain_text() -> None:
         "Title\n\nSome bold text.\n\none\ntwo\n\ncode()\n\nA chart\n\nSaid."
     )
     assert text_of([]) == ""
+
+
+def test_an_address_that_cannot_be_read_is_dropped_not_fatal() -> None:
+    blocks = from_html('<p><a href="http://[::1/x">link</a></p><img src="http://[::1/bad.png">', "")
+    assert [block["type"] for block in blocks] == ["paragraph"]
+    assert not blocks[0]["spans"][0].get("href")
+
+
+def test_a_list_cannot_grow_without_limit() -> None:
+    [block] = from_html("<ul>" + "<li>x</li>" * 5000 + "</ul>", "")
+    assert len(block["items"]) == 500

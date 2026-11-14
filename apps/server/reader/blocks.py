@@ -20,6 +20,8 @@ Block = dict[str, Any]
 
 MAX_BLOCKS = 2000
 MAX_URL = 1000
+# shortcut: items past this are joined onto the last one, split them if real lists get this long
+MAX_ITEMS = 500
 
 _HEADINGS = {"h1": 2, "h2": 2, "h3": 3, "h4": 3, "h5": 3, "h6": 3}
 _MARKS = {
@@ -50,8 +52,12 @@ def _address(base: str, value: str | None, schemes: tuple[str, ...]) -> str:
     """An absolute address with an allowed scheme, or "" if it is anything else."""
     if not value:
         return ""
-    url = urljoin(base, value.strip())
-    if len(url) > MAX_URL or urlsplit(url).scheme not in schemes:
+    try:
+        url = urljoin(base, value.strip())
+        scheme = urlsplit(url).scheme
+    except ValueError:  # not an address at all, such as an unclosed "[" in the host
+        return ""
+    if len(url) > MAX_URL or scheme not in schemes:
         return ""
     return url
 
@@ -166,7 +172,7 @@ class _Reader(HTMLParser):
             self.lists.append({"ordered": tag == "ol", "items": []})
         elif tag == "li":
             self._flush()
-            if self.lists:
+            if self.lists and len(self.lists[-1]["items"]) < MAX_ITEMS:
                 self.lists[-1]["items"].append([])
         elif tag in _HEADINGS:
             self._flush()
