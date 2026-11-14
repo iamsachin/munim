@@ -53,7 +53,7 @@ Version pins with a reason: TypeScript stays on 6.0 until typescript-eslint supp
 
 ## Design gaps (need a design before code)
 
-AI settings (keys, per-feature model, usage); first-run setup and sign-in; lock screen; loading, error and empty states for every screen; honest security screen; command palette and shortcut help; disabled-reply state.
+first-run setup and sign-in; lock screen; loading, error and empty states for every screen; honest security screen; command palette and shortcut help; disabled-reply state.
 
 ## Build order
 

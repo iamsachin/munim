@@ -13,7 +13,7 @@ The owner chose "I design, you approve". Nothing undesigned is built on until th
 2. **Ask what you cannot decide.** Behaviour, content and scope questions go to the owner before any drawing. Visual questions do not; propose and show.
 3. **Design in the existing language.** Use only the tokens and shared components listed in `port-design`. Find the closest designed screen and follow its structure:
    - settings-like content: the two-column section cards of "Security and settings";
-   - lists of things with status and an action: the "Connections" table;
+   - lists of things with status and an action: the "Connections" table (the AI screen at `account/AiSettings.tsx` is the worked example of a designed gap);
    - on/off choices: the 52px On/Off pill; one-of-many: filter chips;
    - AI content: the AI badge and AI card, nothing else;
    - empty states: one line of muted text, as in "Nothing matches this filter."

@@ -75,11 +75,13 @@ Density: `--dn` is 1 (Compact), 1.7 (Comfortable, default) or 2.4 (Roomy). Row p
 - Buttons never wrap, and the thread's metadata line truncates, so the 920px minimum width holds together.
 - The Saved list and its count follow what is saved in the stream; the handoff's two were independent.
 - The light theme's media-preview veil is light, so the caption under the preview stays readable.
+- Nothing is summarised automatically (owner's decision). Where the handoff shows an AI summary, the port shows `AskCard`: an ask field and a "Summarize this ..." suggestion.
+- The Ask scope "Open thread" is "Open item", since it also covers articles.
 - Counts are computed from the data (the sidebar's RSS count is 7, not the handoff's hard-coded 9).
 
 ## Shared components
 
-Build each once and reuse; the prototype repeats their inline styles dozens of times. AI badge, AI card, section label, ghost button, primary button, filter chip, On/Off toggle pill, nav row, table header, table row (hover, selected with 2px inset accent bar, unread weight 600), source code tag, text input, status dot, highlight mark, citation row, media thumb, section card.
+Build each once and reuse; the prototype repeats their inline styles dozens of times. AI badge, AI card, section label, ghost button, primary button, filter chip, On/Off toggle pill, nav row, table header, table row (hover, selected with 2px inset accent bar, unread weight 600), source code tag, text input, status dot, highlight mark, citation row, media thumb, section card. Added with the owner's approval: select (a native dropdown dressed like the small input, for choices too many for chips) and suggestion chip (a question the AI will be asked).
 
 ## Rules
 
