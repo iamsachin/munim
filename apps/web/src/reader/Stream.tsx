@@ -21,7 +21,6 @@ import { useReader } from './store';
 const COLS = 'grid-cols-[34px_minmax(0,1fr)_40px_30px_16px]';
 const FILTERS = ['All', 'Unread', 'Saved', 'Video'] as const;
 type Filter = (typeof FILTERS)[number];
-const SHOW = { All: 'all', Unread: 'unread', Saved: 'saved', Video: 'all' } as const;
 
 const isSource = (code: string): code is Source => Object.hasOwn(SOURCES, code);
 
@@ -36,10 +35,18 @@ export function Stream() {
   // Ages are worked out against one moment, so they do not change while the screen is open.
   const [now] = useState(() => Date.now());
 
-  const items = useItems({ source, show: SHOW[filter], q: query.trim() });
+  // Items opened while the Unread filter is on. They stay listed until the filter changes:
+  // without this, opening an unread item would remove it from under the owner's eyes.
+  const [keptOpen, setKeptOpen] = useState<ReadonlySet<number>>(new Set());
+
+  const items = useItems({ source, show: filter === 'Saved' ? 'saved' : 'all', q: query.trim() });
   const change = useChangeItem();
-  // The server has no notion of "video" yet, so that one filter is applied here.
-  const rows = (items.data ?? []).filter((item) => filter !== 'Video' || item.media === 'Video');
+  // Video (which the server has no notion of yet) and Unread are narrowed here.
+  const rows = (items.data ?? []).filter(
+    (item) =>
+      (filter !== 'Video' || item.media === 'Video') &&
+      (filter !== 'Unread' || item.unread || keptOpen.has(item.id)),
+  );
   // The open item is the one chosen, if it is in the list on screen; otherwise the first row.
   const current = rows.find((item) => item.id === chosen) ?? rows[0];
   const zoomed = rows.find((item) => item.id === zoom);
@@ -50,6 +57,7 @@ export function Stream() {
    */
   const open = (id: number) => {
     setChosen(id);
+    if (filter === 'Unread') setKeptOpen((kept) => new Set(kept).add(id));
     if (rows.find((item) => item.id === id)?.unread) change.mutate({ id, read: true });
   };
   const move = (step: number) => {
@@ -97,6 +105,7 @@ export function Stream() {
               on={filter === f}
               onClick={() => {
                 setFilter(f);
+                setKeptOpen(new Set());
               }}
             >
               {f}
