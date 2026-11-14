@@ -6,9 +6,11 @@ Last updated: 2026-11-14
 
 ## Now
 
-On branch `milestone-2-gaps` (pull request #2, not merged). Approved by the owner on 2026-11-14: the AI screen, on-demand summaries, first run, sign-in, the lock screen, and the Sign-in, Devices and Your data cards.
+On branch `milestone-2-states` (pull request #3). Built, passing all gates, **waiting for the owner's approval**: loading, error and empty states, shown on the gallery page (`/gallery`, bottom) with the wording for every list.
 
-Next: loading, error and empty states; then keyboard navigation and the command palette; the disabled-reply state; highlighting by selecting text.
+Per the owner's decision the states are only designed now. They are wired into the screens in milestone 3, when data really loads and fails.
+
+Then: keyboard navigation and the command palette; the disabled-reply state; highlighting by selecting text.
 
 ## 0. Preparation
 
@@ -55,7 +57,7 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] AI settings: keys, per-feature model, monthly limit, usage (design gap, approved)
 - [x] On-demand summaries in place of automatic ones (approved)
 - [x] First-run setup, sign-in, lock screen (design gap, approved)
-- [ ] Loading, error and empty states for every screen (design gap)
+- [ ] Loading, error and empty states: patterns and wording (design gap; built, awaiting approval)
 - [ ] Keyboard navigation, command palette, shortcut help (design gap)
 - [ ] Disabled-reply state for sources without an official write API (design gap)
 - [ ] Highlight by selecting text, with a note
@@ -66,6 +68,7 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [ ] Server scaffold in `apps/server`: Django, Django Ninja, uv, ruff, mypy, pytest, wired into `pnpm check`
 - [ ] Postgres, Django models and migrations, admin
 - [ ] OpenAPI document, generated front-end client replacing the mock store
+- [ ] Loading, error and empty states wired into every screen (`ui/States.tsx`, wording in `reader/copy.ts`)
 - [ ] Postgres job queue and scheduler
 - [ ] Docker Compose: one app container serving web, API and jobs, plus Postgres
 - [ ] Master key file, generated on first run

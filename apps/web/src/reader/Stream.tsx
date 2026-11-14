@@ -7,7 +7,9 @@ import { Chip } from '../ui/Chip';
 import { cx } from '../ui/cx';
 import { Input } from '../ui/Input';
 import { Cell, RowButton, Table, TableBody, TableHeader, TableRow, Th } from '../ui/Table';
+import { EmptyState } from '../ui/States';
 import { AskCard } from './AskCard';
+import { EMPTY } from './copy';
 import { ITEMS } from './fixtures';
 import { MediaPreview } from './MediaPreview';
 import { itemAt, laterRowFor, toggled, useReader, withoutLater } from './store';
@@ -131,7 +133,7 @@ export function Stream() {
             })}
             {rows.length === 0 && (
               <div role="row">
-                <Cell className="px-16 py-24 text-mute">Nothing matches this filter.</Cell>
+                <Cell className="px-16 py-24 text-mute">{EMPTY.filter}</Cell>
               </div>
             )}
           </TableBody>
@@ -221,7 +223,7 @@ function Thread({ index: i }: { index: number }) {
             {c.text}
           </div>
         ))}
-        {comments.length === 0 && <div className="py-12 text-mute">No replies yet.</div>}
+        {comments.length === 0 && <EmptyState compact>{EMPTY.replies}</EmptyState>}
       </div>
 
       <form
