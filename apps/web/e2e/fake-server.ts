@@ -112,6 +112,7 @@ export async function fakeServer(page: Page, start: State = 'open') {
     id: 1,
     question: 'What did people say about keeping feeds in sync this week?',
     scope: 'everything',
+    follows: null as number | null,
     status: 'answered',
     answer:
       'Three items touch on it. On Hacker News the consensus is to cache aggressively and poll less often [1]. Wire Notes argues that a sync protocol should be boring, because the clever ones lose data [2]. Wire Talks shows conflict-free sync in a twelve-minute video [3].',
@@ -464,17 +465,20 @@ export async function fakeServer(page: Page, start: State = 'open') {
     });
     if (call === 'GET asks') {
       const told = asks.map((asked) => ({ ...asked }));
-      // What was waiting when this was asked for is answered by the time it is asked again,
-      // as when the worker finishes between two looks.
+      // What is waiting moves on between two looks, as while the worker writes: first part
+      // of the answer is there, then all of it with what it cites.
+      const start = 'The stand-in server has no model.';
       asks = asks.map((asked) =>
-        asked.status === 'pending'
-          ? {
-              ...asked,
-              status: 'answered',
-              answer: `The stand-in server has no model. It was asked: ${asked.question} [1]`,
-              cites: [SAMPLE_ASK.cites[0]].filter((cite) => cite !== undefined),
-            }
-          : asked,
+        asked.status !== 'pending'
+          ? asked
+          : asked.answer === ''
+            ? { ...asked, answer: start }
+            : {
+                ...asked,
+                status: 'answered',
+                answer: `${start} It was asked: ${asked.question} [1]`,
+                cites: [SAMPLE_ASK.cites[0]].filter((cite) => cite !== undefined),
+              },
       );
       return reply(200, told);
     }
@@ -489,11 +493,14 @@ export async function fakeServer(page: Page, start: State = 'open') {
           : body.scope === 'item' && body.item_id == null
             ? 'Open an item first, then ask about it.'
             : '';
+      const earlier = asks.find((one) => one.id === Number(body.follows));
       const asked = {
         ...SAMPLE_ASK,
         id: Math.max(0, ...asks.map((one) => one.id)) + 1,
         question: String(body.question),
-        scope: String(body.scope),
+        // A follow-up is asked of what the question it follows was.
+        scope: earlier?.scope ?? String(body.scope),
+        follows: earlier?.id ?? null,
         status: problem ? 'failed' : 'pending',
         answer: '',
         problem,

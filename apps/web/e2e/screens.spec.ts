@@ -545,6 +545,30 @@ test('ask bar: a question opens Ask, waits for its answer and shows it with what
   const bar = page.getByRole('search').getByLabel('Ask');
   await bar.press('Enter');
   await expect(page).toHaveURL(/\/today$/);
+  /** Holds the answer where it is, so that each stage can be looked at for as long as needed. */
+  const hold = async (answer: string) => {
+    await page.unroute('**/api/asks');
+    await page.route('**/api/asks', (route) =>
+      route.request().method() === 'GET'
+        ? route.fulfill({
+            json: [
+              {
+                id: 9,
+                question: 'What changed in sync this week?',
+                scope: 'everything',
+                follows: null,
+                status: 'pending',
+                answer,
+                problem: '',
+                cites: [],
+                asked_at: new Date(NOW).toISOString(),
+              },
+            ],
+          })
+        : route.fallback(),
+    );
+  };
+  await hold('');
   await bar.fill('What changed in sync this week?');
   await bar.press('Enter');
   await expect(page).toHaveURL(/\/ask$/);
@@ -552,8 +576,14 @@ test('ask bar: a question opens Ask, waits for its answer and shows it with what
   const asked = page.getByRole('main').locator('> div > div').filter({
     hasText: 'What changed in sync this week?',
   });
-  // The worker has not answered yet; the page asks again until it has.
+  // The worker has not begun; then the answer is there as far as it is written; then whole.
+  // The page asks again until it is.
   await expect(asked.getByRole('status')).toHaveText('Waiting for the answer.');
+  await expect(asked.getByLabel(/^Ask a follow-up/)).toHaveCount(0);
+  await hold('Sync protocols should be');
+  await expect(asked.getByRole('status')).toHaveText('· writing');
+  await expect(asked).toContainText('Sync protocols should be');
+  await page.unroute('**/api/asks');
   await expect(asked).toContainText('It was asked: What changed in sync this week? [1]');
   await expect(asked.getByRole('status')).toHaveCount(0);
   await expect(asked).toContainText('Ask HN: How do you keep track of long discussions?');
@@ -561,6 +591,37 @@ test('ask bar: a question opens Ask, waits for its answer and shows it with what
   // It is the server's, so it is still there after a reload.
   await page.reload();
   await expect(page.getByText('It was asked: What changed in sync this week? [1]')).toBeVisible();
+});
+
+test('ask: a follow-up joins the conversation it follows and is asked of the same scope', async ({
+  page,
+}) => {
+  await open(page, '/ask');
+  const first = 'What did people say about keeping feeds in sync this week?';
+  // Another question is asked in between, of something else.
+  await page.getByRole('button', { name: 'Saved', exact: true }).click();
+  await page.getByRole('button', { name: 'Summarize what I saved this week' }).click();
+  await expect(page.getByText('It was asked: Summarize what I saved this week [1]')).toBeVisible();
+
+  const followUp = page.getByLabel(`Ask a follow-up to: ${first}`);
+  await followUp.fill('   ');
+  await followUp.press('Enter');
+  await followUp.fill('Which of those is newest?');
+  await followUp.press('Enter');
+  await expect(followUp).toHaveCount(0); // not while its answer is being written
+  await expect(page.getByText('It was asked: Which of those is newest? [1]')).toBeVisible();
+  await expect(followUp).toHaveValue('');
+
+  // It sits with the question it follows, above the one asked in between, and is asked of
+  // everything as that was, not of what is chosen now.
+  const groups = page.getByRole('main').locator('> div > div');
+  await expect(groups.nth(0)).toContainText(first);
+  await expect(groups.nth(0)).toContainText('Which of those is newest?');
+  await expect(groups.nth(0).getByText('From everything')).toHaveCount(2);
+  await expect(groups.nth(1)).toContainText('Summarize what I saved this week');
+  await expect(groups.nth(1)).toContainText('From saved');
+  await expect(page).toHaveScreenshot('ask-follow-up-dark.png');
+  expect(await axeFailures(page)).toEqual([]);
 });
 
 test('ask: a question that cannot be sent says so, and one with no model says why', async ({

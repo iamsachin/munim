@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import timedelta
 from typing import Any
 
@@ -25,10 +26,84 @@ def model(monkeypatch: pytest.MonkeyPatch) -> Any:
     class Stand:
         said = "Sync protocols should be boring [2]. Nothing here is about cheese."
         status = 200
+        # How its stream ends: "response.completed", or "response.failed" part way.
+        ends = "response.completed"
         seen: list[tuple[str, str, dict[str, Any]]] = []
+        # Called after each piece of the answer has been taken, to look at what is saved then.
+        between: Any = None
 
     stand = Stand()
     stand.seen = []
+
+    def event(name: str, data: dict[str, Any]) -> bytes:
+        return f"event: {name}\ndata: {json.dumps({'type': name, **data})}\n\n".encode()
+
+    def pieces() -> list[str]:
+        """The answer a word at a time, as a model sends it."""
+        return re.findall(r"\S+\s*", stand.said)
+
+    def openai_stream() -> Any:
+        for n, piece in enumerate(pieces()):
+            yield event(
+                "response.output_text.delta",
+                {
+                    "item_id": "msg_1",
+                    "output_index": 0,
+                    "content_index": 0,
+                    "delta": piece,
+                    "logprobs": [],
+                    "sequence_number": n,
+                },
+            )
+            if stand.between:
+                stand.between()
+        response = {
+            "id": "resp_1",
+            "object": "response",
+            "created_at": 1,
+            "model": "gpt-example",
+            "status": "completed",
+            "output": [],
+            "parallel_tool_calls": False,
+            "tool_choice": "auto",
+            "tools": [],
+            "usage": {
+                "input_tokens": 1000,
+                "input_tokens_details": {"cached_tokens": 0},
+                "output_tokens": 50,
+                "output_tokens_details": {"reasoning_tokens": 0},
+                "total_tokens": 1050,
+            },
+        }
+        yield event(stand.ends, {"response": response, "sequence_number": 999})
+
+    def anthropic_stream() -> Any:
+        message: dict[str, Any] = {
+            "id": "msg_1",
+            "type": "message",
+            "role": "assistant",
+            "model": "claude-example",
+            "content": [],
+            "stop_reason": None,
+            "stop_sequence": None,
+            "usage": {"input_tokens": 1200, "output_tokens": 1},
+        }
+        yield event("message_start", {"message": message})
+        yield event(
+            "content_block_start", {"index": 0, "content_block": {"type": "text", "text": ""}}
+        )
+        for piece in pieces():
+            delta = {"type": "text_delta", "text": piece}
+            yield event("content_block_delta", {"index": 0, "delta": delta})
+        yield event("content_block_stop", {"index": 0})
+        yield event(
+            "message_delta",
+            {
+                "delta": {"stop_reason": "end_turn", "stop_sequence": None},
+                "usage": {"output_tokens": 80},
+            },
+        )
+        yield event("message_stop", {})
 
     def handler(request: httpx2.Request) -> httpx2.Response:
         headers = request.headers
@@ -40,49 +115,8 @@ def model(monkeypatch: pytest.MonkeyPatch) -> Any:
         )
         if stand.status != 200:
             return httpx2.Response(stand.status, json={"error": {"message": "no", "type": "x"}})
-        if request.url.host == "api.anthropic.com":
-            return httpx2.Response(
-                200,
-                json={
-                    "id": "msg_1",
-                    "type": "message",
-                    "role": "assistant",
-                    "model": "claude-example",
-                    "content": [{"type": "text", "text": stand.said}],
-                    "stop_reason": "end_turn",
-                    "stop_sequence": None,
-                    "usage": {"input_tokens": 1200, "output_tokens": 80},
-                },
-            )
-        return httpx2.Response(
-            200,
-            json={
-                "id": "resp_1",
-                "object": "response",
-                "created_at": 1,
-                "model": "gpt-example",
-                "status": "completed",
-                "output": [
-                    {
-                        "id": "msg_1",
-                        "type": "message",
-                        "role": "assistant",
-                        "status": "completed",
-                        "content": [{"type": "output_text", "text": stand.said, "annotations": []}],
-                    }
-                ],
-                "parallel_tool_calls": False,
-                "tool_choice": "auto",
-                "tools": [],
-                "usage": {
-                    "input_tokens": 1000,
-                    "input_tokens_details": {"cached_tokens": 0},
-                    "output_tokens": 50,
-                    "output_tokens_details": {"reasoning_tokens": 0},
-                    "total_tokens": 1050,
-                },
-            },
-        )
+        stream = anthropic_stream() if request.url.host == "api.anthropic.com" else openai_stream()
+        return httpx2.Response(200, content=stream, headers={"Content-Type": "text/event-stream"})
 
     monkeypatch.setattr("ai.providers.TRANSPORT", httpx2.MockTransport(handler))
     return stand
@@ -183,7 +217,7 @@ def test_a_question_is_answered_by_the_worker_from_matching_items_with_citations
     answer_ask(ask_id=waiting["id"])
     (address, key, body) = model.seen[0]
     assert (address, key) == ("api.openai.com/v1/responses", KEY)
-    assert (body["model"], body["store"]) == ("gpt-example", False)
+    assert (body["model"], body["store"], body["stream"]) == ("gpt-example", False, True)
     assert body["instructions"] == ask.INSTRUCTIONS
     sent = body["input"]
     assert sent.startswith(f"Question: {question}")
@@ -321,6 +355,40 @@ def test_a_provider_that_does_not_answer_is_reported_without_the_key(
     assert not Usage.objects.exists()
 
 
+def test_an_answer_is_shown_while_it_is_written(
+    owner_client: Client, library: dict[str, Item], model: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ready()
+    monkeypatch.setattr(ask, "SHOW_EVERY_SECONDS", 0)
+    model.said = "Boring is good [1]. Clever loses data [1]."
+    asked = put(owner_client, "Summarize this", "item", library["sync"].pk).json()
+    seen: list[tuple[str, str, int]] = []
+
+    def look() -> None:
+        told = owner_client.get("/api/asks").json()[0]
+        seen.append((told["status"], told["answer"], len(told["cites"])))
+
+    model.between = look
+    answer_ask(ask_id=asked["id"])
+    # Still being written, it is already there to read, a piece longer each time; an item is
+    # listed from the moment it is first cited.
+    assert seen[0] == ("pending", "Boring ", 0)
+    assert seen[3] == ("pending", "Boring is good [1]. ", 1)
+    assert [len(answer) for _, answer, _ in seen] == sorted(len(a) for _, a, _ in seen)
+    done = owner_client.get("/api/asks").json()[0]
+    assert (done["status"], done["answer"]) == ("answered", model.said)
+
+    # A stream that fails part way leaves no half answer behind, and is not charged.
+    model.ends = "response.failed"
+    Usage.objects.all().delete()
+    failed = put(owner_client, "Summarize this", "item", library["sync"].pk).json()
+    answer_ask(ask_id=failed["id"])
+    told = owner_client.get("/api/asks").json()[1]
+    assert (told["status"], told["answer"], told["cites"]) == ("failed", "", [])
+    assert told["problem"] == "OpenAI stopped before finishing its answer."
+    assert not Usage.objects.exists()
+
+
 def test_a_limit_reached_while_waiting_stops_the_call(
     owner_client: Client, library: dict[str, Item], model: Any
 ) -> None:
@@ -330,6 +398,65 @@ def test_a_limit_reached_while_waiting_stops_the_call(
     answer_ask(ask_id=asked["id"])
     assert owner_client.get("/api/asks").json()[0]["problem"] == ask.PAUSED
     assert model.seen == []
+
+
+def test_a_follow_up_is_answered_from_the_same_items_with_what_was_said_before(
+    owner_client: Client, library: dict[str, Item], model: Any
+) -> None:
+    ready()
+    model.said = "Clever sync protocols lose data [1]."
+    first = put(owner_client, "What about sync protocols?", "saved").json()
+    assert first["follows"] is None
+    answer_ask(ask_id=first["id"])
+
+    # The follow-up has no words of its own to search by, and says "everything": it is asked
+    # of what the first one was, the saved article, all the same.
+    body = {"question": "Why?", "scope": "everything", "follows": first["id"]}
+    second = owner_client.post("/api/asks", body, "application/json").json()
+    assert (second["follows"], second["scope"]) == (first["id"], "saved")
+    model.said = "Because they are clever [1]."
+    answer_ask(ask_id=second["id"])
+    sent = model.seen[-1][2]["input"]
+    assert sent.startswith(
+        "Earlier question: What about sync protocols?\n"
+        "Earlier answer: Clever sync protocols lose data .\n\n"
+        "Question: Why?\n\nItems:\n\n[1] The case for boring sync protocols"
+    )
+    assert "Show HN" not in sent and "Gardening" not in sent
+    told = owner_client.get("/api/asks").json()[1]
+    assert (told["answer"], told["cites"][0]["title"]) == (
+        "Because they are clever [1].",
+        "The case for boring sync protocols",
+    )
+
+    # A follow-up to a follow-up carries the whole conversation, oldest first.
+    third = owner_client.post(
+        "/api/asks",
+        {"question": "And then?", "scope": "saved", "follows": second["id"]},
+        "application/json",
+    ).json()
+    answer_ask(ask_id=third["id"])
+    sent = model.seen[-1][2]["input"]
+    assert sent.index("Earlier question: What about sync") < sent.index("Earlier question: Why?")
+    assert sent.index("Earlier question: Why?") < sent.index("Question: And then?")
+
+    # About one item, a follow-up is about that item. Following a question that is gone is
+    # just a question.
+    about = put(owner_client, "Summarize this thread", "item", library["hn"].pk).json()
+    answer_ask(ask_id=about["id"])
+    more = owner_client.post(
+        "/api/asks",
+        {"question": "Who said it?", "scope": "everything", "follows": about["id"]},
+        "application/json",
+    ).json()
+    answer_ask(ask_id=more["id"])
+    assert "[1] Show HN: an offline archive" in model.seen[-1][2]["input"]
+    lost = owner_client.post(
+        "/api/asks",
+        {"question": "Anything?", "scope": "week", "follows": 99999},
+        "application/json",
+    ).json()
+    assert (lost["follows"], lost["scope"]) == (None, "week")
 
 
 def test_asks_need_an_open_session(client: Client, db: None, model: Any) -> None:

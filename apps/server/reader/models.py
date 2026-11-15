@@ -170,6 +170,13 @@ class Ask(models.Model):
     item = models.ForeignKey(
         Item, null=True, blank=True, on_delete=models.SET_NULL, related_name="asks"
     )
+    # The question this one follows up, if it is a follow-up: it is answered from the same
+    # items, with what was said before.
+    follows = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.SET_NULL, related_name="followups"
+    )
+    # The items the model was given, in the order of their numbers in the prompt.
+    given = models.JSONField(default=list, blank=True)
     answer = models.TextField(blank=True)
     # The items the answer cites, in the order of their numbers in it: each as it was then
     # (item, source, title, origin, icon), so a citation survives its item.

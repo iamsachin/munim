@@ -1119,6 +1119,8 @@ export interface components {
        * @enum {string}
        */
       scope: 'everything' | 'saved' | 'week' | 'item';
+      /** Follows */
+      follows: number | null;
       /**
        * Status
        * @enum {string}
@@ -1166,6 +1168,8 @@ export interface components {
       scope: 'everything' | 'saved' | 'week' | 'item';
       /** Item Id */
       item_id?: number | null;
+      /** Follows */
+      follows?: number | null;
     };
     /** Counts */
     Counts: {

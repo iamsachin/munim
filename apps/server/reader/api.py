@@ -670,6 +670,8 @@ class AskIn(Schema):
     scope: Literal["everything", "saved", "week", "item"]
     # The item asked about, when the scope is one item.
     item_id: int | None = None
+    # The earlier question this one follows up. It is then asked of what that one was.
+    follows: int | None = None
 
 
 class Cite(Schema):
@@ -689,7 +691,10 @@ class AskOut(Schema):
     id: int
     question: str
     scope: Literal["everything", "saved", "week", "item"]
-    # Waiting for the worker, answered, or not answered (`problem` says why).
+    # The earlier question it follows up, if it is a follow-up.
+    follows: int | None
+    # Waiting for the worker, answered, or not answered (`problem` says why). While it waits,
+    # `answer` is what has been written so far.
     status: Literal["pending", "answered", "failed"]
     answer: str
     problem: str
@@ -707,6 +712,7 @@ def _ask(asked: Ask, kept: set[int]) -> AskOut:
             "id": asked.pk,
             "question": asked.question,
             "scope": asked.scope,
+            "follows": asked.follows_id,
             "status": status,
             "answer": asked.answer,
             "problem": asked.problem,
@@ -739,7 +745,11 @@ def ask_question(request: HttpRequest, body: AskIn) -> Status[AskOut]:
     stops it being asked at all (no model, the limit, no item) is its answer at once."""
     wanted = body.item_id if body.scope == "item" else None
     item = Item.objects.filter(pk=wanted).first() if wanted is not None else None
-    asked = Ask(question=body.question.strip(), scope=body.scope, item=item)
+    scope: str = body.scope
+    earlier = Ask.objects.filter(pk=body.follows).first() if body.follows is not None else None
+    if earlier is not None:
+        scope, item = earlier.scope, earlier.item
+    asked = Ask(question=body.question.strip(), scope=scope, item=item, follows=earlier)
     asked.problem = ask.refusal(asked)
     if asked.problem:
         asked.answered_at = timezone.now()
