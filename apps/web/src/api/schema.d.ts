@@ -563,6 +563,54 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/watches': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Watches
+     * @description The watches, and the latest items that matched them.
+     */
+    get: operations['reader_api_list_watches'];
+    put?: never;
+    /**
+     * Add Watch
+     * @description Adds a watch, which looks back over the past week at once.
+     */
+    post: operations['reader_api_add_watch'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/watches/{watch_id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Remove Watch
+     * @description Removes a watch and its matches. The items themselves stay.
+     */
+    delete: operations['reader_api_remove_watch'];
+    options?: never;
+    head?: never;
+    /**
+     * Switch Watch
+     * @description Switches a watch on or off. Off, it looks at nothing and its matches are not shown.
+     */
+    patch: operations['reader_api_switch_watch'];
+    trace?: never;
+  };
   '/api/counts': {
     parameters: {
       query?: never;
@@ -1295,6 +1343,77 @@ export interface components {
       /** Time Zone */
       time_zone: string;
     };
+    /**
+     * MatchOut
+     * @description An item that matched a watch. A topic's match is a model's judgement.
+     */
+    MatchOut: {
+      /** Watch */
+      watch: string;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: 'keyword' | 'person' | 'topic';
+      /** Item Id */
+      item_id: number;
+      /**
+       * Source
+       * @enum {string}
+       */
+      source: 'RD' | 'X' | 'IG' | 'HN' | 'YT' | 'RSS';
+      /** Title */
+      title: string;
+      /** Icon */
+      icon: string | null;
+      /**
+       * Published At
+       * Format: date-time
+       */
+      published_at: string;
+    };
+    /** WatchOut */
+    WatchOut: {
+      /** Id */
+      id: number;
+      /** Name */
+      name: string;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: 'keyword' | 'person' | 'topic';
+      /** On */
+      on: boolean;
+      /** Week */
+      week: number;
+      /** Last */
+      last: string | null;
+      /** Problem */
+      problem: string;
+    };
+    /** WatchesOut */
+    WatchesOut: {
+      /** Watches */
+      watches: components['schemas']['WatchOut'][];
+      /** Matches */
+      matches: components['schemas']['MatchOut'][];
+    };
+    /** WatchIn */
+    WatchIn: {
+      /** Name */
+      name: string;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: 'keyword' | 'person' | 'topic';
+    };
+    /** WatchSwitch */
+    WatchSwitch: {
+      /** On */
+      on: boolean;
+    };
     /** Counts */
     Counts: {
       /** Stream */
@@ -1305,6 +1424,8 @@ export interface components {
       saved: number;
       /** Highlights */
       highlights: number;
+      /** Watches */
+      watches: number;
       /** Sources */
       sources: {
         [key: string]: number;
@@ -2338,6 +2459,107 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['Error'];
+        };
+      };
+    };
+  };
+  reader_api_list_watches: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['WatchesOut'];
+        };
+      };
+    };
+  };
+  reader_api_add_watch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['WatchIn'];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['WatchesOut'];
+        };
+      };
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+    };
+  };
+  reader_api_remove_watch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        watch_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['WatchesOut'];
+        };
+      };
+    };
+  };
+  reader_api_switch_watch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        watch_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['WatchSwitch'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['WatchesOut'];
         };
       };
     };

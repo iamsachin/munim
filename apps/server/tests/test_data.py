@@ -86,6 +86,7 @@ def test_the_export_holds_everything_the_owner_put_in_and_no_secrets(filled: Cli
         "items.json",
         "saved/" + archive.namelist()[-1].split("/")[-1],
         "settings.json",
+        "watches.json",
     ]
     assert [feed["url"] for feed in read("feeds.json")] == ["https://wire.example/feed"]
     items = {item["title"]: item for item in read("items.json")}
