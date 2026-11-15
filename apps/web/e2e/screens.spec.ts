@@ -1143,6 +1143,9 @@ test('watches: a topic that cannot be judged says why; with none, the screen say
   await page.goto('/watches');
   await expect(page.getByRole('row', { name: /local-first/ })).toContainText(problem);
   await expect(page.getByText('No matches yet.')).toBeVisible();
+  // The sidebar's counts arrive on their own: the picture is taken once they are in.
+  await expect(page.getByRole('link', { name: /^Watches/ })).toHaveText(/19$/);
+  await expect(page.getByRole('link', { name: /^Stream/ })).toHaveText(/22$/);
   await expect(page).toHaveScreenshot('watches-problem-dark.png');
   expect(await axeFailures(page)).toEqual([]);
 
@@ -1152,6 +1155,9 @@ test('watches: a topic that cannot be judged says why; with none, the screen say
   );
   await page.reload();
   await expect(page.getByText('No watches yet. Add a keyword, person or topic.')).toBeVisible();
+  // Today says so too, where its watches would be.
+  await page.getByRole('link', { name: 'Today', exact: true }).click();
+  await expect(page.getByText('No matches yet.')).toBeVisible();
 });
 
 test('rss: choosing a feed and an article', async ({ page }) => {
