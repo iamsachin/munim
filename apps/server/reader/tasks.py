@@ -2,6 +2,8 @@
 
 from procrastinate import JobContext
 from procrastinate.contrib.django import app
+from procrastinate.exceptions import UniqueViolation
+from procrastinate.jobs import Status
 
 from reader import feeds, hackernews, youtube
 
@@ -41,4 +43,11 @@ async def recover_jobs(context: JobContext, timestamp: int) -> None:
     here is safe to run again."""
     jobs = context.app.job_manager
     for job in await jobs.get_stalled_jobs():
-        await jobs.retry_job(job)
+        try:
+            await jobs.retry_job(job)
+        except UniqueViolation:
+            # A later run of the same task is already waiting, and will do the same work: the
+            # one left behind is cleared out of its way.
+            await jobs.finish_job(job, Status.FAILED, delete_job=True)
+    # Jobs that failed are kept to be looked at, but not for ever.
+    await jobs.delete_old_jobs(nb_hours=24 * 7, include_failed=True)
