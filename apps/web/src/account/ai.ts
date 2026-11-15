@@ -1,6 +1,6 @@
-// AI settings: the rules, and mock data for what the server does not hold yet (models, usage,
-// the limit). Provider keys are the server's.
-import type { AiKey } from '../api/client';
+// AI settings: the rules, and mock data for what the server does not hold yet (usage, the
+// limit). Provider keys, their models and each feature's model are the server's.
+import type { AiChoice, AiKey } from '../api/client';
 
 export const PROVIDERS = {
   openai: { name: 'OpenAI', code: 'OAI' },
@@ -15,12 +15,6 @@ export const FEATURES = {
   watch: { name: 'Watch matching', note: 'Topic watches. Keyword watches need no AI.' },
 } as const;
 export type Feature = keyof typeof FEATURES;
-
-// Mock of each provider's models endpoint. The real lists are fetched, never hard-coded.
-export const MODELS: Record<Provider, readonly string[]> = {
-  openai: ['gpt-5.5', 'gpt-5.4-mini'],
-  anthropic: ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5'],
-};
 
 export interface UsageRow {
   feature: Feature;
@@ -94,35 +88,29 @@ export const totalCents = (rows: readonly UsageRow[]) => rows.reduce((n, r) => n
 
 export const usd = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
-export const providerOf = (model: string) =>
-  (Object.keys(MODELS) as Provider[]).find((p) => MODELS[p].includes(model));
-
 export interface AiState {
-  /** null: no model chosen, so the feature is off. */
-  models: Record<Feature, string | null>;
   /** Monthly limit in whole dollars; null for no limit. */
   limit: number | null;
 }
 
-export const AI_INITIAL: AiState = {
-  models: { digest: 'gpt-5.4-mini', ask: 'gpt-5.5', watch: 'gpt-5.4-mini' },
-  limit: 10,
-};
+export const AI_INITIAL: AiState = { limit: 10 };
 
 /** AI features stop for the rest of the month once the estimated cost reaches the limit. */
 export const aiPaused = (ai: AiState) =>
   ai.limit !== null && totalCents(USAGE['This month']) >= ai.limit * 100;
 
-/** The providers whose models can be chosen: those with a key the provider accepted. */
-export const usableProviders = (keys: readonly AiKey[]) =>
-  keys.filter((key) => key.ok).map((key) => key.provider);
+/** A model as a select's value: ids are only unique within their provider. */
+export const optionOf = (provider: Provider, model: string) => `${provider}/${model}`;
 
 /**
- * The model a feature runs on, or null if it is off: none was chosen, or the one chosen belongs
- * to a provider whose key is missing or rejected.
+ * The model a feature runs on, as its select's value, or null if the feature is off: none was
+ * chosen, or its provider's key is missing or rejected, or the provider no longer lists it.
+ * The choice itself is kept, so it is back when the key is.
  */
-export function modelFor(ai: AiState, feature: Feature, usable: readonly Provider[]) {
-  const model = ai.models[feature];
-  const provider = model === null ? undefined : providerOf(model);
-  return provider !== undefined && usable.includes(provider) ? model : null;
+export function modelFor(choice: AiChoice | undefined, keys: readonly AiKey[]) {
+  if (!choice?.provider || !choice.model) return null;
+  const key = keys.find((k) => k.provider === choice.provider);
+  return key?.ok && key.models.includes(choice.model)
+    ? optionOf(choice.provider, choice.model)
+    : null;
 }

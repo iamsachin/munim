@@ -343,6 +343,7 @@ def test_the_poll_is_scheduled_every_fifteen_minutes() -> None:
         for periodic in app.periodic_registry.periodic_tasks.values()
     }
     assert scheduled == {
+        "ai.tasks.refresh_models": "23 4 * * *",
         "reader.tasks.poll_feeds": "*/15 * * * *",
         "reader.tasks.poll_hacker_news": "*/15 * * * *",
         "reader.tasks.poll_youtube": "7 * * * *",

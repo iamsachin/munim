@@ -568,7 +568,21 @@ test('ai: a new key makes that provider selectable; removing a key switches its 
 }) => {
   await open(page, '/ai');
   const askModel = page.getByLabel('Model for Ask');
-  await expect(askModel).toHaveValue('gpt-5.5');
+  await expect(askModel).toHaveValue('openai/gpt-5.5');
+
+  // A choice the server refuses is not made, and the row says why.
+  await page.route('**/api/ai/features/watch', (route) =>
+    route.fulfill({
+      status: 422,
+      json: { detail: 'OpenAI does not list that model for your key.' },
+    }),
+  );
+  const watchModel = page.getByLabel('Model for Watch matching');
+  await watchModel.selectOption('gpt-5.5');
+  await expect(page.getByRole('alert')).toHaveText('OpenAI does not list that model for your key.');
+  await expect(watchModel).toHaveValue('openai/gpt-5.4-mini');
+  await page.unroute('**/api/ai/features/watch');
+
   await expect(askModel.locator('option', { hasText: 'claude-sonnet-5-5' })).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Add key for Anthropic' }).click();
@@ -581,12 +595,15 @@ test('ai: a new key makes that provider selectable; removing a key switches its 
   await expect(anthropic).toContainText('Connected');
   await expect(page.getByText('sk-ant-0123456789abcdefWXYZ')).toHaveCount(0);
   await askModel.selectOption('claude-sonnet-5-5');
-  await expect(askModel).toHaveValue('claude-sonnet-5-5');
+  await expect(askModel).toHaveValue('anthropic/claude-sonnet-5-5');
 
   await page.getByRole('button', { name: 'Remove key for OpenAI' }).click();
   await expect(page.getByLabel('Model for Digest')).toHaveValue('');
   await expect(page.getByText('No model chosen, so this is off.')).toHaveCount(2);
-  await expect(askModel).toHaveValue('claude-sonnet-5-5');
+  await expect(askModel).toHaveValue('anthropic/claude-sonnet-5-5');
+  // The choice is the server's: it is still there when the page is loaded again.
+  await page.reload();
+  await expect(page.getByLabel('Model for Ask')).toHaveValue('anthropic/claude-sonnet-5-5');
   expect(await axeFailures(page)).toEqual([]);
 });
 

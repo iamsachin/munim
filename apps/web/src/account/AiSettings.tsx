@@ -15,11 +15,10 @@ import {
   aiPaused,
   FEATURES,
   modelFor,
-  MODELS,
+  optionOf,
   PERIODS,
   PROVIDERS,
   totalCents,
-  usableProviders,
   USAGE,
   usd,
   type AiState,
@@ -27,8 +26,6 @@ import {
   type Period,
   type Provider,
 } from './ai';
-
-const keys = <T extends object>(o: T) => Object.keys(o) as (keyof T)[];
 
 const KEY_COLS = 'grid-cols-[34px_110px_minmax(0,1fr)_110px_170px]';
 const MODEL_COLS = 'grid-cols-[minmax(0,1fr)_240px_90px]';
@@ -66,8 +63,16 @@ export function AiSettings() {
   });
   const remove = useMutation({ mutationFn: api.removeAiKey, onSuccess: again });
 
+  // The model each feature runs on is the server's too: it is what will call the provider.
+  const chosen = useQuery({ queryKey: ['ai-features'], queryFn: api.aiFeatures });
+  const choose = useMutation({
+    mutationFn: api.setAiFeature,
+    onSuccess: () => queries.invalidateQueries({ queryKey: ['ai-features'] }),
+  });
+
   const month = totalCents(USAGE['This month']);
-  const usable = usableProviders(stored.data ?? []);
+  // What can be chosen from: the models of each provider whose key was accepted.
+  const usable = (stored.data ?? []).filter((key) => key.ok);
   const usage = USAGE[period];
 
   return (
@@ -208,12 +213,15 @@ export function AiSettings() {
           <Th className="text-right">This month</Th>
         </TableHeader>
         {/* Which models can be chosen depends on the keys, so this waits for them. */}
-        {stored.isPending && <LoadingRows what="models" rows={3} />}
+        {(stored.isPending || chosen.isPending) && <LoadingRows what="models" rows={3} />}
+        {chosen.isError && <ErrorState what="the models" onRetry={() => void chosen.refetch()} />}
         {stored.data &&
-          keys(FEATURES).map((f: Feature) => {
+          chosen.data?.map((choice) => {
+            const f: Feature = choice.feature;
             const { name, note } = FEATURES[f];
-            const model = modelFor(ai, f, usable);
+            const model = modelFor(choice, stored.data);
             const spent = totalCents(USAGE['This month'].filter((r) => r.feature === f));
+            const failed = choose.isError && choose.variables.feature === f;
             return (
               <TableRow key={f} pad={6} hover={false} className={`${MODEL_COLS} items-center`}>
                 <Cell>
@@ -222,24 +230,35 @@ export function AiSettings() {
                   {model === null && (
                     <div className="text-note text-a3">No model chosen, so this is off.</div>
                   )}
+                  <div role="alert" className="text-note text-a3 empty:hidden">
+                    {failed && !sessionOver(choose.error) ? reason(choose.error) : null}
+                  </div>
                 </Cell>
                 <Cell>
                   <Select
                     className="w-full"
                     aria-label={`Model for ${name}`}
-                    disabled={usable.length === 0}
+                    disabled={usable.length === 0 || choose.isPending}
                     value={model ?? ''}
                     onChange={(e) => {
-                      setAi((a) => ({ ...a, models: { ...a.models, [f]: e.target.value } }));
+                      // The value is "provider/model"; a model's id may itself hold a slash.
+                      const [provider, ...rest] = e.target.value.split('/');
+                      choose.mutate({
+                        feature: f,
+                        provider: provider as Provider,
+                        model: rest.join('/'),
+                      });
                     }}
                   >
                     <option value="" disabled>
                       {usable.length === 0 ? 'Add a key first' : 'Choose a model'}
                     </option>
-                    {usable.map((p) => (
+                    {usable.map(({ provider: p, models }) => (
                       <optgroup key={p} label={PROVIDERS[p].name}>
-                        {MODELS[p].map((m) => (
-                          <option key={m}>{m}</option>
+                        {models.map((m) => (
+                          <option key={m} value={optionOf(p, m)}>
+                            {m}
+                          </option>
                         ))}
                       </optgroup>
                     ))}

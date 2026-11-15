@@ -16,6 +16,7 @@ export type YouTube = Schemas['YouTubeOut'];
 export type Highlight = Schemas['HighlightOut'];
 /** What the browser knows of a provider's key: its last four characters and whether it works. */
 export type AiKey = Schemas['KeyOut'];
+export type AiChoice = Schemas['ChoiceOut'];
 
 /** Which items to list. Everything left out means "do not narrow by this". */
 export interface ItemQuery {
@@ -110,6 +111,9 @@ export const api = {
   setAiKey: ({ provider, key }: { provider: AiKey['provider']; key: string }) =>
     call<AiKey>('PUT', `ai/keys/${provider}`, { key } satisfies Schemas['KeyIn']),
   removeAiKey: (provider: AiKey['provider']) => call<undefined>('DELETE', `ai/keys/${provider}`),
+  aiFeatures: () => call<AiChoice[]>('GET', 'ai/features'),
+  setAiFeature: ({ feature, ...choice }: { feature: AiChoice['feature'] } & Schemas['ChoiceIn']) =>
+    call<AiChoice>('PUT', `ai/features/${feature}`, choice satisfies Schemas['ChoiceIn']),
   youtube: () => call<YouTube>('GET', 'sources/youtube'),
   setYouTubeCredentials: (credentials: Schemas['YouTubeCredentials']) =>
     call<YouTube>('PUT', 'sources/youtube/credentials', credentials),

@@ -828,6 +828,66 @@
         "tags": ["ai"],
         "security": [{ "Open": [] }]
       }
+    },
+    "/api/ai/features": {
+      "get": {
+        "operationId": "ai_api_list_features",
+        "summary": "List Features",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/ChoiceOut" },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["ai"],
+        "security": [{ "Open": [] }]
+      }
+    },
+    "/api/ai/features/{feature}": {
+      "put": {
+        "operationId": "ai_api_choose_model",
+        "summary": "Choose Model",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "feature",
+            "schema": { "enum": ["digest", "ask", "watch"], "title": "Feature", "type": "string" },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ChoiceOut" } }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          }
+        },
+        "description": "Sets the model a feature runs on: one its provider lists for the owner's accepted key.",
+        "tags": ["ai"],
+        "requestBody": {
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/ChoiceIn" } }
+          },
+          "required": true
+        },
+        "security": [{ "Open": [] }]
+      }
     }
   },
   "components": {
@@ -1394,9 +1454,10 @@
         "properties": {
           "provider": { "enum": ["openai", "anthropic"], "title": "Provider", "type": "string" },
           "tail": { "anyOf": [{ "type": "string" }, { "type": "null" }], "title": "Tail" },
-          "ok": { "title": "Ok", "type": "boolean" }
+          "ok": { "title": "Ok", "type": "boolean" },
+          "models": { "items": { "type": "string" }, "title": "Models", "type": "array" }
         },
-        "required": ["provider", "tail", "ok"],
+        "required": ["provider", "tail", "ok", "models"],
         "title": "KeyOut",
         "type": "object"
       },
@@ -1404,6 +1465,29 @@
         "properties": { "key": { "maxLength": 500, "title": "Key", "type": "string" } },
         "required": ["key"],
         "title": "KeyIn",
+        "type": "object"
+      },
+      "ChoiceOut": {
+        "description": "The model a feature runs on. Both null: none chosen, so the feature is off.",
+        "properties": {
+          "feature": { "enum": ["digest", "ask", "watch"], "title": "Feature", "type": "string" },
+          "provider": {
+            "anyOf": [{ "enum": ["openai", "anthropic"], "type": "string" }, { "type": "null" }],
+            "title": "Provider"
+          },
+          "model": { "anyOf": [{ "type": "string" }, { "type": "null" }], "title": "Model" }
+        },
+        "required": ["feature", "provider", "model"],
+        "title": "ChoiceOut",
+        "type": "object"
+      },
+      "ChoiceIn": {
+        "properties": {
+          "provider": { "enum": ["openai", "anthropic"], "title": "Provider", "type": "string" },
+          "model": { "maxLength": 200, "title": "Model", "type": "string" }
+        },
+        "required": ["provider", "model"],
+        "title": "ChoiceIn",
         "type": "object"
       }
     },
