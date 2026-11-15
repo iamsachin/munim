@@ -1,5 +1,12 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, type Ask, type Item, type ItemPatch, type ItemQuery } from '../api/client';
+import {
+  api,
+  type Ask,
+  type Item,
+  type ItemPatch,
+  type ItemQuery,
+  type Watches,
+} from '../api/client';
 import { useReader, type Scope } from './store';
 
 // shortcut: the page asks again every minute to pick up what the worker has fetched; switch to
@@ -145,6 +152,32 @@ const SCOPE_CODES = {
   'This week': 'week',
   'Open item': 'item',
 } as const satisfies Record<Scope, Ask['scope']>;
+
+/**
+ * The watches and the latest items that matched them. On the Watches screen they are looked for
+ * again every so often (`fresh`): a topic is judged by the worker, some moments after it is added.
+ */
+export const useWatches = (fresh = false) =>
+  useQuery({
+    queryKey: ['watches'],
+    queryFn: api.watches,
+    refetchInterval: fresh ? 15_000 : false,
+  });
+
+/** What changes when a watch is added, switched or removed: the watches, and the sidebar's count. */
+function useWatchChange<In>(mutationFn: (input: In) => Promise<Watches>) {
+  const queries = useQueryClient();
+  return useMutation({
+    mutationFn,
+    onSuccess: (watches) => {
+      queries.setQueryData(['watches'], watches);
+      return queries.invalidateQueries({ queryKey: ['counts'] });
+    },
+  });
+}
+export const useAddWatch = () => useWatchChange(api.addWatch);
+export const useSetWatch = () => useWatchChange(api.setWatch);
+export const useRemoveWatch = () => useWatchChange(api.removeWatch);
 
 /**
  * The latest daily and weekly digest, and whether they are being written. Switched on with

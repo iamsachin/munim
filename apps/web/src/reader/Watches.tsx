@@ -1,20 +1,45 @@
 import { useState } from 'react';
+import { Link } from 'react-router';
+import { reason, sessionOver, type Watches as Told } from '../api/client';
 import { ScreenHeader } from '../shell/ScreenHeader';
-import { SectionLabel, SourceTag } from '../ui/atoms';
+import { AiBadge, SectionLabel, SourceTag } from '../ui/atoms';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { Select } from '../ui/Select';
+import { EmptyState, ErrorState, LoadingRows } from '../ui/States';
 import { Cell, Table, TableHeader, TableRow, Th } from '../ui/Table';
 import { Toggle } from '../ui/Toggle';
-import { MATCHES } from './fixtures';
-import { toggled, useReader, watchRows } from './store';
+import { EMPTY } from './copy';
+import { age, useAddWatch, useRemoveWatch, useSetWatch, useWatches } from './queries';
 
-const COLS = 'grid-cols-[minmax(0,1fr)_90px_170px_80px_100px_60px]';
+type Kind = Told['watches'][number]['kind'];
+
+/** Each kind of watch, and how it is matched, said where the kind is chosen. */
+const KINDS: Record<Kind, { name: string; how: string }> = {
+  keyword: { name: 'Keyword', how: 'Matched by its words' },
+  person: { name: 'Person', how: 'Matched by who published or replied' },
+  topic: { name: 'Topic', how: 'Judged by the Watch model, hourly' },
+};
+
+const COLS = 'grid-cols-[minmax(0,1fr)_90px_80px_100px_60px_70px]';
 const MATCH_COLS = 'grid-cols-[150px_34px_minmax(0,1fr)_40px]';
 const META = 'font-mono text-meta text-mute';
 
+/**
+ * The owner's watches and the latest items that matched them. A keyword or a person is matched
+ * on the server by words; a topic is judged by the model chosen for Watch matching, which is
+ * why it is marked as AI's.
+ */
 export function Watches() {
-  const { state, update } = useReader();
+  const watches = useWatches(true);
+  const add = useAddWatch();
+  const set = useSetWatch();
+  const remove = useRemoveWatch();
   const [draft, setDraft] = useState('');
+  const [kind, setKind] = useState<Kind>('keyword');
+  // Ages are worked out against one moment, so they do not change while the screen is open.
+  const [now] = useState(() => Date.now());
+  const failed = [add, set, remove].find((change) => change.isError && !sessionOver(change.error));
 
   return (
     <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
@@ -24,12 +49,31 @@ export function Watches() {
           onSubmit={(e) => {
             e.preventDefault();
             const name = draft.trim();
-            // A second watch with the same name would share its on/off switch.
-            if (!name || watchRows(state).some((w) => w.name === name)) return;
-            setDraft('');
-            update((s) => ({ watchNew: [...s.watchNew, name] }));
+            if (!name) return;
+            add.mutate(
+              { name, kind },
+              {
+                onSuccess: () => {
+                  setDraft('');
+                },
+              },
+            );
           }}
         >
+          <Select
+            aria-label="Kind of watch"
+            title={KINDS[kind].how}
+            value={kind}
+            onChange={(e) => {
+              setKind(e.target.value as Kind);
+            }}
+          >
+            {Object.entries(KINDS).map(([code, { name }]) => (
+              <option key={code} value={code}>
+                {name}
+              </option>
+            ))}
+          </Select>
           <Input
             className="w-240"
             aria-label="Keyword, person or topic"
@@ -44,58 +88,103 @@ export function Watches() {
           </Button>
         </form>
       </ScreenHeader>
+      {failed && (
+        <div role="alert" className="px-16 pt-10 text-note text-a3">
+          {reason(failed.error)}
+        </div>
+      )}
       <Table label="Watches">
         <TableHeader className={COLS}>
           <Th>Watch</Th>
           <Th>Kind</Th>
-          <Th>In</Th>
           <Th className="text-right">This week</Th>
           <Th>Last match</Th>
           <Th>
             <span className="sr-only">On or off</span>
           </Th>
+          <Th>
+            <span className="sr-only">Remove</span>
+          </Th>
         </TableHeader>
-        {watchRows(state).map((w) => (
-          <TableRow key={w.name} hover={false} className={`${COLS} items-center`}>
+        {watches.data?.watches.map((w) => (
+          <TableRow key={w.id} hover={false} className={`${COLS} items-center`}>
             {/* The handoff fades an off row to 55% opacity, which makes its text unreadable. Muting the name keeps the "off" look at full contrast. */}
-            <Cell className={w.on ? 'font-semibold' : 'font-semibold text-mute'}>{w.name}</Cell>
-            <Cell className="text-note text-mute">{w.kind}</Cell>
-            <Cell className="text-note text-mute">{w.where}</Cell>
-            <Cell className={`${META} text-right`}>{w.count}</Cell>
-            <Cell className={META}>{w.last}</Cell>
+            <Cell className="min-w-0">
+              <div className={w.on ? 'font-semibold' : 'font-semibold text-mute'}>{w.name}</div>
+              {w.problem && <div className="text-note text-a3">{w.problem}</div>}
+            </Cell>
+            <Cell className="flex items-center gap-6 text-note text-mute">
+              {KINDS[w.kind].name}
+              {/* A topic's matches are a model's judgement. */}
+              {w.kind === 'topic' && <AiBadge />}
+            </Cell>
+            <Cell className={`${META} text-right`}>{w.week}</Cell>
+            <Cell className={META}>{w.last ? `${age(w.last, now)} ago` : 'No matches'}</Cell>
             <Cell className="justify-self-end">
               <Toggle
                 on={w.on}
                 label={`Watch ${w.name}`}
-                onChange={() => {
-                  update((s) => ({ watchOff: toggled(s.watchOff, w.name) }));
+                onChange={(on) => {
+                  set.mutate({ id: w.id, on });
                 }}
               />
+            </Cell>
+            <Cell className="justify-self-end">
+              <Button
+                aria-label={`Remove watch ${w.name}`}
+                onClick={() => {
+                  remove.mutate(w.id);
+                }}
+              >
+                Remove
+              </Button>
             </Cell>
           </TableRow>
         ))}
       </Table>
+      <div className="px-16">
+        {watches.isPending && <LoadingRows what="watches" rows={3} />}
+        {watches.isError && (
+          <ErrorState what="the watches" onRetry={() => void watches.refetch()} />
+        )}
+        {watches.data?.watches.length === 0 && <EmptyState compact>{EMPTY.watches}</EmptyState>}
+      </div>
 
       <SectionLabel as="h2" className="px-16 pt-16 pb-6">
         Latest matches
       </SectionLabel>
       <Table label="Latest matches">
-        {MATCHES.map((m) => (
+        {watches.data?.matches.map((m) => (
           <TableRow
-            key={m.watch + m.title}
+            key={`${m.watch} ${String(m.item_id)}`}
             pad={4}
             hover={false}
-            className={`${MATCH_COLS} items-baseline`}
+            className={`${MATCH_COLS} items-center`}
           >
-            <Cell className="text-sm text-accent">{m.watch}</Cell>
-            <Cell>
-              <SourceTag src={m.src} />
+            <Cell className="flex min-w-0 items-center gap-6 text-sm text-accent">
+              <span className="truncate">{m.watch}</span>
+              {m.kind === 'topic' && <AiBadge />}
             </Cell>
-            <Cell className="truncate">{m.title}</Cell>
-            <Cell className={`${META} text-right`}>{m.age}</Cell>
+            <Cell>
+              <SourceTag src={m.source} icon={m.icon} />
+            </Cell>
+            <Cell className="min-w-0">
+              <Link
+                to={`/stream?item=${String(m.item_id)}`}
+                className="block truncate text-ink hover:underline"
+              >
+                {m.title}
+              </Link>
+            </Cell>
+            <Cell className={`${META} text-right`}>{age(m.published_at, now)}</Cell>
           </TableRow>
         ))}
       </Table>
+      {watches.data?.matches.length === 0 && (
+        <div className="px-16">
+          <EmptyState compact>{EMPTY.matches}</EmptyState>
+        </div>
+      )}
     </main>
   );
 }

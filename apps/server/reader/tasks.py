@@ -5,7 +5,7 @@ from procrastinate.contrib.django import app
 from procrastinate.exceptions import UniqueViolation
 from procrastinate.jobs import Status
 
-from reader import ask, digest, feeds, hackernews, youtube
+from reader import ask, digest, feeds, hackernews, watches, youtube
 
 POLL_EVERY = "*/15 * * * *"
 
@@ -48,6 +48,15 @@ def write_digests(timestamp: int) -> None:
     because seven o'clock is on the owner's clock, and so that one missed is written late
     rather than never. Run again, it leaves a digest that is already written alone."""
     digest.write_due()
+
+
+# Hourly, not with every poll: a topic is judged by a model, which is paid for.
+@app.periodic(cron="12 * * * *")
+@app.task(queueing_lock="match_watches", lock="match_watches")
+def match_watches(timestamp: int) -> None:
+    """Every hour, and when a topic is added or switched on: each watch that is on looks at
+    the items that have arrived since it last looked. Run again, it finds nothing new."""
+    watches.check_all()
 
 
 @app.periodic(cron="*/5 * * * *")

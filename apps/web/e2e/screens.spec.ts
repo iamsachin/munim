@@ -1082,22 +1082,76 @@ test('read later: Done removes the row and updates the totals', async ({ page })
   await expect(page.getByRole('link', { name: /^Read later/ })).toHaveText(/4$/);
 });
 
-test('watches: add one, refuse a duplicate, switch one off', async ({ page }) => {
+test('watches: add one of a kind, refuse a duplicate, switch one off, remove one', async ({
+  page,
+}) => {
   await open(page, '/watches');
   const table = page.getByRole('table', { name: 'Watches' });
   const field = page.getByLabel('Keyword, person or topic');
+  // A topic is judged by a model, and is marked as such.
+  await page.getByLabel('Kind of watch').selectOption('topic');
   await field.fill('sqlite');
   await field.press('Enter');
   await expect(table.getByRole('row')).toHaveCount(7);
-  await field.fill('sqlite');
+  await expect(field).toHaveValue('');
+  const added = table.getByRole('row', { name: /sqlite/ });
+  await expect(added).toContainText('Topic');
+  await expect(added.getByText('AI', { exact: true })).toBeVisible();
+  await expect(added).toContainText('No matches');
+  // The same again is refused by the server, which says why; what was typed stays.
+  await field.fill('SQLite');
   await field.press('Enter');
+  await expect(page.getByRole('alert')).toHaveText('There is already a watch for that.');
   await expect(table.getByRole('row')).toHaveCount(7);
+  await expect(field).toHaveValue('SQLite');
 
+  // Off, a watch is not counted and its matches are not listed.
+  const matches = page.getByRole('table', { name: 'Latest matches' }).getByRole('row');
   await expect(page.getByRole('link', { name: /^Watches/ })).toHaveText(/19$/);
+  await expect(matches).toHaveCount(4);
   await page.getByRole('switch', { name: 'Watch rate limits' }).click();
   await expect(page.getByRole('link', { name: /^Watches/ })).toHaveText(/12$/);
+  await expect(matches).toHaveCount(3);
   // A switched-off watch is dimmed but must stay readable.
   expect(await axeFailures(page)).toEqual([]);
+
+  await page.getByRole('button', { name: 'Remove watch kiln' }).click();
+  await expect(table.getByRole('row')).toHaveCount(6);
+  await expect(page.getByRole('link', { name: /^Watches/ })).toHaveText(/8$/);
+
+  // A match opens its item in the Stream.
+  await matches.getByRole('link', { name: /^Show HN: A local-first archive/ }).click();
+  await expect(page).toHaveURL(/\/stream\?item=3$/);
+});
+
+test('watches: a topic that cannot be judged says why; with none, the screen says so', async ({
+  page,
+}) => {
+  await fakeServer(page);
+  const problem =
+    'No model is chosen for Watch matching, so this topic is not looked for. Choose one under AI.';
+  await page.route('**/api/watches', (route) =>
+    route.fulfill({
+      json: {
+        watches: [
+          { id: 1, name: 'local-first', kind: 'topic', on: true, week: 0, last: null, problem },
+        ],
+        matches: [],
+      },
+    }),
+  );
+  await page.goto('/watches');
+  await expect(page.getByRole('row', { name: /local-first/ })).toContainText(problem);
+  await expect(page.getByText('No matches yet.')).toBeVisible();
+  await expect(page).toHaveScreenshot('watches-problem-dark.png');
+  expect(await axeFailures(page)).toEqual([]);
+
+  await page.unroute('**/api/watches');
+  await page.route('**/api/watches', (route) =>
+    route.fulfill({ json: { watches: [], matches: [] } }),
+  );
+  await page.reload();
+  await expect(page.getByText('No watches yet. Add a keyword, person or topic.')).toBeVisible();
 });
 
 test('rss: choosing a feed and an article', async ({ page }) => {

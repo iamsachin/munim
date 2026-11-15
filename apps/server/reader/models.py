@@ -232,3 +232,45 @@ class Digest(models.Model):
 
     def __str__(self) -> str:
         return f"{self.kind} {self.day}"
+
+
+class Watch(models.Model):
+    """Something the owner wants to hear of: a keyword, a person or a topic."""
+
+    class Kind(models.TextChoices):
+        # Matched by its words, as the Stream's search finds them.
+        KEYWORD = "keyword", "Keyword"
+        # Matched by who published an item or replied to it.
+        PERSON = "person", "Person"
+        # Judged by a model: what an item is about, not the words in it.
+        TOPIC = "topic", "Topic"
+
+    name = models.CharField(max_length=100, unique=True)
+    kind = models.CharField(max_length=7, choices=Kind.choices)
+    on = models.BooleanField(default=True)
+    # The newest item it has looked at: later ones are still to be looked at.
+    checked_to = models.PositiveBigIntegerField(default=0)
+    # Why a topic could not be judged the last time, in words for the owner. Empty otherwise.
+    problem = models.CharField(max_length=300, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class Match(models.Model):
+    """An item that matches a watch."""
+
+    watch = models.ForeignKey(Watch, on_delete=models.CASCADE, related_name="matches")
+    item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name="matches")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["watch", "item"], name="one_match_of_an_item_a_watch")
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.watch}: {self.item}"

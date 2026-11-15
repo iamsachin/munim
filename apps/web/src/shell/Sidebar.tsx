@@ -1,5 +1,4 @@
 import { useCounts, useFeeds } from '../reader/queries';
-import { matchCount, useReader } from '../reader/store';
 import { SectionLabel, SOURCES, type Source } from '../ui/atoms';
 import { NavRow } from '../ui/NavRow';
 import { Brand } from './Brand';
@@ -20,7 +19,6 @@ function Group({ label, children }: { label: string; children: ReactNode }) {
 }
 
 export function Sidebar({ onCommands }: { onCommands: () => void }) {
-  const { state } = useReader();
   const feeds = useFeeds();
   // Undefined until the server answers: a row then shows no number rather than a wrong one.
   const counts = useCounts().data;
@@ -39,7 +37,7 @@ export function Sidebar({ onCommands }: { onCommands: () => void }) {
           <NavRow name="Highlights" count={counts?.highlights} to="/highlights" />
           <NavRow name="RSS" count={feeds.data?.reduce((n, f) => n + f.articles, 0)} to="/rss" />
           <NavRow name="Digest" to="/digest" />
-          <NavRow name="Watches" count={matchCount(state)} to="/watches" />
+          <NavRow name="Watches" count={counts?.watches} to="/watches" />
           <NavRow name="Ask" dot="accent" to="/ask" />
         </Group>
         <Group label="Sources">

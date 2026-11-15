@@ -20,6 +20,7 @@ export const sourceIcon = (source: 'HN' | 'YT') => `/api/sources/${source}/icon`
 
 export type Ask = Schemas['AskOut'];
 export type Digests = Schemas['DigestsOut'];
+export type Watches = Schemas['WatchesOut'];
 export type AiKey = Schemas['KeyOut'];
 export type AiChoice = Schemas['ChoiceOut'];
 export type AiPrice = Schemas['Price'];
@@ -124,6 +125,11 @@ export const api = {
   removeAiKey: (provider: AiKey['provider']) => call<undefined>('DELETE', `ai/keys/${provider}`),
   aiPrices: () => call<AiPrice[]>('GET', 'ai/prices'),
   setAiPrice: (price: AiPrice) => call<AiPrice>('PUT', 'ai/prices', price),
+  watches: () => call<Watches>('GET', 'watches'),
+  addWatch: (watch: Schemas['WatchIn']) => call<Watches>('POST', 'watches', watch),
+  setWatch: ({ id, on }: { id: number; on: boolean }) =>
+    call<Watches>('PATCH', `watches/${String(id)}`, { on } satisfies Schemas['WatchSwitch']),
+  removeWatch: (id: number) => call<Watches>('DELETE', `watches/${String(id)}`),
   digests: () => call<Digests>('GET', 'digests'),
   /** Switches digests on or off. Seven o'clock is the owner's, so the browser says where it is. */
   setDigests: (on: boolean) =>

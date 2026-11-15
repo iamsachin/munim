@@ -861,6 +861,106 @@
         "security": [{ "Open": [] }]
       }
     },
+    "/api/watches": {
+      "get": {
+        "operationId": "reader_api_list_watches",
+        "summary": "List Watches",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/WatchesOut" } }
+            }
+          }
+        },
+        "description": "The watches, and the latest items that matched them.",
+        "tags": ["reader"],
+        "security": [{ "Open": [] }]
+      },
+      "post": {
+        "operationId": "reader_api_add_watch",
+        "summary": "Add Watch",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/WatchesOut" } }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          }
+        },
+        "description": "Adds a watch, which looks back over the past week at once.",
+        "tags": ["reader"],
+        "requestBody": {
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/WatchIn" } }
+          },
+          "required": true
+        },
+        "security": [{ "Open": [] }]
+      }
+    },
+    "/api/watches/{watch_id}": {
+      "patch": {
+        "operationId": "reader_api_switch_watch",
+        "summary": "Switch Watch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "watch_id",
+            "schema": { "title": "Watch Id", "type": "integer" },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/WatchesOut" } }
+            }
+          }
+        },
+        "description": "Switches a watch on or off. Off, it looks at nothing and its matches are not shown.",
+        "tags": ["reader"],
+        "requestBody": {
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/WatchSwitch" } }
+          },
+          "required": true
+        },
+        "security": [{ "Open": [] }]
+      },
+      "delete": {
+        "operationId": "reader_api_remove_watch",
+        "summary": "Remove Watch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "watch_id",
+            "schema": { "title": "Watch Id", "type": "integer" },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/WatchesOut" } }
+            }
+          }
+        },
+        "description": "Removes a watch and its matches. The items themselves stay.",
+        "tags": ["reader"],
+        "security": [{ "Open": [] }]
+      }
+    },
     "/api/counts": {
       "get": {
         "operationId": "reader_api_counts",
@@ -1808,19 +1908,88 @@
         "title": "DigestSwitch",
         "type": "object"
       },
+      "MatchOut": {
+        "description": "An item that matched a watch. A topic's match is a model's judgement.",
+        "properties": {
+          "watch": { "title": "Watch", "type": "string" },
+          "kind": { "enum": ["keyword", "person", "topic"], "title": "Kind", "type": "string" },
+          "item_id": { "title": "Item Id", "type": "integer" },
+          "source": {
+            "enum": ["RD", "X", "IG", "HN", "YT", "RSS"],
+            "title": "Source",
+            "type": "string"
+          },
+          "title": { "title": "Title", "type": "string" },
+          "icon": { "anyOf": [{ "type": "string" }, { "type": "null" }], "title": "Icon" },
+          "published_at": { "format": "date-time", "title": "Published At", "type": "string" }
+        },
+        "required": ["watch", "kind", "item_id", "source", "title", "icon", "published_at"],
+        "title": "MatchOut",
+        "type": "object"
+      },
+      "WatchOut": {
+        "properties": {
+          "id": { "title": "Id", "type": "integer" },
+          "name": { "title": "Name", "type": "string" },
+          "kind": { "enum": ["keyword", "person", "topic"], "title": "Kind", "type": "string" },
+          "on": { "title": "On", "type": "boolean" },
+          "week": { "title": "Week", "type": "integer" },
+          "last": {
+            "anyOf": [{ "format": "date-time", "type": "string" }, { "type": "null" }],
+            "title": "Last"
+          },
+          "problem": { "title": "Problem", "type": "string" }
+        },
+        "required": ["id", "name", "kind", "on", "week", "last", "problem"],
+        "title": "WatchOut",
+        "type": "object"
+      },
+      "WatchesOut": {
+        "properties": {
+          "watches": {
+            "items": { "$ref": "#/components/schemas/WatchOut" },
+            "title": "Watches",
+            "type": "array"
+          },
+          "matches": {
+            "items": { "$ref": "#/components/schemas/MatchOut" },
+            "title": "Matches",
+            "type": "array"
+          }
+        },
+        "required": ["watches", "matches"],
+        "title": "WatchesOut",
+        "type": "object"
+      },
+      "WatchIn": {
+        "properties": {
+          "name": { "maxLength": 100, "minLength": 1, "title": "Name", "type": "string" },
+          "kind": { "enum": ["keyword", "person", "topic"], "title": "Kind", "type": "string" }
+        },
+        "required": ["name", "kind"],
+        "title": "WatchIn",
+        "type": "object"
+      },
+      "WatchSwitch": {
+        "properties": { "on": { "title": "On", "type": "boolean" } },
+        "required": ["on"],
+        "title": "WatchSwitch",
+        "type": "object"
+      },
       "Counts": {
         "properties": {
           "stream": { "title": "Stream", "type": "integer" },
           "later": { "title": "Later", "type": "integer" },
           "saved": { "title": "Saved", "type": "integer" },
           "highlights": { "title": "Highlights", "type": "integer" },
+          "watches": { "title": "Watches", "type": "integer" },
           "sources": {
             "additionalProperties": { "type": "integer" },
             "title": "Sources",
             "type": "object"
           }
         },
-        "required": ["stream", "later", "saved", "highlights", "sources"],
+        "required": ["stream", "later", "saved", "highlights", "watches", "sources"],
         "title": "Counts",
         "type": "object"
       },

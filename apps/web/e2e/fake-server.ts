@@ -205,6 +205,56 @@ export async function fakeServer(page: Page, start: State = 'open') {
         : [];
     });
   const day = (daysAgo: number) => ago(daysAgo * 24 * 3_600_000).slice(0, 10);
+  // The design's watches, each with how many items matched it this week, and their matches.
+  const watching = (
+    id: number,
+    name: string,
+    kind: string,
+    week: number,
+    hoursAgo: number | null,
+    matched: number[],
+  ) => ({
+    id,
+    name,
+    kind,
+    on: true,
+    week,
+    last: hoursAgo === null ? null : ago(hoursAgo * 3_600_000),
+    problem: '',
+    matched,
+  });
+  let watches = [
+    watching(1, 'rate limits', 'keyword', 7, 15, [1]),
+    watching(2, '@lena_builds', 'person', 3, 4, [2]),
+    watching(3, 'local-first', 'topic', 5, 4, [3]),
+    watching(4, 'kiln', 'keyword', 4, 8, [6]),
+    watching(5, 'Actual Budget', 'keyword', 0, null, []),
+  ];
+  const watchesTold = () => ({
+    // The server tells more than a watch needs here (which items matched); that is harmless.
+    watches,
+    matches: watches
+      .filter((watch) => watch.on)
+      .flatMap((watch) =>
+        watch.matched.flatMap((id) => {
+          const item = FAKE_ITEMS.find((one) => one.id === id);
+          return item
+            ? [
+                {
+                  watch: watch.name,
+                  kind: watch.kind,
+                  item_id: item.id,
+                  source: item.source,
+                  title: item.title,
+                  icon: iconOf(item.source, item.feed),
+                  published_at: ago(item.hoursAgo * 3_600_000),
+                },
+              ]
+            : [];
+        }),
+      )
+      .sort((a, b) => b.published_at.localeCompare(a.published_at)),
+  });
   let digestsOn = true;
   let digests = {
     daily: {
@@ -594,6 +644,26 @@ export async function fakeServer(page: Page, start: State = 'open') {
       spent,
       paused: aiLimit !== null && spent >= aiLimit,
     });
+    if (call === 'GET watches') return reply(200, watchesTold());
+    if (call === 'POST watches') {
+      const name = String(body.name).trim();
+      if (watches.some((watch) => watch.name.toLowerCase() === name.toLowerCase()))
+        return refuse(422, 'There is already a watch for that.');
+      const id = Math.max(0, ...watches.map((watch) => watch.id)) + 1;
+      watches = [...watches, watching(id, name, String(body.kind), 0, null, [])];
+      return reply(201, watchesTold());
+    }
+    const [, watchVerb, watchId] = /^(PATCH|DELETE) watches\/(\d+)$/.exec(call) ?? [];
+    if (watchVerb === 'PATCH') {
+      watches = watches.map((watch) =>
+        watch.id === Number(watchId) ? { ...watch, on: Boolean(body.on) } : watch,
+      );
+      return reply(200, watchesTold());
+    }
+    if (watchVerb === 'DELETE') {
+      watches = watches.filter((watch) => watch.id !== Number(watchId));
+      return reply(200, watchesTold());
+    }
     if (call === 'GET digests') return reply(200, { on: digestsOn, ...digests });
     if (call === 'PUT digests/on') {
       digestsOn = Boolean(body.on);
@@ -788,6 +858,7 @@ export async function fakeServer(page: Page, start: State = 'open') {
         later: items.filter((item) => item.laterAt).length,
         saved: items.filter((item) => item.savedAt).length,
         highlights: highlights.length,
+        watches: watches.reduce((n, watch) => n + (watch.on ? watch.week : 0), 0),
         sources,
       });
     }
@@ -860,6 +931,7 @@ export async function fakeServer(page: Page, start: State = 'open') {
       aiUsage = { this: { rows: [], cost: 0 }, last: { rows: [], cost: 0 } };
       asks = [];
       digests = { daily: null, weekly: null };
+      watches = [];
       hackerNews = { enabled: false, synced_at: null, problem: '' };
       youtube = {
         ...youtube,

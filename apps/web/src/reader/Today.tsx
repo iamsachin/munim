@@ -6,8 +6,7 @@ import { buttonClass } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { EmptyState, ErrorState, LoadingRows } from '../ui/States';
 import { EMPTY } from './copy';
-import { useDigests, useHighlights, useItems } from './queries';
-import { useReader, watchRows } from './store';
+import { age, useDigests, useHighlights, useItems, useWatches } from './queries';
 
 const SOURCE_ORDER: Source[] = ['RD', 'X', 'IG', 'HN', 'YT', 'RSS'];
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -40,7 +39,6 @@ function Section({
 }
 
 export function Today() {
-  const { state } = useReader();
   const highlights = useHighlights();
   const digests = useDigests();
   const daily = digests.data?.daily;
@@ -56,9 +54,7 @@ export function Today() {
     source,
     rows: fresh.filter((item) => item.source === source),
   })).filter((group) => group.rows.length > 0);
-  const watches = watchRows(state)
-    .filter((w) => w.on && w.count > 0)
-    .slice(0, 4);
+  const watches = (useWatches().data?.watches ?? []).filter((w) => w.on && w.week > 0).slice(0, 4);
 
   return (
     <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
@@ -125,8 +121,10 @@ export function Today() {
             {watches.map((w) => (
               <div key={w.name} className="flex items-baseline gap-10 px-6 py-dn-3">
                 <span className="font-medium">{w.name}</span>
-                <span className="font-mono text-meta text-accent">{w.count} new</span>
-                <span className="ml-auto font-mono text-meta text-mute">{w.last}</span>
+                <span className="font-mono text-meta text-accent">{w.week} new</span>
+                <span className="ml-auto font-mono text-meta text-mute">
+                  {w.last && `${age(w.last, now)} ago`}
+                </span>
               </div>
             ))}
           </Section>

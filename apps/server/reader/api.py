@@ -7,7 +7,7 @@ from zoneinfo import available_timezones
 
 import httpx
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Count, Max, Q, QuerySet
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -16,8 +16,8 @@ from procrastinate.exceptions import AlreadyEnqueued
 
 from account.auth import Open
 from account.models import Preferences
-from reader import ask, feeds, icons, images, search, tasks, youtube
-from reader.models import Ask, Connection, Digest, Feed, Highlight, Item, Source
+from reader import ask, feeds, icons, images, search, tasks, watches, youtube
+from reader.models import Ask, Connection, Digest, Feed, Highlight, Item, Match, Source, Watch
 
 router = Router(tags=["reader"], auth=Open())
 
@@ -241,6 +241,8 @@ class Counts(Schema):
     later: int
     saved: int
     highlights: int
+    # Matches this week of the watches that are on.
+    watches: int
     # Items per source, for every source, including those with none.
     sources: dict[str, int]
 
@@ -906,6 +908,140 @@ def switch_digests(request: HttpRequest, body: DigestSwitch) -> Status[DigestsOu
     return Status(200, _digests())
 
 
+class WatchIn(Schema):
+    name: str = Field(min_length=1, max_length=100)
+    kind: Literal["keyword", "person", "topic"]
+
+
+class WatchSwitch(Schema):
+    on: bool
+
+
+class WatchOut(Schema):
+    id: int
+    name: str
+    kind: Literal["keyword", "person", "topic"]
+    on: bool
+    # How many items matched it this week, and when the latest of them was published.
+    week: int
+    last: datetime | None
+    # Why a topic could not be judged the last time, or empty.
+    problem: str
+
+
+class MatchOut(Schema):
+    """An item that matched a watch. A topic's match is a model's judgement."""
+
+    watch: str
+    kind: Literal["keyword", "person", "topic"]
+    item_id: int
+    source: SourceCode
+    title: str
+    icon: str | None
+    published_at: datetime
+
+
+class WatchesOut(Schema):
+    watches: list[WatchOut]
+    # The latest matches of the watches that are on, newest item first.
+    matches: list[MatchOut]
+
+
+MOST_MATCHES = 20
+
+
+def _this_week() -> QuerySet[Match]:
+    return Match.objects.filter(item__published_at__gte=timezone.now() - watches.WEEK)
+
+
+def _watches() -> WatchesOut:
+    week = dict(_this_week().values_list("watch").annotate(n=Count("id")))
+    last = dict(Match.objects.values_list("watch").annotate(at=Max("item__published_at")))
+    latest = (
+        Match.objects.filter(watch__on=True)
+        .select_related("watch", "item__feed")
+        .order_by("-item__published_at", "-id")[:MOST_MATCHES]
+    )
+    return WatchesOut(
+        watches=[
+            WatchOut(
+                id=w.pk,
+                name=w.name,
+                kind=w.kind,  # type: ignore[arg-type]
+                on=w.on,
+                week=week.get(w.pk, 0),
+                last=last.get(w.pk),
+                problem=w.problem,
+            )
+            for w in Watch.objects.all()
+        ],
+        matches=[
+            MatchOut(
+                watch=m.watch.name,
+                kind=m.watch.kind,  # type: ignore[arg-type]
+                item_id=m.item.pk,
+                source=m.item.source,  # type: ignore[arg-type]
+                title=m.item.title,
+                icon=icons.address_of(m.item),
+                published_at=m.item.published_at,
+            )
+            for m in latest
+        ],
+    )
+
+
+def _look(watch: Watch) -> None:
+    """A watch just added or switched on looks at once. By words that is done here, since it
+    asks nothing of anyone; a topic is left to the worker, which calls the model."""
+    if watch.kind != Watch.Kind.TOPIC:
+        watches.check(watch)
+        return
+    # In a transaction of its own: if the hourly run is already queued the insert fails, and
+    # that must not spoil the request's.
+    try:
+        with transaction.atomic():
+            # The periodic decorator hides the task's arguments from the type checker.
+            tasks.match_watches.defer(timestamp=0)  # type: ignore[call-arg]
+    except AlreadyEnqueued:
+        pass
+
+
+@router.get("/watches", response=WatchesOut)
+def list_watches(request: HttpRequest) -> WatchesOut:
+    """The watches, and the latest items that matched them."""
+    return _watches()
+
+
+@router.post("/watches", response={201: WatchesOut, 422: Error})
+def add_watch(request: HttpRequest, body: WatchIn) -> Status[WatchesOut] | Status[Error]:
+    """Adds a watch, which looks back over the past week at once."""
+    name = body.name.strip()
+    if not name:
+        return Status(422, Error(detail="A watch needs a keyword, a person or a topic."))
+    if Watch.objects.filter(name__iexact=name).exists():
+        return Status(422, Error(detail="There is already a watch for that."))
+    _look(Watch.objects.create(name=name, kind=body.kind))
+    return Status(201, _watches())
+
+
+@router.patch("/watches/{watch_id}", response=WatchesOut)
+def switch_watch(request: HttpRequest, watch_id: int, body: WatchSwitch) -> WatchesOut:
+    """Switches a watch on or off. Off, it looks at nothing and its matches are not shown."""
+    watch = get_object_or_404(Watch, pk=watch_id)
+    watch.on = body.on
+    watch.save(update_fields=["on"])
+    if watch.on:
+        _look(watch)
+    return _watches()
+
+
+@router.delete("/watches/{watch_id}", response=WatchesOut)
+def remove_watch(request: HttpRequest, watch_id: int) -> WatchesOut:
+    """Removes a watch and its matches. The items themselves stay."""
+    Watch.objects.filter(pk=watch_id).delete()
+    return _watches()
+
+
 @router.get("/counts", response=Counts)
 def counts(request: HttpRequest) -> Counts:
     """The numbers beside the sidebar's rows."""
@@ -915,5 +1051,6 @@ def counts(request: HttpRequest) -> Counts:
         later=Item.objects.filter(later_at__isnull=False).count(),
         saved=Item.objects.filter(saved_at__isnull=False).count(),
         highlights=Highlight.objects.count(),
+        watches=_this_week().filter(watch__on=True).count(),
         sources={code: by_source.get(code, 0) for code in Source.values},
     )
