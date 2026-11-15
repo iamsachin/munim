@@ -76,7 +76,7 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] Stream, Saved, Read later, Today and sidebar counts from the server
 - [ ] Highlights, watches, digest, Ask, connections and AI settings from the server
 - [ ] Loading, error and empty states wired into every screen (`ui/States.tsx`, wording in `reader/copy.ts`); done for RSS and the device list
-- [x] Postgres job queue, scheduler and worker (Procrastinate); `pnpm dev` runs the worker
+- [x] Postgres job queue, scheduler and worker (Procrastinate); `pnpm dev` runs the worker; a job left behind by a worker that died is put back within five minutes
 - [x] Docker Compose: one app container serving web, API and the job worker, plus Postgres (`docker compose up -d`; `README.md` has install, upgrade and backup)
 - [x] Master key file, generated on first use (or `MUNIM_MASTER_KEY`)
 - [x] Server: passphrase sign-in, sessions, device list with Revoke, lock and idle lock, change passphrase (Django auth and sessions)
