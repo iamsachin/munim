@@ -1,5 +1,6 @@
 """The one place that talks to the AI providers, through their official SDKs."""
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from itertools import islice
 
@@ -47,10 +48,20 @@ class Failed(Exception):
     """The provider did not answer. Its message is for the owner and never contains the key."""
 
 
-def answer(provider: Provider, key: str, model: str, instructions: str, prompt: str) -> Answer:
-    """What the model says to the prompt, and the tokens that took. One call, no retries: a
-    call that may have been paid for is not made twice."""
+def answer(
+    provider: Provider,
+    key: str,
+    model: str,
+    instructions: str,
+    prompt: str,
+    heard: Callable[[str], None],
+) -> Answer:
+    """What the model says to the prompt, and the tokens that took. The answer is streamed:
+    `heard` is given each piece as it arrives, so it can be shown while it is written. One
+    call, no retries: a call that may have been paid for is not made twice."""
     name = provider.label
+    text = ""
+    used = (0, 0)
     try:
         if provider == Provider.OPENAI:
             with openai.OpenAI(
@@ -59,29 +70,44 @@ def answer(provider: Provider, key: str, model: str, instructions: str, prompt: 
                 max_retries=0,
                 http_client=openai.DefaultHttpxClient(transport=TRANSPORT),
             ) as client:
-                got = client.responses.create(
+                events = client.responses.create(
                     model=model,
                     instructions=instructions,
                     input=prompt,
                     max_output_tokens=MAX_ANSWER_TOKENS,
                     # The owner's reading is not left with OpenAI for longer than the call.
                     store=False,
+                    stream=True,
                 )
-                text = got.output_text
-                used = (got.usage.input_tokens, got.usage.output_tokens) if got.usage else (0, 0)
+                for event in events:
+                    if event.type == "response.output_text.delta":
+                        text += event.delta
+                        heard(event.delta)
+                    # "incomplete" is an answer cut short at the most tokens allowed: it was
+                    # paid for, so it is kept and counted like a whole one.
+                    elif event.type in ("response.completed", "response.incomplete"):
+                        usage = event.response.usage
+                        used = (usage.input_tokens, usage.output_tokens) if usage else used
+                    elif event.type in ("response.failed", "error"):
+                        raise Failed(f"{name} stopped before finishing its answer.")
         else:
-            with anthropic.Anthropic(
-                api_key=key,
-                timeout=ANSWER_TIMEOUT_SECONDS,
-                max_retries=0,
-                http_client=anthropic.DefaultHttpxClient(transport=TRANSPORT),
-            ) as client:
-                message = client.messages.create(
+            with (
+                anthropic.Anthropic(
+                    api_key=key,
+                    timeout=ANSWER_TIMEOUT_SECONDS,
+                    max_retries=0,
+                    http_client=anthropic.DefaultHttpxClient(transport=TRANSPORT),
+                ) as claude,
+                claude.messages.stream(
                     model=model,
                     max_tokens=MAX_ANSWER_TOKENS,
                     system=instructions,
                     messages=[{"role": "user", "content": prompt}],
-                )
+                ) as stream,
+            ):
+                for piece in stream.text_stream:
+                    heard(piece)
+                message = stream.get_final_message()
                 if message.stop_reason == "refusal":
                     raise Failed(f"{name} declined to answer that.")
                 text = "".join(block.text for block in message.content if block.type == "text")
@@ -92,6 +118,9 @@ def answer(provider: Provider, key: str, model: str, instructions: str, prompt: 
         raise Failed(f"{name} answered {problem.status_code}, so there is no answer.") from None
     except (openai.APIConnectionError, anthropic.APIConnectionError):
         raise Failed(f"{name} could not be reached, so there is no answer.") from None
+    except (openai.APIError, anthropic.APIError):
+        # Whatever else goes wrong once the answer has begun to arrive.
+        raise Failed(f"{name} stopped before finishing its answer.") from None
     if not text.strip():
         raise Failed(f"{name} gave no answer.")
     return Answer(text.strip(), *used)

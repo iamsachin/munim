@@ -1,13 +1,16 @@
 import { useMutationState } from '@tanstack/react-query';
+import { useState } from 'react';
 import type { Ask as Asked } from '../api/client';
 import { ScreenHeader } from '../shell/ScreenHeader';
 import { AiBadge, SectionLabel } from '../ui/atoms';
+import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { Chip, SuggestChip } from '../ui/Chip';
 import { CitationRow } from '../ui/CitationRow';
+import { Input } from '../ui/Input';
 import { EmptyState, ErrorState, LoadingRows } from '../ui/States';
 import { EMPTY } from './copy';
-import { useAsk, useAsks } from './queries';
+import { conversations, useAsk, useAsks } from './queries';
 import { SCOPES, useReader } from './store';
 
 /** What a question was asked of, as the answer's card says it. */
@@ -24,10 +27,78 @@ const TRY = [
   'What is new about sync protocols?',
 ];
 
+/** One question and its answer, which is shown as far as it has been written. */
+function Exchange({ asked }: { asked: Asked }) {
+  const said = asked.answer || asked.problem;
+  return (
+    <>
+      <div className="max-w-4/5 self-end rounded-8 bg-card px-12 py-8 text-prose">
+        {asked.question}
+      </div>
+      <Card tone="ai" className="gap-8">
+        <div className="flex items-center gap-8">
+          <AiBadge />
+          <span className="font-mono text-code text-mute">{FROM[asked.scope]}</span>
+          {asked.status === 'pending' && said && (
+            <span role="status" className="font-mono text-code text-mute">
+              · writing
+            </span>
+          )}
+        </div>
+        {said ? (
+          // pre-line keeps the paragraphs the model wrote.
+          <div className="text-prose leading-prose text-pretty whitespace-pre-line">{said}</div>
+        ) : (
+          <div role="status" className="text-prose text-mute">
+            Waiting for the answer.
+          </div>
+        )}
+        {asked.cites.map((cite, i) => (
+          <CitationRow
+            key={i}
+            index={i + 1}
+            src={cite.source}
+            icon={cite.icon}
+            title={cite.title}
+            from={cite.origin}
+          />
+        ))}
+      </Card>
+    </>
+  );
+}
+
+/** The field under a conversation that asks a follow-up of the same items. */
+function FollowUp({ about, onAsk }: { about: string; onAsk: (question: string) => boolean }) {
+  const [question, setQuestion] = useState('');
+  return (
+    <form
+      className="flex gap-6"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (onAsk(question)) setQuestion('');
+      }}
+    >
+      <Input
+        size="md"
+        tone="ai"
+        className="flex-1"
+        aria-label={`Ask a follow-up to: ${about}`}
+        placeholder="Ask a follow-up"
+        value={question}
+        onChange={(e) => {
+          setQuestion(e.target.value);
+        }}
+      />
+      <Button type="submit">Ask</Button>
+    </form>
+  );
+}
+
 /**
  * What was asked and what was answered. A question goes to the server, where the worker puts
- * it to the model the owner chose for Ask; the answer appears here when it is ready, with the
- * items it rests on.
+ * it to the model the owner chose for Ask; the answer appears here as it is written, with the
+ * items it rests on. A follow-up is asked of the same items, with what was said before.
  */
 export function Ask() {
   const { state, update } = useReader();
@@ -61,39 +132,27 @@ export function Ask() {
         {asks.data?.length === 0 && unsent.length === 0 && (
           <EmptyState compact>{EMPTY.asks}</EmptyState>
         )}
-        {asks.data?.map((asked) => (
-          <div key={asked.id} className="flex flex-col gap-10">
-            <div className="max-w-4/5 self-end rounded-8 bg-card px-12 py-8 text-prose">
-              {asked.question}
-            </div>
-            <Card tone="ai" className="gap-8">
-              <div className="flex items-center gap-8">
-                <AiBadge />
-                <span className="font-mono text-code text-mute">{FROM[asked.scope]}</span>
-              </div>
-              {asked.status === 'pending' ? (
-                <div role="status" className="text-prose text-mute">
-                  Waiting for the answer.
-                </div>
-              ) : (
-                // pre-line keeps the paragraphs the model wrote.
-                <div className="text-prose leading-prose text-pretty whitespace-pre-line">
-                  {asked.answer || asked.problem}
-                </div>
-              )}
-              {asked.cites.map((cite, i) => (
-                <CitationRow
-                  key={i}
-                  index={i + 1}
-                  src={cite.source}
-                  icon={cite.icon}
-                  title={cite.title}
-                  from={cite.origin}
-                />
+        {conversations(asks.data ?? []).map((group) => {
+          const last = group.at(-1);
+          return (
+            // One conversation is one entry: a rule sets it apart from the one before.
+            <div
+              key={group[0]?.id}
+              className="flex flex-col gap-10 border-rule not-first:border-t not-first:pt-14"
+            >
+              {group.map((asked) => (
+                <Exchange key={asked.id} asked={asked} />
               ))}
-            </Card>
-          </div>
-        ))}
+              {/* Once the last answer is in, the conversation can be carried on. */}
+              {last && last.status !== 'pending' && (
+                <FollowUp
+                  about={group[0]?.question ?? ''}
+                  onAsk={(question) => ask(question, undefined, undefined, last)}
+                />
+              )}
+            </div>
+          );
+        })}
         {unsent.map((question, n) => (
           <div key={n} className="flex flex-col gap-4">
             <div className="max-w-4/5 self-end rounded-8 bg-card px-12 py-8 text-prose">

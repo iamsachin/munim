@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { age, day, heldOf, kindOf, readingTotal } from './queries';
+import { age, conversations, day, heldOf, kindOf, readingTotal } from './queries';
 
 test('age is shown in the largest whole unit, in the short form', () => {
   const now = Date.parse('2026-11-14T12:00:00Z');
@@ -48,4 +48,21 @@ test('a day is named as the owner would: today, yesterday, a weekday, then a dat
   expect(day(at(9, 12), now)).toBe('Mon');
   expect(day(at(8, 12), now)).toBe('Sun');
   expect(day(at(7, 12), now)).toBe('7 Nov');
+});
+
+test('questions are grouped into conversations, each follow-up after what it follows', () => {
+  const asked = (id: number, follows: number | null = null) =>
+    ({ id, follows }) as Parameters<typeof conversations>[0][number];
+  const ids = (asks: ReturnType<typeof asked>[]) =>
+    conversations(asks).map((group) => group.map((one) => one.id));
+  expect(ids([])).toEqual([]);
+  expect(ids([asked(1), asked(2)])).toEqual([[1], [2]]);
+  // A follow-up joins its question's conversation even when another was asked in between,
+  // and so does a follow-up to that follow-up.
+  expect(ids([asked(1), asked(2), asked(3, 1), asked(4, 3), asked(5, 2)])).toEqual([
+    [1, 3, 4],
+    [2, 5],
+  ]);
+  // What it follows is no longer listed: it stands by itself.
+  expect(ids([asked(7, 3), asked(8, 7)])).toEqual([[7, 8]]);
 });

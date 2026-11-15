@@ -146,19 +146,23 @@ const SCOPE_CODES = {
   'Open item': 'item',
 } as const satisfies Record<Scope, Ask['scope']>;
 
-/** What was asked and answered. Asked again every moment while an answer is being waited for. */
+/**
+ * What was asked and answered. While an answer is being written it is asked for a few times a
+ * second, so the words are seen as they arrive.
+ */
 export const useAsks = () =>
   useQuery({
     queryKey: ['asks'],
     queryFn: api.asks,
     refetchInterval: (query) =>
-      query.state.data?.some((asked) => asked.status === 'pending') ? 1500 : false,
+      query.state.data?.some((asked) => asked.status === 'pending') ? 400 : false,
   });
 
 /**
  * Sends a question to the server, where the worker puts it to the model: the answer comes to
- * the Ask screen when it is ready. Returns false, sending nothing, if the question is blank.
- * `item` is the open item, for a question about it.
+ * the Ask screen as it is written. Returns false, sending nothing, if the question is blank.
+ * `item` is the open item, for a question about it. `follows` is the earlier question this
+ * one follows up: it is then asked of what that one was, whatever the scope chosen now.
  */
 export function useAsk() {
   const { state, update } = useReader();
@@ -169,9 +173,13 @@ export function useAsk() {
     mutationFn: api.ask,
     onSuccess: () => queries.invalidateQueries({ queryKey: ['asks'] }),
   });
-  return (question: string, scope: Scope = state.scope, item = state.openItem) => {
+  return (question: string, scope: Scope = state.scope, item = state.openItem, follows?: Ask) => {
     const text = question.trim();
     if (!text) return false;
+    if (follows) {
+      send.mutate({ question: text, scope: follows.scope, follows: follows.id });
+      return true;
+    }
     update({ scope, openItem: item });
     send.mutate({
       question: text,
@@ -180,4 +188,19 @@ export function useAsk() {
     });
     return true;
   };
+}
+
+/**
+ * The questions as conversations: each one with its follow-ups after it, in the order asked.
+ * A follow-up whose first question is no longer listed starts a conversation of its own.
+ */
+export function conversations(asks: readonly Ask[]): Ask[][] {
+  const groups = new Map<number, Ask[]>();
+  for (const asked of asks) {
+    const group = asked.follows === null ? undefined : groups.get(asked.follows);
+    if (group) group.push(asked);
+    // Found by any of its questions, so that a follow-up to a follow-up joins it too.
+    groups.set(asked.id, group ?? [asked]);
+  }
+  return [...new Set(groups.values())];
 }

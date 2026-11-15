@@ -5,6 +5,7 @@ owner asked. The answer may only rest on the items it was given, and says which.
 """
 
 import re
+import time
 from datetime import timedelta
 
 from django.contrib.postgres.search import SearchQuery, SearchRank
@@ -22,6 +23,10 @@ MOST_ITEMS = 8
 ITEM_CHARACTERS = 6_000
 OPEN_ITEM_CHARACTERS = 60_000
 MOST_WORDS = 30
+# How far back a follow-up's conversation is sent with it.
+MOST_EARLIER = 6
+# How often an answer still being written is saved for the browser to show.
+SHOW_EVERY_SECONDS = 0.3
 
 INSTRUCTIONS = (
     "You answer a question for the owner of a personal reading app, using only the numbered "
@@ -63,6 +68,12 @@ def chosen(ask: Ask) -> list[Item]:
     items: QuerySet[Item] = Item.objects.exclude(source=Source.REDDIT).select_related("feed")
     if ask.scope == Ask.Scope.ITEM:
         return list(items.filter(asks=ask))
+    earlier = ask.follows
+    if earlier is not None and earlier.given:
+        # A follow-up is about what was already being talked of: the same items, numbered the
+        # same, less any that have since been removed.
+        kept = {item.pk: item for item in items.filter(pk__in=earlier.given)}
+        return [kept[pk] for pk in earlier.given if pk in kept]
     if ask.scope == Ask.Scope.SAVED:
         items = items.filter(saved_at__isnull=False)
     if ask.scope == Ask.Scope.WEEK:
@@ -84,9 +95,26 @@ def _origin(item: Item) -> str:
     return item.feed.title if item.feed else item.origin
 
 
+def _earlier(ask: Ask) -> list[Ask]:
+    """The answered questions this one follows up, oldest first."""
+    chain: list[Ask] = []
+    one = ask.follows
+    while one is not None and len(chain) < MOST_EARLIER:
+        if one.answer:
+            chain.append(one)
+        one = one.follows
+    return chain[::-1]
+
+
 def prompt(ask: Ask, items: list[Item]) -> str:
-    """The question and the numbered items, as the model is given them."""
+    """What the model is given: for a follow-up what was said before, then the question and
+    the numbered items."""
     limit = OPEN_ITEM_CHARACTERS if ask.scope == Ask.Scope.ITEM else ITEM_CHARACTERS
+    # An earlier answer's citations were numbered for that answer alone, so they are left out.
+    said = "".join(
+        f"Earlier question: {one.question}\nEarlier answer: {_CITED.sub('', one.answer)}\n\n"
+        for one in _earlier(ask)
+    )
     parts = []
     for number, item in enumerate(items, start=1):
         replies = "\n".join(
@@ -98,7 +126,7 @@ def prompt(ask: Ask, items: list[Item]) -> str:
             f"From {_origin(item)}, {item.published_at:%Y-%m-%d}\n"
             f"{text[:limit]}"
         )
-    return f"Question: {ask.question}\n\nItems:\n\n" + "\n\n".join(parts)
+    return f"{said}Question: {ask.question}\n\nItems:\n\n" + "\n\n".join(parts)
 
 
 def cited(text: str, items: list[Item]) -> tuple[str, list[dict[str, object]]]:
@@ -138,12 +166,29 @@ def _answer(ask: Ask) -> tuple[str, list[dict[str, object]]]:
     items = chosen(ask)
     if not items:
         raise Unanswered(NOTHING)
+    # Kept, so that a follow-up is answered from the same items.
+    ask.given = [item.pk for item in items]
+
+    written = ""
+    shown_at = 0.0
+
+    def heard(piece: str) -> None:
+        """Keeps what has been written so far where the browser reads it, a few times a
+        second, so the answer is seen as it is written."""
+        nonlocal written, shown_at
+        written += piece
+        if time.monotonic() - shown_at >= SHOW_EVERY_SECONDS:
+            shown_at = time.monotonic()
+            text, cites = cited(written, items)
+            Ask.objects.filter(pk=ask.pk).update(answer=text, cites=cites)
+
     got = providers.answer(
         Provider(model.provider),
         vault.unseal(key.sealed),
         model.model,
         INSTRUCTIONS,
         prompt(ask, items),
+        heard,
     )
     spend.record(Feature.ASK, model.provider, model.model, got.tokens_in, got.tokens_out)
     return cited(got.text, items)
@@ -157,6 +202,7 @@ def answer(ask_id: int) -> None:
     try:
         ask.answer, ask.cites = _answer(ask)
     except (Unanswered, providers.Failed) as problem:
-        ask.problem = str(problem)
+        # What had arrived before it failed is not kept: half an answer reads as a whole one.
+        ask.answer, ask.cites, ask.problem = "", [], str(problem)
     ask.answered_at = timezone.now()
     ask.save()
