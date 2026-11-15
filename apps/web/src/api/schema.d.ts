@@ -627,6 +627,8 @@ export interface components {
       kept: number;
       /** Problem */
       problem: string;
+      /** Fetched At */
+      fetched_at: string | null;
     };
     /** FeedIn */
     FeedIn: {

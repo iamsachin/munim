@@ -37,6 +37,8 @@ class FeedOut(Schema):
     kept: int
     # Why the last fetch failed, or empty.
     problem: str
+    # When it was last fetched, whether or not that worked. Null until the first fetch.
+    fetched_at: datetime | None
 
 
 SourceCode = Literal["RD", "X", "IG", "HN", "YT", "RSS"]
@@ -277,6 +279,7 @@ def _feed_out(feed: Feed) -> FeedOut:
         articles=feed.items.count(),
         kept=kept,
         problem=feed.problem,
+        fetched_at=feed.fetched_at,
     )
 
 

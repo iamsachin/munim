@@ -928,9 +928,13 @@
           "url": { "title": "Url", "type": "string" },
           "articles": { "title": "Articles", "type": "integer" },
           "kept": { "title": "Kept", "type": "integer" },
-          "problem": { "title": "Problem", "type": "string" }
+          "problem": { "title": "Problem", "type": "string" },
+          "fetched_at": {
+            "anyOf": [{ "format": "date-time", "type": "string" }, { "type": "null" }],
+            "title": "Fetched At"
+          }
         },
-        "required": ["id", "title", "url", "articles", "kept", "problem"],
+        "required": ["id", "title", "url", "articles", "kept", "problem", "fetched_at"],
         "title": "FeedOut",
         "type": "object"
       },

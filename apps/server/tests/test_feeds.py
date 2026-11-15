@@ -287,6 +287,8 @@ def test_a_feed_that_says_nothing_changed_or_fails_keeps_its_articles(
     poll_feeds(timestamp=0)
     (failed,) = owner_client.get("/api/feeds").json()
     assert failed["problem"] == "The feed's server answered 500."
+    # A fetch that failed is still a fetch: Connections shows when Munim last tried.
+    assert failed["fetched_at"]
     assert failed["articles"] == 2
 
     # It recovers by itself once the feed's server does.

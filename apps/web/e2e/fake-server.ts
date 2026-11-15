@@ -184,7 +184,12 @@ export async function fakeServer(page: Page, start: State = 'open') {
     { id: 3, title: 'Plain Crypto' },
     { id: 4, title: 'Release notes' },
     { id: 5, title: 'Wire Notes' },
-  ].map((f) => ({ ...f, url: `https://feeds.example/${String(f.id)}.xml`, problem: '' }));
+  ].map((f) => ({
+    ...f,
+    url: `https://feeds.example/${String(f.id)}.xml`,
+    problem: '',
+    fetched_at: new Date(NOW - 31 * 60_000).toISOString(),
+  }));
   /** Saved, queued or highlighted: such an item stays when its feed is removed. */
   const isKept = (item: (typeof items)[number]) =>
     !!item.savedAt || !!item.laterAt || highlights.some((h) => h.item_id === item.id);
@@ -368,7 +373,13 @@ export async function fakeServer(page: Page, start: State = 'open') {
       if (feeds.some((f) => f.url === url)) return refuse(409, 'That feed is already here.');
       if (!url.endsWith('.xml')) return refuse(422, 'That address is not an RSS or Atom feed.');
       const id = 100 + feeds.length;
-      feeds.push({ id, title: 'Example Feed', url, problem: '' });
+      feeds.push({
+        id,
+        title: 'Example Feed',
+        url,
+        problem: '',
+        fetched_at: new Date(NOW).toISOString(),
+      });
       items.push({
         ...items[0],
         id: 1000 + items.length,
