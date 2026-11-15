@@ -1141,7 +1141,8 @@
             "anyOf": [{ "enum": ["Video", "Image"], "type": "string" }, { "type": "null" }],
             "title": "Media"
           },
-          "thumb": { "anyOf": [{ "type": "string" }, { "type": "null" }], "title": "Thumb" }
+          "thumb": { "anyOf": [{ "type": "string" }, { "type": "null" }], "title": "Thumb" },
+          "icon": { "anyOf": [{ "type": "string" }, { "type": "null" }], "title": "Icon" }
         },
         "required": [
           "id",
@@ -1156,7 +1157,8 @@
           "saved_at",
           "later_at",
           "media",
-          "thumb"
+          "thumb",
+          "icon"
         ],
         "title": "ItemOut",
         "type": "object"
@@ -1274,6 +1276,7 @@
             "title": "Media"
           },
           "thumb": { "anyOf": [{ "type": "string" }, { "type": "null" }], "title": "Thumb" },
+          "icon": { "anyOf": [{ "type": "string" }, { "type": "null" }], "title": "Icon" },
           "url": { "title": "Url", "type": "string" },
           "blocks": {
             "items": {
@@ -1332,6 +1335,7 @@
           "later_at",
           "media",
           "thumb",
+          "icon",
           "url",
           "blocks",
           "comments",
@@ -1437,7 +1441,8 @@
             "type": "string"
           },
           "title": { "title": "Title", "type": "string" },
-          "origin": { "title": "Origin", "type": "string" }
+          "origin": { "title": "Origin", "type": "string" },
+          "icon": { "anyOf": [{ "type": "string" }, { "type": "null" }], "title": "Icon" }
         },
         "required": [
           "id",
@@ -1451,7 +1456,8 @@
           "item_id",
           "source",
           "title",
-          "origin"
+          "origin",
+          "icon"
         ],
         "title": "HighlightOut",
         "type": "object"

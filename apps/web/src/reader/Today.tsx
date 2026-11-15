@@ -87,7 +87,8 @@ export function Today() {
                 to={`/stream/${source.toLowerCase()}`}
                 className="grid grid-cols-[30px_96px_24px_minmax(0,1fr)] items-baseline gap-x-10 rounded-5 px-6 py-dn-3 text-ink hover:bg-card"
               >
-                <SourceTag src={source} />
+                {/* Feeds each have their own icon; the rest have one for the whole source. */}
+                <SourceTag src={source} icon={source === 'RSS' ? null : rows[0]?.icon} />
                 <span className="font-medium">{SOURCES[source].name}</span>
                 <span className="text-right font-mono text-meta text-mute">{rows.length}</span>
                 <span className="truncate text-mute">{rows[0]?.title}</span>
@@ -121,7 +122,7 @@ export function Today() {
                 key={item.id}
                 className="grid grid-cols-[30px_minmax(0,1fr)_auto] items-baseline gap-x-10 px-6 py-dn-3"
               >
-                <SourceTag src={item.source} />
+                <SourceTag src={item.source} icon={item.icon} />
                 <span className="truncate">{item.title}</span>
                 <span className="font-mono text-meta text-mute">{item.minutes} min</span>
               </div>

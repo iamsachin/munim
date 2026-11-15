@@ -57,23 +57,53 @@ export function SectionLabel({
 }
 
 /**
- * The source's mark in the source's colour (owner's decision, 2026-11-15; the handoff has its
- * two- or three-letter code here). The full name is read to screen readers and shown on hover.
- * `inheritSize` is for metadata lines, where the mark is the size of the line's text.
+ * Where something came from: its site's own icon, or else the source's mark in the source's
+ * colour (owner's decision, 2026-11-15; the handoff has a two- or three-letter code here). The
+ * full name is read to screen readers and shown on hover. `inheritSize` is for metadata lines,
+ * where the icon is the size of the line's text.
  */
-export function SourceTag({ src, inheritSize = false }: { src: Source; inheritSize?: boolean }) {
+export function SourceTag({
+  src,
+  icon,
+  inheritSize = false,
+}: {
+  src: Source;
+  /** Where the site's own icon is, at Munim's server. Without one, or if it cannot be had,
+   * the source's mark is drawn. */
+  icon?: string | null;
+  inheritSize?: boolean;
+}) {
   const { name, tone } = SOURCES[src];
+  const [failed, setFailed] = useState(false);
+  const size = inheritSize ? 'size-12' : 'size-14';
+  const own = Boolean(icon) && !failed;
   return (
-    // The name is shown on hover as well as read out: a mark alone can be unfamiliar.
-    <span title={name} className={cx('inline-flex align-middle', TEXT[tone])}>
-      <svg
-        viewBox="0 0 24 24"
-        fill="currentColor"
-        aria-hidden="true"
-        className={inheritSize ? 'size-12' : 'size-14'}
-      >
-        <path d={SOURCE_ICONS[src]} />
-      </svg>
+    // The name is shown on hover as well as read out: an icon alone can be unfamiliar.
+    <span
+      title={name}
+      className={cx('inline-flex flex-col items-start gap-2 align-middle', TEXT[tone])}
+    >
+      {icon && own ? (
+        <img
+          src={icon}
+          alt=""
+          className={cx(size, 'rounded-2')}
+          onError={() => {
+            setFailed(true);
+          }}
+        />
+      ) : (
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={size}>
+          <path d={SOURCE_ICONS[src]} />
+        </svg>
+      )}
+      {/* A feed's own icon does not say it is a feed, so it is labelled (owner's request).
+          Not in a line of metadata, which names the feed beside it. */}
+      {src === 'RSS' && own && !inheritSize && (
+        <span aria-hidden="true" className="font-mono text-micro leading-none">
+          rss
+        </span>
+      )}
       <span className="sr-only">{name}</span>
     </span>
   );

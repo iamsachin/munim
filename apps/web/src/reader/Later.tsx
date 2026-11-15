@@ -36,7 +36,7 @@ export function Later() {
           {rows.map((item) => (
             <TableRow key={item.id} className={`${COLS} items-center`}>
               <Cell>
-                <SourceTag src={item.source} />
+                <SourceTag src={item.source} icon={item.icon} />
               </Cell>
               <Cell className="truncate font-medium">{item.title}</Cell>
               <Cell className={`${META} truncate`}>{item.origin}</Cell>

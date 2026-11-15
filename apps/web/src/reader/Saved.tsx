@@ -53,7 +53,7 @@ export function Saved() {
             <TableRow key={item.id} className={`${COLS} items-baseline`}>
               <Cell className="text-sm text-mute">{kindOf(item)}</Cell>
               <Cell>
-                <SourceTag src={item.source} />
+                <SourceTag src={item.source} icon={item.icon} />
               </Cell>
               <Cell className="truncate font-medium">{item.title}</Cell>
               <Cell className={`${META} truncate`}>{item.origin}</Cell>

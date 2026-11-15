@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { api, reason, sessionOver, type YouTube } from '../api/client';
+import { api, reason, sessionOver, sourceIcon, type YouTube } from '../api/client';
 import { UNAVAILABLE } from '../reader/copy';
 import { age, useFeeds, useHackerNews, useSetHackerNews } from '../reader/queries';
 import { SectionLabel, SourceTag, SOURCES, StatusDot } from '../ui/atoms';
@@ -93,7 +93,7 @@ export function Connections() {
 
         <TableRow pad={6} hover={false} className={`${COLS} items-center`}>
           <Cell>
-            <SourceTag src="HN" />
+            <SourceTag src="HN" icon={sourceIcon('HN')} />
           </Cell>
           <Cell className="font-semibold">Hacker News</Cell>
           <Cell className="font-mono text-sm text-mute">Front page</Cell>
@@ -125,7 +125,7 @@ export function Connections() {
 
         <TableRow pad={6} hover={false} className={`${COLS} items-center`}>
           <Cell>
-            <SourceTag src="YT" />
+            <SourceTag src="YT" icon={sourceIcon('YT')} />
           </Cell>
           <Cell className="font-semibold">YouTube</Cell>
           <Cell className="truncate font-mono text-sm text-mute">

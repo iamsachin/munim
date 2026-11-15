@@ -14,7 +14,7 @@ from ninja import Field, Router, Schema, Status
 from procrastinate.exceptions import AlreadyEnqueued
 
 from account.auth import Open
-from reader import feeds, images, search, tasks, youtube
+from reader import feeds, icons, images, search, tasks, youtube
 from reader.models import Connection, Feed, Highlight, Item, Source
 
 router = Router(tags=["reader"], auth=Open())
@@ -64,6 +64,8 @@ class ItemOut(Schema):
     media: Literal["Video", "Image"] | None
     # Where its still or picture is, at Munim, for the small box in a row. Null if it has none.
     thumb: str | None
+    # Where the icon of the site it came from is, at Munim. Null for a source with no one site.
+    icon: str | None
 
 
 class Span(Schema):
@@ -164,6 +166,7 @@ class HighlightOut(HighlightPlace):
     source: SourceCode
     title: str
     origin: str
+    icon: str | None
 
 
 class NoteIn(Schema):
@@ -247,8 +250,17 @@ def _thumb(item: Item) -> str | None:
     return f"/api/items/{item.pk}/images/0" if item.media and next(pictures, None) else None
 
 
+def _icon_of(item: Item) -> str | None:
+    """Where the icon of the item's site is asked for: its feed's site, or its source's own.
+    An article whose feed was removed has no site left to ask."""
+    if item.feed_id:
+        return f"/api/feeds/{item.feed_id}/icon"
+    return f"/api/sources/{item.source}/icon" if item.source in icons.SITES else None
+
+
 def _row(item: Item) -> dict[str, Any]:
     return {
+        "icon": _icon_of(item),
         "id": item.pk,
         "source": item.source,
         "title": item.title,
@@ -429,6 +441,34 @@ def get_image(request: HttpRequest, item_id: int, index: int) -> HttpResponse:
     return response
 
 
+def _icon(site: str) -> HttpResponse:
+    """A site's icon, fetched through this server and kept on disk."""
+    try:
+        content, kind = icons.fetch(site)
+    except images.ImageProblem as problem:
+        response = HttpResponse(str(problem), status=404, content_type="text/plain")
+        # The browser need not ask again for every row: the server looks again after a day.
+        response["Cache-Control"] = "private, max-age=86400"
+        return response
+    response = HttpResponse(content, content_type=kind)
+    # A site may change its icon, so the browser keeps it for a week, not for ever.
+    response["Cache-Control"] = "private, max-age=604800"
+    response["X-Content-Type-Options"] = "nosniff"
+    response["Content-Security-Policy"] = "default-src 'none'; sandbox"
+    return response
+
+
+@router.get("/sources/{source}/icon", include_in_schema=False)
+def source_icon(request: HttpRequest, source: Literal["HN", "YT"]) -> HttpResponse:
+    return _icon(icons.SITES[source])
+
+
+@router.get("/feeds/{feed_id}/icon", include_in_schema=False)
+def feed_icon(request: HttpRequest, feed_id: int) -> HttpResponse:
+    feed = get_object_or_404(Feed, pk=feed_id)
+    return _icon(feed.site_url or feed.url)
+
+
 @router.patch("/items/{item_id}", response=ItemOut)
 def change_item(request: HttpRequest, item_id: int, body: ItemPatch) -> ItemOut:
     """Marks an item read or unread, saved or not, queued for later or not."""
@@ -461,6 +501,7 @@ def _highlight(highlight: Highlight) -> HighlightOut:
         source=item.source,  # type: ignore[arg-type]
         title=item.title,
         origin=item.feed.title if item.feed else item.origin,
+        icon=_icon_of(item),
     )
 
 

@@ -40,7 +40,7 @@ export function MediaPreview({
           </div>
         )}
         <div className="flex items-center gap-10">
-          <SourceTag src={item.source} />
+          <SourceTag src={item.source} icon={item.icon} />
           <span className="min-w-0 flex-1 truncate font-semibold">{item.title}</span>
           <span className="font-mono text-meta text-mute">
             {item.origin} · {age(item.published_at, now)}
