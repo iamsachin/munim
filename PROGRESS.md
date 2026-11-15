@@ -71,11 +71,11 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] Development Postgres in Docker; Django admin and built-in migrations
 - [x] Feed and Article models and migrations, in the admin
 - [x] Stream items, with read, saved and read-later state (feed articles only so far)
-- [ ] Models for the rest: other sources' items and their comments, highlights, watches
+- [x] Models for the rest: other sources' items and their comments, highlights, watches, digests, questions and answers
 - [x] OpenAPI document committed, front-end types generated from it and checked for staleness
 - [x] Stream, Saved, Read later, Today and sidebar counts from the server
-- [ ] Highlights, watches, digest, Ask, connections and AI settings from the server
-- [ ] Loading, error and empty states wired into every screen (`ui/States.tsx`, wording in `reader/copy.ts`); done for RSS and the device list
+- [x] Highlights, watches, digest, Ask, connections and AI settings from the server; no sample data is left in the web app
+- [x] Loading, error and empty states wired into every screen (`ui/States.tsx`, wording in `reader/copy.ts`); audited 2026-11-15, when Today's watches were the one gap. Connections says each row's state in the row itself.
 - [x] Postgres job queue, scheduler and worker (Procrastinate); `pnpm dev` runs the worker; a job left behind by a worker that died is put back within five minutes
 - [x] Docker Compose: one app container serving web, API and the job worker, plus Postgres (`docker compose up -d`; `README.md` has install, upgrade and backup)
 - [x] Master key file, generated on first use (or `MUNIM_MASTER_KEY`)
@@ -98,7 +98,8 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [ ] Reddit (official OAuth, read-only, kept out of AI calls): waits for Reddit's approval of the request sent 2026-11-15; shown as "Not available yet" until then
 - [x] Connections says only what is true: Hacker News, YouTube and feeds from the server; Reddit, X and Instagram "Not available yet" with the reason
 - [x] Saving an item (full text of feed articles)
-- [ ] Saving: comment threads, transcripts, thumbnails
+- [x] Saving keeps an item's full text and its comment thread as last fetched: no source ever deletes an item, and removing a feed leaves what was saved. Transcripts are dropped: no official API has them (owner's decision, 2026-11-15).
+- [ ] Saving: a saved item's pictures are kept only once they have been shown; they are not fetched at the moment of saving
 - [x] Search (Postgres full-text) in the Stream: the words typed are looked for together first, then anywhere, in titles and article text, in any form; quoted phrases, OR and exclusions as written. Replies are not searched yet.
 - [x] Search matches shown in the open article: marked words, a tick for each down the edge, and a stepper (approved)
 - [x] Highlights on the server, stored with their position in the text: a highlight can cross bold, italic and links, is marked only where it was made, and is found again by its words if the text changes

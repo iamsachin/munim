@@ -54,7 +54,8 @@ export function Today() {
     source,
     rows: fresh.filter((item) => item.source === source),
   })).filter((group) => group.rows.length > 0);
-  const watches = (useWatches().data?.watches ?? []).filter((w) => w.on && w.week > 0).slice(0, 4);
+  const watching = useWatches();
+  const watches = (watching.data?.watches ?? []).filter((w) => w.on && w.week > 0).slice(0, 4);
 
   return (
     <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
@@ -118,6 +119,13 @@ export function Today() {
 
         <div className="flex min-w-0 flex-col gap-12">
           <Section label="Watches" to="/watches" action="All watches">
+            {watching.isPending && <LoadingRows what="watches" rows={2} />}
+            {watching.isError && (
+              <ErrorState what="the watches" onRetry={() => void watching.refetch()} />
+            )}
+            {watching.isSuccess && watches.length === 0 && (
+              <EmptyState compact>{EMPTY.matches}</EmptyState>
+            )}
             {watches.map((w) => (
               <div key={w.name} className="flex items-baseline gap-10 px-6 py-dn-3">
                 <span className="font-medium">{w.name}</span>
