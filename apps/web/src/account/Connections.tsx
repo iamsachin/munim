@@ -36,6 +36,7 @@ export function Connections() {
   const ago = (at: string | null | undefined) => {
     const short = at ? age(at, now) : '';
     const unit = short.endsWith('m') ? 'min' : short.slice(-1);
+    if (short === '0m') return 'Just now';
     return short ? `${short.slice(0, -1)} ${unit} ago` : '';
   };
   const yt = youtube.data;
