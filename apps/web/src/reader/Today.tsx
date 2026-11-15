@@ -138,7 +138,8 @@ export function Today() {
             {highlights.data?.slice(0, 2).map((h) => (
               <div key={h.id} className="p-6">
                 <Highlight>{h.quote}</Highlight>
-                <div className="pt-3 font-mono text-code text-mute">
+                <div className="flex items-center gap-6 pt-3 font-mono text-code text-mute">
+                  {!h.source && <AiBadge />}
                   {h.title} · {h.origin}
                 </div>
               </div>

@@ -7,7 +7,7 @@ import {
   type CSSProperties,
   type RefObject,
 } from 'react';
-import { Navigate, useParams } from 'react-router';
+import { Navigate, useParams, useSearchParams } from 'react-router';
 import type { Item } from '../api/client';
 import { useTheme } from '../settings';
 import { focusId, useKeys } from '../shell/keys';
@@ -39,7 +39,9 @@ export function Stream() {
   const { theme } = useTheme();
   const [filter, setFilter] = useState<Filter>('All');
   const [query, setQuery] = useState('');
-  const [chosen, setChosen] = useState<number | undefined>(undefined);
+  // An address like /stream?item=7 is a link to one item, which then opens.
+  const linked = Number(useSearchParams()[0].get('item')) || undefined;
+  const [chosen, setChosen] = useState(linked);
   // The item shown large. `play` starts its video at once: choosing a card is choosing to watch.
   const [zoom, setZoom] = useState<{ id: number; play: boolean } | null>(null);
   // YouTube is looked at as much as read, so its page opens as cards of stills. The choice
@@ -69,7 +71,10 @@ export function Stream() {
       (filter !== 'Unread' || item.unread || keptOpen.has(item.id)),
   );
   // The open item is the one chosen, if it is in the list on screen; otherwise the first row.
-  const current = rows.find((item) => item.id === chosen) ?? rows[0];
+  // An item linked to is open even if it is not listed: it may be too old to be.
+  const unlisted = chosen !== undefined && chosen === linked;
+  const current = rows.find((item) => item.id === chosen) ?? (unlisted ? undefined : rows[0]);
+  const openId = current?.id ?? (unlisted ? chosen : undefined);
   const zoomed = rows.find((item) => item.id === zoom?.id);
 
   /**
@@ -274,8 +279,8 @@ export function Stream() {
         )}
       </main>
 
-      {current ? (
-        <Thread key={current.id} id={current.id} now={now} q={query.trim()} />
+      {openId !== undefined ? (
+        <Thread key={openId} id={openId} now={now} q={query.trim()} />
       ) : (
         <aside aria-label="Thread" className="border-l border-line bg-panel" />
       )}

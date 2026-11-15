@@ -95,6 +95,17 @@ def _origin(item: Item) -> str:
     return item.feed.title if item.feed else item.origin
 
 
+def told(item: Item) -> dict[str, object]:
+    """An item as an answer names it: what a citation keeps of it, so as to outlive it."""
+    return {
+        "item": item.pk,
+        "source": item.source,
+        "title": item.title,
+        "origin": _origin(item),
+        "icon": icons.address_of(item),
+    }
+
+
 def _earlier(ask: Ask) -> list[Ask]:
     """The answered questions this one follows up, oldest first."""
     chain: list[Ask] = []
@@ -142,16 +153,7 @@ def cited(text: str, items: list[Item]) -> tuple[str, list[dict[str, object]]]:
         number = int(match.group(1))
         return f"[{order.index(number) + 1}]" if number in order else ""
 
-    cites: list[dict[str, object]] = [
-        {
-            "item": item.pk,
-            "source": item.source,
-            "title": item.title,
-            "origin": _origin(item),
-            "icon": icons.address_of(item),
-        }
-        for item in (items[number - 1] for number in order)
-    ]
+    cites = [told(items[number - 1]) for number in order]
     return _CITED.sub(renumber, text), cites
 
 

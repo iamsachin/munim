@@ -11,8 +11,9 @@ const elementOf = (node: Node | null | undefined) =>
 
 /**
  * A "Highlight" button that appears above text selected inside one unit of an item's text (a
- * paragraph, a heading, a list item). Pressing it, or the h key, saves the selection as a
- * highlight, by where it is: the item, the unit, and the characters within the unit.
+ * paragraph, a heading, a list item) or of an answer (a line). Pressing it, or the h key, saves
+ * the selection as a highlight, by where it is: the item or the answer, the unit, and the
+ * characters within the unit.
  */
 export function SelectionHighlight() {
   const add = useAddHighlight();
@@ -25,7 +26,7 @@ export function SelectionHighlight() {
     const selected = range?.toString() ?? '';
     const quote = selected.trim();
     const unit = elementOf(range?.startContainer)?.closest<HTMLElement>('[data-unit]');
-    const text = unit?.closest<HTMLElement>('[data-highlight-item]');
+    const text = unit?.closest<HTMLElement>('[data-highlight-item], [data-highlight-ask]');
     // The whole selection must sit inside one unit, and not inside text that is already
     // highlighted: that would store a second, redundant highlight.
     const inOneUnit = elementOf(range?.endContainer)?.closest('[data-unit]') === unit;
@@ -46,7 +47,9 @@ export function SelectionHighlight() {
       top: box.top,
       left: box.left + box.width / 2,
       entry: {
-        item: Number(text.dataset.highlightItem),
+        of: text.dataset.highlightAsk
+          ? `asks/${text.dataset.highlightAsk}`
+          : `items/${text.dataset.highlightItem ?? ''}`,
         reply: text.dataset.highlightReply ? Number(text.dataset.highlightReply) : null,
         unit: Number(unit.dataset.unit),
         start,

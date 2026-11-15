@@ -111,7 +111,7 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] Usage tracking and display: each call's tokens and cost at the price the owner entered for its model; a monthly limit in dollars that pauses AI (the Prices table waits for the owner's approval)
 - [x] Summaries on demand, through Ask (no automatic summaries)
 - [ ] Digest (daily, weekly)
-- [x] Ask with citations: over everything, saved, this week or the open item; answered by the worker; only the items given can be cited; Reddit content is never sent; the answer is shown as it is written; a follow-up carries its conversation on, from the same items
+- [x] Ask with citations: over everything, saved, this week or the open item; answered by the worker; only the items given can be cited; Reddit content is never sent; the answer is shown as it is written; a follow-up carries its conversation on, from the same items; the Ask screen lists conversations, one for each post asked about, with the open one beside the list; a passage of an answer can be highlighted (the screen waits for the owner's approval)
 - [ ] Watches matching
 - [ ] Replies where the official API allows (none of the connected sources does; Reddit stays read-only)
 - [ ] **Approved by owner**

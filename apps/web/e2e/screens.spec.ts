@@ -557,6 +557,7 @@ test('ask bar: a question opens Ask, waits for its answer and shows it with what
                 question: 'What changed in sync this week?',
                 scope: 'everything',
                 follows: null,
+                about: null,
                 status: 'pending',
                 answer,
                 problem: '',
@@ -573,9 +574,12 @@ test('ask bar: a question opens Ask, waits for its answer and shows it with what
   await bar.press('Enter');
   await expect(page).toHaveURL(/\/ask$/);
   await expect(bar).toHaveValue('');
-  const asked = page.getByRole('main').locator('> div > div').filter({
-    hasText: 'What changed in sync this week?',
-  });
+  // The new question is the latest conversation, so it is the one open beside the list.
+  const asked = page.getByRole('region', { name: 'Conversation' });
+  const row = page.getByRole('row', { name: /What changed in sync this week\?/ });
+  await expect(row).toHaveAttribute('aria-current', 'true');
+  // One message so far: the question.
+  await expect(row.getByRole('cell').nth(2)).toHaveText('1');
   // The worker has not begun; then the answer is there as far as it is written; then whole.
   // The page asks again until it is.
   await expect(asked.getByRole('status')).toHaveText('Waiting for the answer.');
@@ -588,40 +592,126 @@ test('ask bar: a question opens Ask, waits for its answer and shows it with what
   await expect(asked.getByRole('status')).toHaveCount(0);
   await expect(asked).toContainText('Ask HN: How do you keep track of long discussions?');
   await expect(asked).toContainText('From everything');
+  await expect(row.getByRole('cell').nth(2)).toHaveText('2');
   // It is the server's, so it is still there after a reload.
   await page.reload();
   await expect(page.getByText('It was asked: What changed in sync this week? [1]')).toBeVisible();
 });
 
-test('ask: a follow-up joins the conversation it follows and is asked of the same scope', async ({
+test('ask: conversations are listed, the latest open; a follow-up joins the one it follows', async ({
   page,
 }) => {
   await open(page, '/ask');
   const first = 'What did people say about keeping feeds in sync this week?';
-  // Another question is asked in between, of something else.
+  const thread = 'Show HN: A local-first archive for everything you read';
+  const rows = page.getByRole('table', { name: 'Conversations' }).getByRole('row');
+  const pane = page.getByRole('region', { name: 'Conversation' });
+  // One row for each conversation, the one last added to first (after the header's row). A
+  // question about nothing in particular is named by its words; the questions about one post
+  // are one conversation, named by the post.
+  await expect(rows).toHaveCount(3);
+  await expect(rows.nth(1)).toContainText(`${first} From everything`);
+  await expect(rows.nth(1)).toHaveAttribute('aria-current', 'true');
+  await expect(rows.nth(2)).toContainText(`${thread} 612 points`);
+  await expect(rows.nth(2).getByRole('cell').nth(2)).toHaveText('2');
+  await expect(pane).toContainText('Three items touch on it.');
+  await expect(pane).not.toContainText('Most replies like that the archive');
+
+  // Another question is asked, of something else: it is the latest, so it opens.
   await page.getByRole('button', { name: 'Saved', exact: true }).click();
   await page.getByRole('button', { name: 'Summarize what I saved this week' }).click();
-  await expect(page.getByText('It was asked: Summarize what I saved this week [1]')).toBeVisible();
+  await expect(pane.getByText('It was asked: Summarize what I saved this week [1]')).toBeVisible();
+  await expect(pane).not.toContainText('Three items touch on it.');
 
+  // The earlier one is opened again from its row, or with the keys, and carried on.
+  await page.keyboard.press('j');
+  await expect(rows.nth(2)).toHaveAttribute('aria-current', 'true');
+  await page.keyboard.press('k');
+  await rows.nth(2).getByRole('button').click();
   const followUp = page.getByLabel(`Ask a follow-up to: ${first}`);
   await followUp.fill('   ');
   await followUp.press('Enter');
   await followUp.fill('Which of those is newest?');
   await followUp.press('Enter');
   await expect(followUp).toHaveCount(0); // not while its answer is being written
-  await expect(page.getByText('It was asked: Which of those is newest? [1]')).toBeVisible();
+  await expect(pane.getByText('It was asked: Which of those is newest? [1]')).toBeVisible();
   await expect(followUp).toHaveValue('');
 
-  // It sits with the question it follows, above the one asked in between, and is asked of
-  // everything as that was, not of what is chosen now.
-  const groups = page.getByRole('main').locator('> div > div');
-  await expect(groups.nth(0)).toContainText(first);
-  await expect(groups.nth(0)).toContainText('Which of those is newest?');
-  await expect(groups.nth(0).getByText('From everything')).toHaveCount(2);
-  await expect(groups.nth(1)).toContainText('Summarize what I saved this week');
-  await expect(groups.nth(1)).toContainText('From saved');
+  // The follow-up is in the conversation it follows, which stays open and is now the one
+  // last added to; it was asked of everything as that was, not of what is chosen now.
+  await expect(pane).toContainText(first);
+  await expect(pane.getByText('From everything')).toHaveCount(2);
+  await expect(rows.nth(1)).toContainText(first);
+  await expect(rows.nth(1)).toHaveAttribute('aria-current', 'true');
+  await expect(rows.nth(1).getByRole('cell').nth(2)).toHaveText('4');
+  await expect(rows.nth(2)).toContainText('Summarize what I saved this week From saved');
   await expect(page).toHaveScreenshot('ask-follow-up-dark.png');
   expect(await axeFailures(page)).toEqual([]);
+});
+
+test('ask: a conversation about a post is one chat under a link to the post; a passage of an answer is highlighted where it is', async ({
+  page,
+}) => {
+  await open(page, '/ask');
+  const thread = 'Show HN: A local-first archive for everything you read';
+  const row = page.getByRole('row', { name: new RegExp(thread) });
+  await row.getByRole('button').click();
+  const pane = page.getByRole('region', { name: 'Conversation' });
+  // The post is named once, above the conversation: no answer says again what it is from,
+  // cites it again, or carries marks that would all point at it.
+  await expect(pane.getByRole('heading')).toHaveText(thread);
+  await expect(pane).toContainText('changing the same note.');
+  await expect(pane).not.toContainText('[1]');
+  await expect(pane).not.toContainText('From open item');
+  await expect(pane.getByText(thread)).toHaveCount(1);
+
+  const quote = 'a script that mails them the threads they starred';
+  await selectText(page, quote);
+  await page.getByRole('button', { name: 'Highlight', exact: true }).click();
+  await expect(pane.locator('mark')).toHaveText(quote);
+  await expect(page).toHaveScreenshot('ask-highlight-dark.png');
+
+  // It is still marked after a reload, and is listed with the AI badge and its question.
+  await page.reload();
+  await row.getByRole('button').click();
+  await expect(pane.locator('mark')).toHaveText(quote);
+  await page.getByRole('link', { name: /^Highlights/ }).click();
+  const from = page.getByText('Summarize this thread · Ask').locator('..');
+  await expect(from.getByText('AI', { exact: true })).toBeVisible();
+  await expect(page.getByRole('main').locator('mark').first()).toHaveText(quote);
+  expect(await axeFailures(page)).toEqual([]);
+
+  // The heading is a link to the post itself, which opens in the Stream.
+  await page.getByRole('link', { name: 'Ask', exact: true }).click();
+  await row.getByRole('button').click();
+  await pane.getByRole('link', { name: thread }).click();
+  await expect(page).toHaveURL(/\/stream\?item=3$/);
+  await expect(
+    page.getByRole('complementary', { name: 'Thread' }).getByRole('heading', { level: 2 }),
+  ).toHaveText(thread);
+
+  // An answer that is still being written cannot be highlighted: it may yet be dropped.
+  await page.route('**/api/asks', (route) =>
+    route.fulfill({
+      json: [
+        {
+          id: 9,
+          question: 'Anything?',
+          scope: 'everything',
+          follows: null,
+          about: null,
+          status: 'pending',
+          answer: 'Sync protocols should be',
+          problem: '',
+          cites: [],
+          asked_at: new Date(NOW).toISOString(),
+        },
+      ],
+    }),
+  );
+  await page.goto('/ask');
+  await selectText(page, 'Sync protocols');
+  await expect(page.getByRole('button', { name: 'Highlight', exact: true })).toHaveCount(0);
 });
 
 test('ask: a question that cannot be sent says so, and one with no model says why', async ({
@@ -633,7 +723,7 @@ test('ask: a question that cannot be sent says so, and one with no model says wh
   );
   await page.getByRole('button', { name: 'What is new about sync protocols?' }).click();
   await expect(page.getByRole('alert')).toHaveText(
-    'This question could not be sent. Ask it again.',
+    '“What is new about sync protocols?” could not be sent. Ask it again.',
   );
   await page.unroute('**/api/asks');
 
@@ -654,9 +744,17 @@ test('ask: with nothing asked yet the screen says so', async ({ page }) => {
 
 test('thread question is scoped to the open item', async ({ page }) => {
   await open(page, '/stream');
+  const title = await page
+    .getByRole('complementary', { name: 'Thread' })
+    .getByRole('heading', { level: 2 })
+    .innerText();
   await page.getByLabel('Ask about this thread').fill('Who disagrees?');
   await page.getByLabel('Ask about this thread').press('Enter');
   await expect(page).toHaveURL(/\/ask$/);
+  // The question is in the conversation about that item, which is the one open.
+  const pane = page.getByRole('region', { name: 'Conversation' });
+  await expect(pane.getByRole('heading')).toHaveText(title);
+  await expect(pane).toContainText('Who disagrees?');
   await expect(page.getByRole('button', { name: 'Open item' })).toHaveAttribute(
     'aria-pressed',
     'true',
@@ -673,7 +771,11 @@ test('nothing is summarised automatically: a summary is one press away, as an As
   await thread.getByRole('button', { name: 'Summarize this thread' }).click();
   await expect(page).toHaveURL(/\/ask$/);
   await expect(page.getByText('Summarize this thread')).toBeVisible();
-  await expect(page.getByText('From open item')).toBeVisible();
+  // It is a conversation about that thread, which is named once, above it.
+  await expect(
+    page.getByRole('region', { name: 'Conversation' }).getByRole('heading').getByRole('link'),
+  ).toBeVisible();
+  await expect(page.getByText('From open item')).toHaveCount(0);
 
   await page.getByRole('link', { name: /^RSS/ }).click();
   await page.getByRole('button', { name: 'Summarize this article' }).click();

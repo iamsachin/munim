@@ -21,7 +21,8 @@ Everything Munim held when this archive was made.
 
 feeds.json        the feeds you follow
 items.json        every item: where it came from, what you did with it, its text and replies
-highlights.json   your highlights and notes, each with the id of its item
+highlights.json   your highlights and notes, each with the id of its item, or the question
+                  whose answer it is from
 asks.json         what you asked, what was answered, and the items each answer cited
 settings.json     the settings kept on the server
 ai-usage.json     each call made to an AI model: when, by which feature, its tokens and cost
@@ -77,8 +78,14 @@ def export() -> IO[bytes]:
             archive,
             "highlights.json",
             (
-                {"item": h.item_id, "quote": h.quote, "note": h.note, "created_at": h.created_at}
-                for h in Highlight.objects.iterator()
+                {
+                    "item": h.item_id,
+                    "asked": h.ask.question if h.ask else None,
+                    "quote": h.quote,
+                    "note": h.note,
+                    "created_at": h.created_at,
+                }
+                for h in Highlight.objects.select_related("ask").iterator()
             ),
         )
         on = set(Connection.objects.filter(enabled=True).values_list("source", flat=True))

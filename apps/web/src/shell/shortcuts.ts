@@ -30,7 +30,7 @@ export const HELP: { title: string; rows: { keys: string[]; what: string }[] }[]
     ],
   },
   {
-    title: 'Stream and RSS',
+    title: 'Stream, RSS and Ask',
     rows: [
       { keys: ['j'], what: 'Next item' },
       { keys: ['k'], what: 'Previous item' },

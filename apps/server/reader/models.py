@@ -131,12 +131,19 @@ class Item(models.Model):
 
 
 class Highlight(models.Model):
-    """A passage the owner marked in an item, with an optional note."""
+    """A passage the owner marked, with an optional note: in an item, or in the answer to a
+    question (`ask`). It is always in exactly one of the two."""
 
-    item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name="highlights")
+    item = models.ForeignKey(
+        Item, null=True, blank=True, on_delete=models.CASCADE, related_name="highlights"
+    )
+    ask = models.ForeignKey(
+        "Ask", null=True, blank=True, on_delete=models.CASCADE, related_name="highlights"
+    )
     # Where the passage is. `reply` is null for the item's own text, or the number of the reply
     # it is in. `unit` counts the runs of text there: each paragraph, heading, paragraph of a
-    # quotation and list item is one. `start` and `end` are characters within that run.
+    # quotation and list item is one; in an answer, each of its lines that has words. `start`
+    # and `end` are characters within that run.
     reply = models.PositiveIntegerField(null=True, blank=True)
     unit = models.PositiveIntegerField()
     start = models.PositiveIntegerField()
@@ -149,6 +156,13 @@ class Highlight(models.Model):
 
     class Meta:
         ordering = ["-created_at", "-id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(item__isnull=False, ask__isnull=True)
+                | models.Q(item__isnull=True, ask__isnull=False),
+                name="highlight_in_an_item_or_an_answer",
+            )
+        ]
 
     def __str__(self) -> str:
         return self.quote[:60]

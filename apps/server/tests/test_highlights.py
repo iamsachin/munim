@@ -3,8 +3,9 @@ from typing import Any
 
 import pytest
 from django.test import Client
+from django.utils import timezone
 
-from reader.models import Feed, Highlight, Item
+from reader.models import Ask, Feed, Highlight, Item
 
 QUOTE = "wrong silently"
 
@@ -42,6 +43,7 @@ def test_a_passage_is_marked_and_listed_with_what_it_came_from(
         "note": "",
         "created_at": highlight["created_at"],
         "item_id": article.pk,
+        "ask_id": None,
         "source": "RSS",
         "title": "The case for boring sync protocols",
         "origin": "Wire Notes",
@@ -137,3 +139,52 @@ def test_highlights_need_an_open_session_and_a_real_item(
     owner_client.post("/api/sign-out", {}, "application/json")
     assert client.get("/api/highlights").status_code == 401
     assert mark(client, article).status_code == 401
+
+
+def test_a_passage_of_an_answer_is_marked_once_it_is_finished(
+    owner_client: Client, article: Item
+) -> None:
+    asked = Ask.objects.create(question="Why is sync hard?", scope="item", item=article)
+    place = {"unit": 1, "start": 3, "end": 17, "quote": QUOTE}
+    address = f"/api/asks/{asked.pk}/highlights"
+    # An answer still being written may yet be dropped: nothing in it is kept.
+    asked.answer = "It is fast."
+    asked.save()
+    assert owner_client.post(address, place, "application/json").status_code == 422
+
+    asked.answer, asked.answered_at = "It is fast.\n\nIt wrong silently [1].", timezone.now()
+    asked.save()
+    made = owner_client.post(address, {**place, "reply": 4}, "application/json")
+    assert made.status_code == 201
+    highlight = made.json()
+    # It is told by its question, and has no source: it is the model's words, not an item's.
+    assert {**highlight, "id": 0, "created_at": ""} == {
+        "id": 0,
+        "reply": None,
+        "unit": 1,
+        "start": 3,
+        "end": 17,
+        "quote": QUOTE,
+        "note": "",
+        "created_at": "",
+        "item_id": None,
+        "ask_id": asked.pk,
+        "source": None,
+        "title": "Why is sync hard?",
+        "origin": "Ask",
+        "icon": None,
+    }
+    # The same place again is the same highlight; it is listed, counted and can take a note.
+    assert owner_client.post(address, place, "application/json").json()["id"] == highlight["id"]
+    assert owner_client.get("/api/highlights").json() == [highlight]
+    assert owner_client.get("/api/counts").json()["highlights"] == 1
+    noted = owner_client.patch(
+        f"/api/highlights/{highlight['id']}", {"note": "Check."}, "application/json"
+    )
+    assert noted.json()["note"] == "Check."
+    # The item asked about has no highlight of its own from this.
+    assert owner_client.get(f"/api/items/{article.pk}").json()["highlights"] == []
+    assert (
+        owner_client.post("/api/asks/99999/highlights", place, "application/json").status_code
+        == 404
+    )

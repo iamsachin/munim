@@ -109,8 +109,9 @@ export const api = {
   changeItem: (id: number, patch: ItemPatch) => call<Item>('PATCH', `items/${String(id)}`, patch),
   counts: () => call<Counts>('GET', 'counts'),
   highlights: () => call<Highlight[]>('GET', 'highlights'),
-  addHighlight: ({ item, ...place }: Schemas['HighlightIn'] & { item: number }) =>
-    call<Highlight>('POST', `items/${String(item)}/highlights`, place),
+  /** `of` is what the passage is in: an item ("items/3") or an answer ("asks/5"). */
+  addHighlight: ({ of, ...place }: Schemas['HighlightIn'] & { of: string }) =>
+    call<Highlight>('POST', `${of}/highlights`, place),
   noteHighlight: ({ id, note }: { id: number; note: string }) =>
     call<Highlight>('PATCH', `highlights/${String(id)}`, { note } satisfies Schemas['NoteIn']),
   removeHighlight: (id: number) => call<undefined>('DELETE', `highlights/${String(id)}`),
