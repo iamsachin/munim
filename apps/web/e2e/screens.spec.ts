@@ -900,8 +900,15 @@ test('connections: sources Munim cannot read say why, and feeds show their real 
   await expect(
     page.getByRole('button', { name: 'Later: Calendar is not available yet' }),
   ).toBeDisabled();
+  // A feed added this minute was fetched "Just now", not "0 min ago".
   await page.getByRole('link', { name: 'Manage feeds' }).click();
   await expect(page).toHaveURL(/\/rss$/);
+  await page.getByLabel('Feed URL').fill('https://feeds.example/new.xml');
+  await page.getByRole('button', { name: 'Add', exact: true }).click();
+  await expect(page.getByRole('button', { name: /^Example Feed/ })).toBeVisible();
+  await page.getByRole('link', { name: 'Connections' }).click();
+  await expect(rss).toContainText('6 feeds');
+  await expect(rss).toContainText('Just now');
 });
 
 test('connections: YouTube is disconnected, and can be connected again with one click', async ({
