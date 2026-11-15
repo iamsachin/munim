@@ -1,5 +1,6 @@
 """Background jobs for the reader. Run by the worker: `manage.py procrastinate worker`."""
 
+from procrastinate import JobContext
 from procrastinate.contrib.django import app
 
 from reader import feeds, hackernews, youtube
@@ -29,3 +30,15 @@ def poll_hacker_news(timestamp: int) -> None:
 def poll_youtube(timestamp: int) -> None:
     """Every hour, and when it is connected: fetch new videos from subscribed channels."""
     youtube.refresh()
+
+
+@app.periodic(cron="*/5 * * * *")
+@app.task(queueing_lock="recover_jobs", lock="recover_jobs", pass_context=True)
+async def recover_jobs(context: JobContext, timestamp: int) -> None:
+    """Every five minutes: a job whose worker died while running it (a restart, a crash, the
+    power) is put back to be run again. Left alone it stays "running" for ever, and because a
+    task never runs twice at once, nothing of its kind could ever start behind it. Every task
+    here is safe to run again."""
+    jobs = context.app.job_manager
+    for job in await jobs.get_stalled_jobs():
+        await jobs.retry_job(job)

@@ -3,6 +3,7 @@ from typing import Any
 
 import httpx
 import pytest
+from django.db import connection
 from django.test import Client
 from django.utils import timezone
 from procrastinate.contrib.django import app
@@ -10,7 +11,7 @@ from procrastinate.contrib.django import app
 from reader import feeds
 from reader.blocks import text_of
 from reader.models import Feed, Highlight, Item
-from reader.tasks import poll_feeds
+from reader.tasks import poll_feeds, recover_jobs
 
 from .conftest import PASSPHRASE, Handler, post
 
@@ -343,6 +344,7 @@ def test_the_poll_is_scheduled_every_fifteen_minutes() -> None:
         "reader.tasks.poll_feeds": "*/15 * * * *",
         "reader.tasks.poll_hacker_news": "*/15 * * * *",
         "reader.tasks.poll_youtube": "7 * * * *",
+        "reader.tasks.recover_jobs": "*/5 * * * *",
     }
 
 
@@ -361,6 +363,48 @@ def test_a_queued_poll_is_run_by_the_worker(client: Client, web: Any) -> None:
     with app.replace_connector(worker) as worker_app:
         worker_app.run_worker(wait=False, install_signal_handlers=False, listen_notify=False)
 
+    assert client.get("/api/feeds").json()[0]["problem"] == "The feed's server answered 500."
+
+
+def work() -> None:
+    """Runs a real worker until the queue is empty."""
+    worker = app.connector.get_worker_connector()  # type: ignore[attr-defined]
+    with app.replace_connector(worker) as worker_app:
+        worker_app.run_worker(wait=False, install_signal_handlers=False, listen_notify=False)
+
+
+@pytest.mark.django_db(transaction=True)
+def test_a_job_left_behind_by_a_worker_that_died_is_run_again(client: Client, web: Any) -> None:
+    post(client, "setup", {"passphrase": PASSPHRASE})
+    web(ok(RSS))
+    post(client, "feeds", {"url": "https://lowtech.example/feed"})
+    asked: list[str] = []
+
+    def down(request: httpx.Request) -> httpx.Response:
+        asked.append(request.url.host)
+        return httpx.Response(500)
+
+    web(down)
+    poll_feeds.defer(timestamp=0)  # type: ignore[call-arg]
+    # What a worker killed in the middle of a job leaves: the job marked as running, by nobody.
+    with connection.cursor() as cursor:
+        cursor.execute("update procrastinate_jobs set status = 'doing'")
+
+    def waiting() -> list[tuple[str, str]]:
+        with connection.cursor() as cursor:
+            cursor.execute("select task_name, status from procrastinate_jobs order by id")
+            return list(cursor.fetchall())
+
+    # A worker passes it by: it looks taken. And nothing of its kind can start behind it.
+    work()
+    assert asked == []
+    assert waiting() == [("reader.tasks.poll_feeds", "doing")]
+
+    # The recovery task puts it back, and it runs.
+    recover_jobs.defer(timestamp=0)  # type: ignore[call-arg]
+    work()
+    assert asked == ["lowtech.example"]
+    assert waiting() == []
     assert client.get("/api/feeds").json()[0]["problem"] == "The feed's server answered 500."
 
 
