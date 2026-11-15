@@ -1177,6 +1177,18 @@ export interface components {
       origin: string;
       /** Icon */
       icon: string | null;
+      /**
+       * Quote
+       * @default
+       */
+      quote: string;
+      /** Reply */
+      reply?: number | null;
+      /**
+       * Who
+       * @default
+       */
+      who: string;
     };
     /** AskIn */
     AskIn: {

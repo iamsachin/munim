@@ -1685,7 +1685,10 @@
           },
           "title": { "title": "Title", "type": "string" },
           "origin": { "title": "Origin", "type": "string" },
-          "icon": { "anyOf": [{ "type": "string" }, { "type": "null" }], "title": "Icon" }
+          "icon": { "anyOf": [{ "type": "string" }, { "type": "null" }], "title": "Icon" },
+          "quote": { "default": "", "title": "Quote", "type": "string" },
+          "reply": { "anyOf": [{ "type": "integer" }, { "type": "null" }], "title": "Reply" },
+          "who": { "default": "", "title": "Who", "type": "string" }
         },
         "required": ["item_id", "source", "title", "origin", "icon"],
         "title": "Cite",

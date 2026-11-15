@@ -711,6 +711,12 @@ class Cite(Schema):
     title: str
     origin: str
     icon: str | None
+    # The words of the item the answer rests on, if the model quoted any that the item has;
+    # then `reply` is the number of the reply they are in (null for the item's own text) and
+    # `who` wrote that reply.
+    quote: str = ""
+    reply: int | None = None
+    who: str = ""
 
 
 class AskOut(Schema):

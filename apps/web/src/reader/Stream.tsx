@@ -23,7 +23,7 @@ import { AskCard } from './AskCard';
 import { Blocks } from './Blocks';
 import { EMPTY, UNAVAILABLE } from './copy';
 import { NO_REPLY } from './marks';
-import { marksFor } from './units';
+import { marksFor, type Cited } from './units';
 import { MediaPreview } from './MediaPreview';
 import { age, useChangeItem, useItem, useItems } from './queries';
 
@@ -40,7 +40,12 @@ export function Stream() {
   const [filter, setFilter] = useState<Filter>('All');
   const [query, setQuery] = useState('');
   // An address like /stream?item=7 is a link to one item, which then opens.
-  const linked = Number(useSearchParams()[0].get('item')) || undefined;
+  // It may also name words in the item, or in one of its replies: a citation's.
+  const [address] = useSearchParams();
+  const linked = Number(address.get('item')) || undefined;
+  const quote = address.get('quote');
+  const reply = address.get('reply');
+  const cited = quote ? { quote, reply: reply === null ? null : Number(reply) } : undefined;
   const [chosen, setChosen] = useState(linked);
   // The item shown large. `play` starts its video at once: choosing a card is choosing to watch.
   const [zoom, setZoom] = useState<{ id: number; play: boolean } | null>(null);
@@ -280,7 +285,13 @@ export function Stream() {
       </main>
 
       {openId !== undefined ? (
-        <Thread key={openId} id={openId} now={now} q={query.trim()} />
+        <Thread
+          key={openId}
+          id={openId}
+          now={now}
+          q={query.trim()}
+          cited={openId === linked ? cited : undefined}
+        />
       ) : (
         <aside aria-label="Thread" className="border-l border-line bg-panel" />
       )}
@@ -438,7 +449,18 @@ function useFoundMarks(
 }
 
 /** The open item: a question field, its text and replies, and where to go next. Keyed by item. */
-function Thread({ id, now, q }: { id: number; now: number; q: string }) {
+function Thread({
+  id,
+  now,
+  q,
+  cited,
+}: {
+  id: number;
+  now: number;
+  q: string;
+  /** Words the item was opened at: they are marked and brought into view, as a match is. */
+  cited?: Cited;
+}) {
   const item = useItem(id, q);
   const scroller = useRef<HTMLDivElement>(null);
   const text = useRef<HTMLDivElement>(null);
@@ -446,15 +468,17 @@ function Thread({ id, now, q }: { id: number; now: number; q: string }) {
   const matches = useFoundMarks(
     scroller,
     text,
-    `${String(id)} ${JSON.stringify(item.data?.found)}`,
+    `${String(id)} ${JSON.stringify(item.data?.found)} ${cited?.quote ?? ''}`,
   );
   // What to mark in the text and in each reply: highlights, and what the search matched.
   const marks = useMemo(() => {
     const opened = item.data;
     if (!opened) return [];
     const parts = [opened.blocks, ...opened.comments.map((comment) => comment.blocks)];
-    return marksFor(parts, opened.highlights, opened.found);
-  }, [item.data]);
+    return marksFor(parts, opened.highlights, opened.found, cited);
+    // The words cited are compared, not the object, which is made anew each time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item.data, cited?.quote, cited?.reply]);
   const change = useChangeItem();
   const frame = 'flex min-h-0 min-w-0 flex-col gap-12 border-l border-line bg-panel p-14';
 
