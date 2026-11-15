@@ -107,24 +107,33 @@ export async function fakeServer(page: Page, start: State = 'open') {
     { feature: 'ask', provider: 'openai', model: 'gpt-5.5' },
     { feature: 'watch', provider: 'openai', model: 'gpt-5.4-mini' },
   ] as ({ feature: string } & typeof none)[];
+  const HN_THREAD = {
+    item_id: 1,
+    source: 'HN',
+    title: 'Ask HN: How do you keep track of long discussions?',
+    origin: '208 points',
+    icon: iconOf('HN'),
+  };
+  const ARCHIVE_THREAD = {
+    item_id: 3,
+    source: 'HN',
+    title: 'Show HN: A local-first archive for everything you read',
+    origin: '612 points',
+    icon: iconOf('HN'),
+  };
   // What was asked: one worked example, as the design has, about sources this install reads.
   const SAMPLE_ASK = {
-    id: 1,
+    id: 2,
     question: 'What did people say about keeping feeds in sync this week?',
     scope: 'everything',
     follows: null as number | null,
+    about: null as typeof HN_THREAD | null,
     status: 'answered',
     answer:
       'Three items touch on it. On Hacker News the consensus is to cache aggressively and poll less often [1]. Wire Notes argues that a sync protocol should be boring, because the clever ones lose data [2]. Wire Talks shows conflict-free sync in a twelve-minute video [3].',
     problem: '',
     cites: [
-      {
-        item_id: 1,
-        source: 'HN',
-        title: 'Ask HN: How do you keep track of long discussions?',
-        origin: '208 points',
-        icon: iconOf('HN'),
-      },
+      HN_THREAD,
       {
         item_id: 2,
         source: 'RSS',
@@ -142,7 +151,19 @@ export async function fakeServer(page: Page, start: State = 'open') {
     ],
     asked_at: ago(2 * 3_600_000),
   };
-  let asks = [SAMPLE_ASK];
+  // And an earlier one about a single post, whose questions are one conversation.
+  const SAMPLE_POST_ASK = {
+    ...SAMPLE_ASK,
+    id: 1,
+    question: 'Summarize this thread',
+    scope: 'item',
+    about: ARCHIVE_THREAD,
+    answer:
+      'Most replies like that the archive keeps everything on your own disk, and ask how it copes with two devices changing the same note [1].\n\nA few doubt that search will stay fast past a few thousand items, and one wrote a script that mails them the threads they starred [1].',
+    cites: [ARCHIVE_THREAD],
+    asked_at: ago(5 * 3_600_000),
+  };
+  let asks = [SAMPLE_POST_ASK, SAMPLE_ASK];
   // Spend, with the design's sample figures: prices for the two models in use, a limit, and
   // what each feature used this month and last.
   let aiLimit: number | null = 10;
@@ -181,7 +202,8 @@ export async function fakeServer(page: Page, start: State = 'open') {
   const sample = (
     quote: string,
     note: string,
-    source: string,
+    // Null for a passage of an answer, which has an `ask_id` in place of an `item_id`.
+    source: string | null,
     title: string,
     origin: string,
     hoursAgo: number,
@@ -230,7 +252,8 @@ export async function fakeServer(page: Page, start: State = 'open') {
   ].map((highlight, n) => ({
     ...highlight,
     id: n + 1,
-    item_id: FAKE_ITEMS.find((item) => item.title === highlight.title)?.id ?? 0,
+    item_id: FAKE_ITEMS.find((item) => item.title === highlight.title)?.id ?? null,
+    ask_id: null as number | null,
     reply: null as number | null,
     unit: 0,
     start: 0,
@@ -282,9 +305,11 @@ export async function fakeServer(page: Page, start: State = 'open') {
     icon: iconOf(item.source, item.feed),
   });
   /** A highlight as the server tells it: with the icon of what it was taken from. */
-  const told = <T extends { source: string; origin: string }>(highlight: T) => ({
+  const told = <T extends { source: string | null; origin: string }>(highlight: T) => ({
     ...highlight,
-    icon: iconOf(highlight.source, feeds.find((feed) => feed.title === highlight.origin)?.id),
+    icon:
+      highlight.source &&
+      iconOf(highlight.source, feeds.find((feed) => feed.title === highlight.origin)?.id),
   });
   const newest = (key: 'savedAt' | 'laterAt') => (a: Stored, b: Stored) =>
     (b[key] ?? '').localeCompare(a[key] ?? '');
@@ -401,12 +426,36 @@ export async function fakeServer(page: Page, start: State = 'open') {
       const made = {
         id: Math.max(0, ...highlights.map((highlight) => highlight.id)) + 1,
         item_id: item.id,
+        ask_id: null,
         source: item.source,
         title: item.title,
         origin: item.origin,
         note: '',
         created_at: ago(0),
         reply: (body.reply ?? null) as number | null,
+        unit: Number(body.unit),
+        start: Number(body.start),
+        end: Number(body.end),
+        quote: String(body.quote),
+      };
+      highlights = [...highlights, made];
+      return reply(201, told(made));
+    }
+    const [, askId] = /^POST asks\/(\d+)\/highlights$/.exec(call) ?? [];
+    if (askId) {
+      const asked = asks.find((candidate) => candidate.id === Number(askId));
+      if (!asked) return refuse(404, 'Not Found');
+      // A passage of an answer is told by its question, and has no source.
+      const made = {
+        id: Math.max(0, ...highlights.map((highlight) => highlight.id)) + 1,
+        item_id: null,
+        ask_id: asked.id,
+        source: null,
+        title: asked.question,
+        origin: 'Ask',
+        note: '',
+        created_at: ago(0),
+        reply: null,
         unit: Number(body.unit),
         start: Number(body.start),
         end: Number(body.end),
@@ -493,7 +542,12 @@ export async function fakeServer(page: Page, start: State = 'open') {
           : body.scope === 'item' && body.item_id == null
             ? 'Open an item first, then ask about it.'
             : '';
-      const earlier = asks.find((one) => one.id === Number(body.follows));
+      const item =
+        body.scope === 'item' ? items.find((one) => one.id === Number(body.item_id)) : undefined;
+      // A follow-up, or one more question about an item that has been asked about before.
+      const earlier =
+        asks.find((one) => one.id === Number(body.follows)) ??
+        (item && asks.findLast((one) => one.about?.item_id === item.id));
       const asked = {
         ...SAMPLE_ASK,
         id: Math.max(0, ...asks.map((one) => one.id)) + 1,
@@ -501,6 +555,17 @@ export async function fakeServer(page: Page, start: State = 'open') {
         // A follow-up is asked of what the question it follows was.
         scope: earlier?.scope ?? String(body.scope),
         follows: earlier?.id ?? null,
+        about: earlier
+          ? earlier.about
+          : item
+            ? {
+                item_id: item.id,
+                source: item.source,
+                title: item.title,
+                origin: item.origin,
+                icon: iconOf(item.source, item.feed),
+              }
+            : null,
         status: problem ? 'failed' : 'pending',
         answer: '',
         problem,

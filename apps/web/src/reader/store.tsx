@@ -16,6 +16,8 @@ export interface ReaderState {
   scope: Scope;
   /** The item "Open item" means: the one a question was last asked from. */
   openItem: number | undefined;
+  /** The conversation open on the Ask screen, by its first question. None is the latest. */
+  conversation: number | undefined;
 }
 
 export const INITIAL: ReaderState = {
@@ -23,6 +25,7 @@ export const INITIAL: ReaderState = {
   watchNew: [],
   scope: 'Everything',
   openItem: undefined,
+  conversation: undefined,
 };
 
 type Update = (patch: Partial<ReaderState> | ((s: ReaderState) => Partial<ReaderState>)) => void;

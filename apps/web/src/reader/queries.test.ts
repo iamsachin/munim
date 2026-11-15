@@ -50,19 +50,27 @@ test('a day is named as the owner would: today, yesterday, a weekday, then a dat
   expect(day(at(7, 12), now)).toBe('7 Nov');
 });
 
-test('questions are grouped into conversations, each follow-up after what it follows', () => {
-  const asked = (id: number, follows: number | null = null) =>
-    ({ id, follows }) as Parameters<typeof conversations>[0][number];
+test('questions are grouped into conversations, the one last added to first', () => {
+  const asked = (id: number, follows: number | null = null, item: number | null = null) =>
+    ({ id, follows, about: item && { item_id: item } }) as Parameters<
+      typeof conversations
+    >[0][number];
   const ids = (asks: ReturnType<typeof asked>[]) =>
     conversations(asks).map((group) => group.map((one) => one.id));
   expect(ids([])).toEqual([]);
-  expect(ids([asked(1), asked(2)])).toEqual([[1], [2]]);
+  expect(ids([asked(1), asked(2)])).toEqual([[2], [1]]);
   // A follow-up joins its question's conversation even when another was asked in between,
   // and so does a follow-up to that follow-up.
   expect(ids([asked(1), asked(2), asked(3, 1), asked(4, 3), asked(5, 2)])).toEqual([
-    [1, 3, 4],
     [2, 5],
+    [1, 3, 4],
   ]);
   // What it follows is no longer listed: it stands by itself.
   expect(ids([asked(7, 3), asked(8, 7)])).toEqual([[7, 8]]);
+  // The questions about one item are one conversation, whether or not one follows another;
+  // a question about nothing in particular is not part of it.
+  expect(ids([asked(1, null, 9), asked(2), asked(3, null, 9), asked(4, 3, 9)])).toEqual([
+    [1, 3, 4],
+    [2],
+  ]);
 });

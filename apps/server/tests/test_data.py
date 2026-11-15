@@ -99,6 +99,7 @@ def test_the_export_holds_everything_the_owner_put_in_and_no_secrets(filled: Cli
     assert read("highlights.json") == [
         {
             "item": sync["id"],
+            "asked": None,
             "quote": "Incremental",
             "note": "Check this.",
             "created_at": read("highlights.json")[0]["created_at"],

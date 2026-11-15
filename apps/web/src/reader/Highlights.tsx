@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ScreenHeader } from '../shell/ScreenHeader';
-import { Highlight, SourceTag } from '../ui/atoms';
+import { AiBadge, Highlight, SourceTag } from '../ui/atoms';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { focusOnMount, Input } from '../ui/Input';
@@ -20,7 +20,7 @@ export function Highlights() {
     <main className="flex min-h-0 flex-1 flex-col">
       <ScreenHeader title="Highlights">
         <span className="text-note text-mute">
-          Select text in any article or comment to highlight it.
+          Select text in any article, comment or answer to highlight it.
         </span>
       </ScreenHeader>
       <div className="flex min-h-0 flex-1 flex-col gap-10 overflow-y-auto p-16">
@@ -74,7 +74,8 @@ export function Highlights() {
                 h.note && <div className="text-mute">Note: {h.note}</div>
               )}
               <div className="flex items-baseline gap-10 font-mono text-meta text-mute">
-                <SourceTag src={h.source} icon={h.icon} />
+                {/* A passage of an answer is the model's words, and is marked as such. */}
+                {h.source ? <SourceTag src={h.source} icon={h.icon} /> : <AiBadge />}
                 <span className="min-w-0 truncate">
                   {h.title} · {h.origin}
                 </span>

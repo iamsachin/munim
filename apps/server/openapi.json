@@ -579,7 +579,44 @@
             }
           }
         },
-        "description": "Marks a passage. Marking the same place twice gives back the first highlight.",
+        "description": "Marks a passage of an item's text or of one of its replies.",
+        "tags": ["reader"],
+        "requestBody": {
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/HighlightIn" } }
+          },
+          "required": true
+        },
+        "security": [{ "Open": [] }]
+      }
+    },
+    "/api/asks/{ask_id}/highlights": {
+      "post": {
+        "operationId": "reader_api_add_answer_highlight",
+        "summary": "Add Answer Highlight",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ask_id",
+            "schema": { "title": "Ask Id", "type": "integer" },
+            "required": true
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/HighlightOut" } }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          }
+        },
+        "description": "Marks a passage of an answer. `unit` is the number of the line it is in, counting only\nlines that have words.",
         "tags": ["reader"],
         "requestBody": {
           "content": {
@@ -1478,11 +1515,14 @@
           "quote": { "title": "Quote", "type": "string" },
           "note": { "title": "Note", "type": "string" },
           "created_at": { "format": "date-time", "title": "Created At", "type": "string" },
-          "item_id": { "title": "Item Id", "type": "integer" },
+          "item_id": { "anyOf": [{ "type": "integer" }, { "type": "null" }], "title": "Item Id" },
+          "ask_id": { "anyOf": [{ "type": "integer" }, { "type": "null" }], "title": "Ask Id" },
           "source": {
-            "enum": ["RD", "X", "IG", "HN", "YT", "RSS"],
-            "title": "Source",
-            "type": "string"
+            "anyOf": [
+              { "enum": ["RD", "X", "IG", "HN", "YT", "RSS"], "type": "string" },
+              { "type": "null" }
+            ],
+            "title": "Source"
           },
           "title": { "title": "Title", "type": "string" },
           "origin": { "title": "Origin", "type": "string" },
@@ -1498,6 +1538,7 @@
           "note",
           "created_at",
           "item_id",
+          "ask_id",
           "source",
           "title",
           "origin",
@@ -1603,6 +1644,7 @@
             "type": "string"
           },
           "follows": { "anyOf": [{ "type": "integer" }, { "type": "null" }], "title": "Follows" },
+          "about": { "anyOf": [{ "$ref": "#/components/schemas/Cite" }, { "type": "null" }] },
           "status": {
             "enum": ["pending", "answered", "failed"],
             "title": "Status",
@@ -1622,6 +1664,7 @@
           "question",
           "scope",
           "follows",
+          "about",
           "status",
           "answer",
           "problem",

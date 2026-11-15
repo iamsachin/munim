@@ -162,8 +162,11 @@ class HighlightOut(HighlightPlace):
 
     note: str
     created_at: datetime
-    item_id: int
-    source: SourceCode
+    # One of these two: the item it is in, or the question whose answer it is in.
+    item_id: int | None
+    ask_id: int | None
+    # Null for a passage of an answer, which is told by its question: `title` is the question.
+    source: SourceCode | None
     title: str
     origin: str
     icon: str | None
@@ -479,7 +482,7 @@ def change_item(request: HttpRequest, item_id: int, body: ItemPatch) -> ItemOut:
 
 
 def _highlight(highlight: Highlight) -> HighlightOut:
-    item = highlight.item
+    item, asked = highlight.item, highlight.ask
     return HighlightOut(
         id=highlight.pk,
         reply=highlight.reply,
@@ -489,32 +492,36 @@ def _highlight(highlight: Highlight) -> HighlightOut:
         quote=highlight.quote,
         note=highlight.note,
         created_at=highlight.created_at,
-        item_id=item.pk,
-        source=item.source,  # type: ignore[arg-type]
-        title=item.title,
-        origin=item.feed.title if item.feed else item.origin,
-        icon=icons.address_of(item),
+        item_id=highlight.item_id,
+        ask_id=highlight.ask_id,
+        source=item.source if item else None,  # type: ignore[arg-type]
+        title=item.title if item else asked.question if asked else "",
+        origin=(item.feed.title if item.feed else item.origin) if item else "Ask",
+        icon=icons.address_of(item) if item else None,
     )
+
+
+_HIGHLIGHTS = Highlight.objects.select_related("item__feed", "ask")
 
 
 @router.get("/highlights", response=list[HighlightOut])
 def list_highlights(request: HttpRequest) -> list[HighlightOut]:
     """Every highlight, newest first."""
-    return [_highlight(h) for h in Highlight.objects.select_related("item__feed")]
+    return [_highlight(h) for h in _HIGHLIGHTS.all()]
 
 
-@router.post("/items/{item_id}/highlights", response={201: HighlightOut, 422: Error})
-def add_highlight(
-    request: HttpRequest, item_id: int, body: HighlightIn
+def _mark(
+    body: HighlightIn, item: Item | None = None, asked: Ask | None = None
 ) -> Status[HighlightOut] | Status[Error]:
-    """Marks a passage. Marking the same place twice gives back the first highlight."""
-    item = get_object_or_404(Item.objects.select_related("feed"), pk=item_id)
+    """Marks a passage of an item or of an answer. Marking the same place twice gives back
+    the first highlight."""
     quote = body.quote.strip()
     if body.end <= body.start or not quote:
         return Status(422, Error(detail="A highlight needs some text."))
     highlight, _ = Highlight.objects.get_or_create(
         item=item,
-        reply=body.reply,
+        ask=asked,
+        reply=body.reply if item else None,
         unit=body.unit,
         start=body.start,
         end=body.end,
@@ -523,10 +530,31 @@ def add_highlight(
     return Status(201, _highlight(highlight))
 
 
+@router.post("/items/{item_id}/highlights", response={201: HighlightOut, 422: Error})
+def add_highlight(
+    request: HttpRequest, item_id: int, body: HighlightIn
+) -> Status[HighlightOut] | Status[Error]:
+    """Marks a passage of an item's text or of one of its replies."""
+    return _mark(body, item=get_object_or_404(Item.objects.select_related("feed"), pk=item_id))
+
+
+@router.post("/asks/{ask_id}/highlights", response={201: HighlightOut, 422: Error})
+def add_answer_highlight(
+    request: HttpRequest, ask_id: int, body: HighlightIn
+) -> Status[HighlightOut] | Status[Error]:
+    """Marks a passage of an answer. `unit` is the number of the line it is in, counting only
+    lines that have words."""
+    asked = get_object_or_404(Ask, pk=ask_id)
+    # An answer still being written may yet be dropped, if its provider fails part way.
+    if asked.answered_at is None or not asked.answer:
+        return Status(422, Error(detail="There is no finished answer to highlight."))
+    return _mark(body, asked=asked)
+
+
 @router.patch("/highlights/{highlight_id}", response=HighlightOut)
 def change_highlight(request: HttpRequest, highlight_id: int, body: NoteIn) -> HighlightOut:
     """Sets the note. An empty note removes it."""
-    highlight = get_object_or_404(Highlight.objects.select_related("item__feed"), pk=highlight_id)
+    highlight = get_object_or_404(_HIGHLIGHTS, pk=highlight_id)
     highlight.note = body.note.strip()
     highlight.save(update_fields=["note"])
     return _highlight(highlight)
@@ -693,6 +721,9 @@ class AskOut(Schema):
     scope: Literal["everything", "saved", "week", "item"]
     # The earlier question it follows up, if it is a follow-up.
     follows: int | None
+    # The one item it was asked about, as that item is now. Null if it was asked of more than
+    # one item, or the item has since been removed.
+    about: Cite | None
     # Waiting for the worker, answered, or not answered (`problem` says why). While it waits,
     # `answer` is what has been written so far.
     status: Literal["pending", "answered", "failed"]
@@ -713,6 +744,7 @@ def _ask(asked: Ask, kept: set[int]) -> AskOut:
             "question": asked.question,
             "scope": asked.scope,
             "follows": asked.follows_id,
+            "about": {**ask.told(asked.item), "item_id": asked.item.pk} if asked.item else None,
             "status": status,
             "answer": asked.answer,
             "problem": asked.problem,
@@ -735,7 +767,7 @@ MOST_ASKS = 50
 @router.get("/asks", response=list[AskOut])
 def list_asks(request: HttpRequest) -> list[AskOut]:
     """The questions asked, oldest first, as a conversation reads."""
-    latest = list(Ask.objects.order_by("-asked_at", "-id")[:MOST_ASKS])
+    latest = list(Ask.objects.select_related("item__feed").order_by("-asked_at", "-id")[:MOST_ASKS])
     return _asks(latest[::-1])
 
 
@@ -749,6 +781,9 @@ def ask_question(request: HttpRequest, body: AskIn) -> Status[AskOut]:
     earlier = Ask.objects.filter(pk=body.follows).first() if body.follows is not None else None
     if earlier is not None:
         scope, item = earlier.scope, earlier.item
+    elif item is not None:
+        # The questions about one item are one conversation: each carries on from the last.
+        earlier = Ask.objects.filter(item=item).order_by("-asked_at", "-id").first()
     asked = Ask(question=body.question.strip(), scope=scope, item=item, follows=earlier)
     asked.problem = ask.refusal(asked)
     if asked.problem:

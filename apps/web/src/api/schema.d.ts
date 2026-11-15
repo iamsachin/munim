@@ -383,9 +383,30 @@ export interface paths {
     put?: never;
     /**
      * Add Highlight
-     * @description Marks a passage. Marking the same place twice gives back the first highlight.
+     * @description Marks a passage of an item's text or of one of its replies.
      */
     post: operations['reader_api_add_highlight'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/asks/{ask_id}/highlights': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Add Answer Highlight
+     * @description Marks a passage of an answer. `unit` is the number of the line it is in, counting only
+     *     lines that have words.
+     */
+    post: operations['reader_api_add_answer_highlight'];
     delete?: never;
     options?: never;
     head?: never;
@@ -1030,12 +1051,11 @@ export interface components {
        */
       created_at: string;
       /** Item Id */
-      item_id: number;
-      /**
-       * Source
-       * @enum {string}
-       */
-      source: 'RD' | 'X' | 'IG' | 'HN' | 'YT' | 'RSS';
+      item_id: number | null;
+      /** Ask Id */
+      ask_id: number | null;
+      /** Source */
+      source: ('RD' | 'X' | 'IG' | 'HN' | 'YT' | 'RSS') | null;
       /** Title */
       title: string;
       /** Origin */
@@ -1121,6 +1141,7 @@ export interface components {
       scope: 'everything' | 'saved' | 'week' | 'item';
       /** Follows */
       follows: number | null;
+      about: components['schemas']['Cite'] | null;
       /**
        * Status
        * @enum {string}
@@ -1903,6 +1924,41 @@ export interface operations {
       header?: never;
       path: {
         item_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['HighlightIn'];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HighlightOut'];
+        };
+      };
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+    };
+  };
+  reader_api_add_answer_highlight: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        ask_id: number;
       };
       cookie?: never;
     };

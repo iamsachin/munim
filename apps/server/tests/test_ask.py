@@ -451,6 +451,30 @@ def test_a_follow_up_is_answered_from_the_same_items_with_what_was_said_before(
     ).json()
     answer_ask(ask_id=more["id"])
     assert "[1] Show HN: an offline archive" in model.seen[-1][2]["input"]
+    # Each says which item it is about, as that item is now.
+    assert (
+        about["about"]
+        == more["about"]
+        == {
+            "item_id": library["hn"].pk,
+            "source": "HN",
+            "title": "Show HN: an offline archive",
+            "origin": "612 points",
+            "icon": "/api/sources/HN/icon",
+        }
+    )
+    assert first["about"] is None
+    # The questions about one item are one conversation: a new one, asked from the item and
+    # not as a follow-up, carries on from the last, with what was said before.
+    again = put(owner_client, "And the archive?", "item", library["hn"].pk).json()
+    assert again["follows"] == more["id"]
+    answer_ask(ask_id=again["id"])
+    assert "Earlier question: Who said it?" in model.seen[-1][2]["input"]
+    # A question about another item starts its own.
+    assert put(owner_client, "Summarize", "item", library["sync"].pk).json()["follows"] is None
+    # With the item gone, its questions stay, about nothing that can be named.
+    library["hn"].delete()
+    assert owner_client.get("/api/asks").json()[-2]["about"] is None
     lost = owner_client.post(
         "/api/asks",
         {"question": "Anything?", "scope": "week", "follows": 99999},

@@ -180,7 +180,8 @@ export function useAsk() {
       send.mutate({ question: text, scope: follows.scope, follows: follows.id });
       return true;
     }
-    update({ scope, openItem: item });
+    // A new question is the latest conversation, which is the one Ask then shows.
+    update({ scope, openItem: item, conversation: undefined });
     send.mutate({
       question: text,
       scope: SCOPE_CODES[scope],
@@ -191,16 +192,25 @@ export function useAsk() {
 }
 
 /**
- * The questions as conversations: each one with its follow-ups after it, in the order asked.
- * A follow-up whose first question is no longer listed starts a conversation of its own.
+ * The questions as conversations, the one last added to first. The questions about one item
+ * are one conversation; any other question starts one, which its follow-ups join. Within a
+ * conversation the questions are in the order asked.
  */
 export function conversations(asks: readonly Ask[]): Ask[][] {
-  const groups = new Map<number, Ask[]>();
-  for (const asked of asks) {
-    const group = asked.follows === null ? undefined : groups.get(asked.follows);
-    if (group) group.push(asked);
-    // Found by any of its questions, so that a follow-up to a follow-up joins it too.
-    groups.set(asked.id, group ?? [asked]);
-  }
-  return [...new Set(groups.values())];
+  // Each conversation, found by its item and by any of its questions.
+  const groups = new Map<string, Ask[]>();
+  // Where each conversation's last question is in the list, which is oldest first.
+  const latest = new Map<Ask[], number>();
+  asks.forEach((asked, n) => {
+    const item = asked.about ? `item ${String(asked.about.item_id)}` : undefined;
+    const group =
+      (item === undefined ? undefined : groups.get(item)) ??
+      groups.get(`ask ${String(asked.follows)}`) ??
+      [];
+    group.push(asked);
+    if (item) groups.set(item, group);
+    groups.set(`ask ${String(asked.id)}`, group);
+    latest.set(group, n);
+  });
+  return [...latest.keys()].sort((a, b) => (latest.get(b) ?? 0) - (latest.get(a) ?? 0));
 }

@@ -21,4 +21,4 @@ class ConnectionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 
 @admin.register(Highlight)
 class HighlightAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
-    list_display = ["quote", "item", "note", "created_at"]
+    list_display = ["quote", "item", "ask", "note", "created_at"]
