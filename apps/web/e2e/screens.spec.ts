@@ -1756,7 +1756,9 @@ test('command palette: filter, move with arrows, run with Enter, or ask what was
   await expect(options).toHaveCount(1);
   await field.press('Enter');
   await expect(page).toHaveURL(/\/ask$/);
-  await expect(page.getByText('What changed in sync this week?')).toBeVisible();
+  await expect(
+    page.getByRole('region', { name: 'Conversation' }).getByText('What changed in sync this week?'),
+  ).toBeVisible();
 });
 
 test('command palette: actions change the theme, open the shortcut list, and lock', async ({
