@@ -16,6 +16,7 @@ export const EMPTY = {
   matches: 'No matches yet.',
   asks: 'Nothing asked yet.',
   usage: 'No AI use in this period.',
+  prices: 'No model is in use yet. Choose one above.',
 } as const;
 
 /**

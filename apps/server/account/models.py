@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.db import models
 
 
@@ -30,6 +32,10 @@ class Preferences(models.Model):
 
     # Minutes without activity before the app locks; null for never.
     lock_after_minutes = models.PositiveSmallIntegerField(null=True, blank=True, default=15)
+    # Dollars of AI use in a month at which AI pauses; null for no limit.
+    ai_limit = models.DecimalField(
+        max_digits=8, decimal_places=2, null=True, blank=True, default=Decimal(10)
+    )
 
     def __str__(self) -> str:
         return "preferences"

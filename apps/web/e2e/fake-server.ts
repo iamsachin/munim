@@ -81,6 +81,39 @@ export async function fakeServer(page: Page, start: State = 'open') {
     { feature: 'ask', provider: 'openai', model: 'gpt-5.5' },
     { feature: 'watch', provider: 'openai', model: 'gpt-5.4-mini' },
   ] as ({ feature: string } & typeof none)[];
+  // Spend, with the design's sample figures: prices for the two models in use, a limit, and
+  // what each feature used this month and last.
+  let aiLimit: number | null = 10;
+  let aiPrices = [
+    { provider: 'openai', model: 'gpt-5.4-mini', input: 0.15, output: 0.6 },
+    { provider: 'openai', model: 'gpt-5.5', input: 2.5, output: 10 },
+  ];
+  const used = (
+    feature: string,
+    model: string,
+    requests: number,
+    tokens_in: number,
+    tokens_out: number,
+    cost: number | null,
+  ) => ({ feature, model, requests, tokens_in, tokens_out, cost });
+  let aiUsage = {
+    this: {
+      rows: [
+        used('digest', 'gpt-5.4-mini', 14, 412_300, 18_900, 0.31),
+        used('ask', 'gpt-5.5', 37, 1_204_000, 41_200, 3.42),
+        used('watch', 'gpt-5.4-mini', 512, 603_000, 5_100, 0.47),
+      ],
+      cost: 4.2,
+    },
+    last: {
+      rows: [
+        used('digest', 'gpt-5.4-mini', 31, 905_000, 41_000, 0.68),
+        used('ask', 'gpt-5.5', 64, 2_010_000, 72_400, 5.91),
+        used('watch', 'gpt-5.4-mini', 1_340, 1_612_000, 13_400, 1.26),
+      ],
+      cost: 7.85,
+    },
+  };
   // The design's sample highlights. Their places are unknown, so each is found by its words,
   // as a highlight is when the text it was made in has changed.
   const sample = (
@@ -354,6 +387,28 @@ export async function fakeServer(page: Page, start: State = 'open') {
       aiKeys[provider] = saved;
       return reply(200, { provider, ...saved });
     }
+    const spent = aiUsage.this.cost;
+    const limitNow = () => ({
+      limit: aiLimit,
+      spent,
+      paused: aiLimit !== null && spent >= aiLimit,
+    });
+    if (call === 'GET ai/limit') return reply(200, limitNow());
+    if (call === 'PUT ai/limit') {
+      aiLimit = body.limit === null ? null : Number(body.limit);
+      return reply(200, limitNow());
+    }
+    if (call === 'GET ai/prices') return reply(200, aiPrices);
+    if (call === 'PUT ai/prices') {
+      const price = body as (typeof aiPrices)[number];
+      const other = (p: typeof price) => p.provider !== price.provider || p.model !== price.model;
+      aiPrices = [...aiPrices.filter(other), price];
+      return reply(200, price);
+    }
+    if (call === 'GET ai/usage') {
+      const last = new URL(request.url()).searchParams.get('period') === 'last';
+      return reply(200, last ? aiUsage.last : aiUsage.this);
+    }
     if (call === 'GET ai/features') return reply(200, aiFeatures);
     const [, feature] = /^PUT ai\/features\/(digest|ask|watch)$/.exec(call) ?? [];
     if (feature) {
@@ -520,6 +575,8 @@ export async function fakeServer(page: Page, start: State = 'open') {
       highlights = [];
       for (const provider of Object.keys(aiKeys)) aiKeys[provider] = null;
       aiFeatures = aiFeatures.map(({ feature }) => ({ feature, ...none }));
+      aiPrices = [];
+      aiUsage = { this: { rows: [], cost: 0 }, last: { rows: [], cost: 0 } };
       hackerNews = { enabled: false, synced_at: null, problem: '' };
       youtube = {
         ...youtube,

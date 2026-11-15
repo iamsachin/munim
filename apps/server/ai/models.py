@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 
 
 class Provider(models.TextChoices):
@@ -41,3 +42,37 @@ class FeatureModel(models.Model):
 
     def __str__(self) -> str:
         return f"{self.get_feature_display()}: {self.model}"
+
+
+class ModelPrice(models.Model):
+    """What the owner says a model costs, in dollars for a million tokens. Providers' lists of
+    models carry no prices, so the owner copies them from the provider's pricing page."""
+
+    provider = models.CharField(max_length=20, choices=Provider.choices)
+    model = models.CharField(max_length=200)
+    input = models.DecimalField(max_digits=9, decimal_places=4)
+    output = models.DecimalField(max_digits=9, decimal_places=4)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["provider", "model"], name="one_price_per_model")
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.model}: {self.input} in, {self.output} out"
+
+
+class Usage(models.Model):
+    """One call to a model: the feature that made it, the tokens in and out, and what it cost
+    at the price entered at the time. Without a price then, the cost is unknown (null)."""
+
+    feature = models.CharField(max_length=20, choices=Feature.choices)
+    provider = models.CharField(max_length=20, choices=Provider.choices)
+    model = models.CharField(max_length=200)
+    tokens_in = models.PositiveIntegerField()
+    tokens_out = models.PositiveIntegerField()
+    cost = models.DecimalField(max_digits=12, decimal_places=6, null=True)
+    at = models.DateTimeField(default=timezone.now, db_index=True)
+
+    def __str__(self) -> str:
+        return f"{self.get_feature_display()} on {self.model}"

@@ -1,4 +1,5 @@
-import { aiPaused } from '../account/ai';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '../api/client';
 import { ScreenHeader } from '../shell/ScreenHeader';
 import { AiBadge, SectionLabel, type Source } from '../ui/atoms';
 import { Card } from '../ui/Card';
@@ -37,7 +38,8 @@ const TRY = [
 
 export function Ask() {
   const { state, update } = useReader();
-  const paused = aiPaused(state.ai);
+  // The server decides: it is where this month's cost and the limit are.
+  const paused = useQuery({ queryKey: ['ai-limit'], queryFn: api.aiLimit }).data?.paused ?? false;
   const log: Exchange[] = [
     SAMPLE,
     ...state.asks.map(({ q, scope }) => ({
