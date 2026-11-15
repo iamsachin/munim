@@ -51,6 +51,7 @@ Not in the handoff, approved by the owner (2026-11-15), for YouTube:
 - A row's media box shows the item's own still; the striped box with its kind is the fallback.
 - The YouTube page is cards by default (still with the length in its corner, title in up to two lines, channel and age, save dot), with a Cards/List pair of chips in the header on that page only. Choosing a card opens the preview modal, playing.
 - A source Munim cannot read is a muted row on Connections like a planned module's, with its one-line reason across the Account, Access and Last sync columns, "Not available yet" and a disabled "Later". Available sources come first. The RSS row sums up the feeds and its button is "Manage", a link to the RSS screen.
+- A source is shown by its mark, not its letters: `SourceTag` draws the icon from `ui/sourceIcons.ts` at 14px (12px in a metadata line) in the source's own token colour, never the brand's colour, with the name on hover and for screen readers. Planned modules keep their letter codes.
 - The AI screen has a Prices table between Models and Monthly limit: one row for each model in use (its id in mono, its provider under it), a "$" amount field each for input and output per million tokens, and Save, which is offered once the amounts differ from what is stored. A model with no price says so in a3 under its name.
 - A source that needs setting up gets a panel under the Connections table: a section label, one muted paragraph, the address to copy in mono, then the fields and Save in one row.
 

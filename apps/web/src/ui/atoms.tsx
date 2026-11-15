@@ -1,5 +1,6 @@
 import { useState, type ComponentProps } from 'react';
 import { cx } from './cx';
+import { SOURCE_ICONS } from './sourceIcons';
 
 export type Tone = 'accent' | 'ink' | 'a2' | 'a3' | 'a4' | 'ok' | 'line';
 
@@ -56,14 +57,23 @@ export function SectionLabel({
 }
 
 /**
- * Two- or three-letter source code in the source's colour; the full name is read to screen readers.
- * `inheritSize` is for metadata lines, where the design sets it at the line's own size.
+ * The source's mark in the source's colour (owner's decision, 2026-11-15; the handoff has its
+ * two- or three-letter code here). The full name is read to screen readers and shown on hover.
+ * `inheritSize` is for metadata lines, where the mark is the size of the line's text.
  */
 export function SourceTag({ src, inheritSize = false }: { src: Source; inheritSize?: boolean }) {
   const { name, tone } = SOURCES[src];
   return (
-    <span className={cx('font-mono font-medium', !inheritSize && 'text-code', TEXT[tone])}>
-      <span aria-hidden="true">{src}</span>
+    // The name is shown on hover as well as read out: a mark alone can be unfamiliar.
+    <span title={name} className={cx('inline-flex align-middle', TEXT[tone])}>
+      <svg
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        aria-hidden="true"
+        className={inheritSize ? 'size-12' : 'size-14'}
+      >
+        <path d={SOURCE_ICONS[src]} />
+      </svg>
       <span className="sr-only">{name}</span>
     </span>
   );
