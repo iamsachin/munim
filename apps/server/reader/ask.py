@@ -30,9 +30,11 @@ SHOW_EVERY_SECONDS = 0.3
 
 INSTRUCTIONS = (
     "You answer a question for the owner of a personal reading app, using only the numbered "
-    "items below: things they follow, saved or opened. Say only what the items support. After "
-    "each claim, cite the item it rests on by its number in square brackets, followed by the "
-    'words of that item the claim rests on in double quotes, like [2 "the exact words"]. '
+    "items below: things they follow, saved or opened. Say only what the items support. Cite "
+    "sparingly: at the end of a paragraph, cite the item it rests on by its number in square "
+    "brackets, followed by the words of that item that best support the paragraph in double "
+    'quotes, like [2 "the exact words"]. One citation is enough for a paragraph: never cite '
+    "each detail, and cite again in the same paragraph only for a different item. "
     "Copy those words exactly from the item or from one of its replies: one unbroken run of "
     "at most twenty words from within one sentence, with nothing added, left out or changed, "
     "and with no quotation marks or square brackets in it. If the "
@@ -47,9 +49,10 @@ NO_ITEM = "Open an item first, then ask about it."
 NOTHING = "There is nothing there that Munim can send to a model."
 
 # A citation as the model writes it: the item's number, and perhaps the words it rests on.
-_CITED = re.compile(r"\[(\d+)(?:[\s:,]*[\"“]([^\"”\]]*)[\"”])?\s*\]")
+# The space before it goes with it, so that one left out leaves no gap.
+_CITED = re.compile(r"[ \t]*\[(\d+)(?:[\s:,]*[\"“]([^\"”\]]*)[\"”])?\s*\]")
 # One still being written, at the end of an answer that is: it is not shown until it is whole.
-_UNFINISHED = re.compile(r"\[\d+[^\]]*$")
+_UNFINISHED = re.compile(r"[ \t]*\[\d+[^\]]*$")
 
 
 class Unanswered(Exception):
@@ -173,22 +176,30 @@ def _place(item: Item, quote: str) -> tuple[str, int | None, str] | None:
 def cited(text: str, items: list[Item]) -> tuple[str, list[dict[str, object]]]:
     """The answer with its citations numbered from one in the order they appear, and what
     each stands for: an item, and the words of it the model quoted if the item has them. A
-    number that is no item's is dropped: nothing may be cited that was not given."""
+    number that is no item's is dropped: nothing may be cited that was not given. A paragraph
+    cites an item once, the first time: a mark after every detail is noise, whatever the
+    model was told."""
     cites: list[dict[str, object]] = []
     numbers: dict[tuple[int, str], int] = {}
 
-    def renumber(match: re.Match[str]) -> str:
-        number = int(match.group(1))
-        if not 1 <= number <= len(items):
-            return ""
-        item = items[number - 1]
-        quote, reply, who = _place(item, match.group(2) or "") or ("", None, "")
-        if (number, quote) not in numbers:
-            cites.append({**told(item), "quote": quote, "reply": reply, "who": who})
-            numbers[number, quote] = len(cites)
-        return f"[{numbers[number, quote]}]"
+    def paragraph(line: str) -> str:
+        seen: set[int] = set()
 
-    return _CITED.sub(renumber, _UNFINISHED.sub("", text)), cites
+        def renumber(match: re.Match[str]) -> str:
+            number = int(match.group(1))
+            if not 1 <= number <= len(items) or number in seen:
+                return ""
+            seen.add(number)
+            item = items[number - 1]
+            quote, reply, who = _place(item, match.group(2) or "") or ("", None, "")
+            if (number, quote) not in numbers:
+                cites.append({**told(item), "quote": quote, "reply": reply, "who": who})
+                numbers[number, quote] = len(cites)
+            return f" [{numbers[number, quote]}]"
+
+        return _CITED.sub(renumber, line)
+
+    return "\n".join(map(paragraph, _UNFINISHED.sub("", text).split("\n"))), cites
 
 
 def _answer(ask: Ask) -> tuple[str, list[dict[str, object]]]:
