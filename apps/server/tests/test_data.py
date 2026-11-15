@@ -11,7 +11,7 @@ from django.test import Client
 from django.utils import timezone
 
 from account.models import Device, Preferences
-from ai.models import ProviderKey
+from ai.models import FeatureModel, ProviderKey
 from munim import vault
 from reader.models import Connection, Feed, Highlight, Item
 
@@ -48,6 +48,7 @@ def filled(owner_client: Client, settings: Any) -> Client:
         ok=True,
         checked_at=timezone.now(),
     )
+    FeatureModel.objects.create(feature="ask", provider="openai", model="gpt-example")
     images = Path(settings.DATA_DIR) / "images" / "ab"
     images.mkdir(parents=True)
     (images / "abcdef").write_bytes(b"picture")
@@ -91,7 +92,13 @@ def test_the_export_holds_everything_the_owner_put_in_and_no_secrets(filled: Cli
             "created_at": read("highlights.json")[0]["created_at"],
         }
     ]
-    assert read("settings.json") == [{"lock_after_minutes": 15, "sources_on": ["HN"]}]
+    assert read("settings.json") == [
+        {
+            "lock_after_minutes": 15,
+            "sources_on": ["HN"],
+            "ai_models": {"ask": "openai/gpt-example"},
+        }
+    ]
     saved = archive.read(next(n for n in archive.namelist() if n.startswith("saved/"))).decode()
     assert saved.startswith("The case for boring sync protocols\nhttps://wire.example/sync\n\n")
 
@@ -121,7 +128,7 @@ def test_deleting_everything_needs_the_passphrase_and_leaves_the_account(
     assert Item.objects.count() == 2
 
     assert delete(filled, PASSPHRASE).status_code == 204
-    for model in (Item, Feed, Highlight, Connection, ProviderKey):
+    for model in (Item, Feed, Highlight, Connection, ProviderKey, FeatureModel):
         assert model.objects.count() == 0, model
     assert not (Path(settings.DATA_DIR) / "images").exists()
 

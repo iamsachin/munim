@@ -1,14 +1,6 @@
 import { expect, test } from 'vitest';
-import {
-  AI_INITIAL,
-  aiPaused,
-  modelFor,
-  providerOf,
-  totalCents,
-  usableProviders,
-  USAGE,
-  usd,
-} from './ai';
+import type { AiKey } from '../api/client';
+import { AI_INITIAL, aiPaused, modelFor, totalCents, USAGE, usd } from './ai';
 
 test('costs are summed in cents and shown as dollars', () => {
   expect(totalCents(USAGE['This month'])).toBe(420);
@@ -25,32 +17,17 @@ test('AI pauses when the month reaches the limit, not before, and never without 
   expect(aiPaused({ ...AI_INITIAL, limit: null })).toBe(false);
 });
 
-test('a model belongs to the provider that lists it', () => {
-  expect(providerOf('gpt-5.5')).toBe('openai');
-  expect(providerOf('claude-haiku-5-5')).toBe('anthropic');
-  expect(providerOf('unknown')).toBeUndefined();
-});
-
-test('only providers whose key was accepted can be chosen from', () => {
-  expect(usableProviders([])).toEqual([]);
-  expect(
-    usableProviders([
-      { provider: 'openai', tail: 'hort', ok: false },
-      { provider: 'anthropic', tail: 'WXYZ', ok: true },
-    ]),
-  ).toEqual(['anthropic']);
-  expect(usableProviders([{ provider: 'openai', tail: null, ok: false }])).toEqual([]);
-});
-
-test('a feature is off while the provider of its model has no working key', () => {
-  const ai = {
-    ...AI_INITIAL,
-    models: { digest: 'gpt-5.4-mini', ask: 'claude-sonnet-5-5', watch: null },
-  };
-  expect(modelFor(ai, 'digest', ['openai', 'anthropic'])).toBe('gpt-5.4-mini');
-  expect(modelFor(ai, 'digest', ['anthropic'])).toBeNull();
-  expect(modelFor(ai, 'ask', ['anthropic'])).toBe('claude-sonnet-5-5');
-  expect(modelFor(ai, 'watch', ['openai', 'anthropic'])).toBeNull();
-  // The choice is kept, so it returns with the key.
-  expect(modelFor(ai, 'digest', ['openai'])).toBe('gpt-5.4-mini');
+test('a feature is off while its model cannot be used, and the choice is kept', () => {
+  const openai: AiKey = { provider: 'openai', tail: '4f2a', ok: true, models: ['gpt-a', 'gpt-b'] };
+  const ask = { feature: 'ask', provider: 'openai', model: 'gpt-b' } as const;
+  expect(modelFor(ask, [openai])).toBe('openai/gpt-b');
+  // None chosen yet, or not loaded.
+  expect(modelFor({ feature: 'ask', provider: null, model: null }, [openai])).toBeNull();
+  expect(modelFor(undefined, [openai])).toBeNull();
+  // The key is gone, was rejected, or the provider stopped listing the model.
+  expect(modelFor(ask, [])).toBeNull();
+  expect(modelFor(ask, [{ ...openai, ok: false, models: [] }])).toBeNull();
+  expect(modelFor(ask, [{ ...openai, models: ['gpt-a'] }])).toBeNull();
+  // A model of the same name at another provider is not this one.
+  expect(modelFor(ask, [{ ...openai, provider: 'anthropic' }])).toBeNull();
 });

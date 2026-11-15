@@ -1,6 +1,6 @@
-"""AI settings: the owner's key for each provider."""
+"""AI settings: the owner's key for each provider, and the model each feature runs on."""
 
-from typing import Literal
+from typing import Any, Literal
 
 from django.http import HttpRequest
 from django.utils import timezone
@@ -8,7 +8,7 @@ from ninja import Field, Router, Schema, Status
 
 from account.auth import Open
 from ai import providers
-from ai.models import Provider, ProviderKey
+from ai.models import Feature, FeatureModel, Provider, ProviderKey
 from munim import vault
 
 router = Router(tags=["ai"], auth=Open())
@@ -31,14 +31,26 @@ class KeyOut(Schema):
     provider: ProviderCode
     # The key's last four characters; null if there is no key.
     tail: str | None
-    # Whether the provider accepted it when it was saved.
+    # Whether the provider accepted it when it was last asked.
     ok: bool
+    # The models the provider lists for it, newest first. Empty without an accepted key.
+    models: list[str]
 
 
 def _out(provider: str, key: ProviderKey | None) -> KeyOut:
     return KeyOut.model_validate(
-        {"provider": provider, "tail": key.tail if key else None, "ok": bool(key and key.ok)}
+        {
+            "provider": provider,
+            "tail": key.tail if key else None,
+            "ok": bool(key and key.ok),
+            "models": key.models if key and key.ok else [],
+        }
     )
+
+
+def asked(listed: list[str] | None) -> dict[str, Any]:
+    """What to keep of a provider's answer: its models, or that it rejected the key."""
+    return {"models": listed or [], "ok": listed is not None, "checked_at": timezone.now()}
 
 
 @router.get("/ai/keys", response=list[KeyOut])
@@ -57,17 +69,12 @@ def set_key(
     if len(key) < MIN_KEY:
         return Status(422, Error(detail="That is too short to be an API key."))
     try:
-        ok = providers.accepts(Provider(provider), key)
+        listed = providers.models_of(Provider(provider), key)
     except providers.Unreachable as problem:
         return Status(502, Error(detail=str(problem)))
     stored, _ = ProviderKey.objects.update_or_create(
         provider=provider,
-        defaults={
-            "sealed": vault.seal(key),
-            "tail": key[-4:],
-            "ok": ok,
-            "checked_at": timezone.now(),
-        },
+        defaults={"sealed": vault.seal(key), "tail": key[-4:], **asked(listed)},
     )
     return Status(200, _out(provider, stored))
 
@@ -76,3 +83,50 @@ def set_key(
 def remove_key(request: HttpRequest, provider: ProviderCode) -> Status[None]:
     ProviderKey.objects.filter(provider=provider).delete()
     return Status(204, None)
+
+
+FeatureCode = Literal["digest", "ask", "watch"]
+
+
+class ChoiceIn(Schema):
+    provider: ProviderCode
+    model: str = Field(max_length=200)
+
+
+class ChoiceOut(Schema):
+    """The model a feature runs on. Both null: none chosen, so the feature is off."""
+
+    feature: FeatureCode
+    provider: ProviderCode | None
+    model: str | None
+
+
+def _choice(feature: str, chosen: FeatureModel | None) -> ChoiceOut:
+    return ChoiceOut.model_validate(
+        {
+            "feature": feature,
+            "provider": chosen.provider if chosen else None,
+            "model": chosen.model if chosen else None,
+        }
+    )
+
+
+@router.get("/ai/features", response=list[ChoiceOut])
+def list_features(request: HttpRequest) -> list[ChoiceOut]:
+    chosen = FeatureModel.objects.in_bulk()
+    return [_choice(feature, chosen.get(feature)) for feature in Feature.values]
+
+
+@router.put("/ai/features/{feature}", response={200: ChoiceOut, 422: Error})
+def choose_model(
+    request: HttpRequest, feature: FeatureCode, body: ChoiceIn
+) -> Status[ChoiceOut] | Status[Error]:
+    """Sets the model a feature runs on: one its provider lists for the owner's accepted key."""
+    key = ProviderKey.objects.filter(provider=body.provider, ok=True).first()
+    if key is None or body.model not in key.models:
+        name = Provider(body.provider).label
+        return Status(422, Error(detail=f"{name} does not list that model for your key."))
+    chosen, _ = FeatureModel.objects.update_or_create(
+        feature=feature, defaults={"provider": body.provider, "model": body.model}
+    )
+    return Status(200, _choice(feature, chosen))

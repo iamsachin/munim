@@ -8,11 +8,11 @@ Last updated: 2026-11-14
 
 Milestone 3 in progress. Merged: the Django scaffold (#6), the account API (#8), the web app signing in against the server (#9), RSS (#10), background polling (#11), the Stream on real items (#12), feed articles readable in the thread pane (#13), rich text as blocks with images fetched through the server (#14), Hacker News with its discussions (#15), sealed storage for secrets with the AI provider keys on the server (#16), the Docker Compose install (#17), full-text search in the Stream (#18), search matches marked in the open article (#19), highlights on the server (#20), removing a feed (#21), the Encryption card (#22), export and delete-all (#23), the trusted-proxies setting (#24), and YouTube through OAuth with click-to-play and a card view (#25).
 
-Still on sample data in the browser: watches, digest, Ask, and on the AI screen the models, usage and limit (the provider keys are real).
+Still on sample data in the browser: watches, digest, Ask, and on the AI screen the usage and limit (the provider keys, their models and each feature's model are real).
 
 Reddit is not possible today: Reddit requires its approval before an app may read anything (2026-11-15). It joins X and Instagram as "Not available yet" on Connections, each with its reason, and is built only if Reddit approves the owner's request.
 
-Next: the AI features.
+Next: Ask with citations, which brings usage tracking with it.
 
 ## 0. Preparation
 
@@ -106,8 +106,8 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 
 ## 4. AI and write-back
 
-- [ ] OpenAI and Anthropic providers, keys set in the UI
-- [ ] Per-feature model selection
+- [x] OpenAI and Anthropic providers, keys set in the UI
+- [x] Per-feature model selection: each provider's own model list, fetched with the key and again daily; the choice is kept on the server
 - [ ] Usage tracking and display
 - [ ] Summaries on demand, through Ask (no automatic summaries)
 - [ ] Digest (daily, weekly)

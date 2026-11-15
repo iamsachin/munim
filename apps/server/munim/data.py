@@ -13,7 +13,7 @@ from django.db import transaction
 from django.utils.text import slugify
 
 from account.models import Preferences
-from ai.models import ProviderKey
+from ai.models import FeatureModel, ProviderKey
 from reader.models import Channel, Connection, Feed, Highlight, Item
 
 ABOUT = """\
@@ -81,10 +81,17 @@ def export() -> IO[bytes]:
         )
         on = set(Connection.objects.filter(enabled=True).values_list("source", flat=True))
         prefs = Preferences.load()
+        chosen = FeatureModel.objects.all()
         _rows(
             archive,
             "settings.json",
-            [{"lock_after_minutes": prefs.lock_after_minutes, "sources_on": sorted(on)}],
+            [
+                {
+                    "lock_after_minutes": prefs.lock_after_minutes,
+                    "sources_on": sorted(on),
+                    "ai_models": {c.feature: f"{c.provider}/{c.model}" for c in chosen},
+                }
+            ],
         )
         for item in items.filter(saved_at__isnull=False).iterator():
             name = f"saved/{item.pk}-{slugify(item.title)[:60] or 'untitled'}.txt"
@@ -95,11 +102,13 @@ def export() -> IO[bytes]:
 
 def delete_all() -> None:
     """Removes what the owner put in: feeds, items with their highlights, which sources are on,
-    and the API keys. The account itself (passphrase, devices, lock setting) stays."""
+    the API keys and the model chosen for each AI feature. The account itself (passphrase,
+    devices, lock setting) stays."""
     with transaction.atomic():
         Item.objects.all().delete()
         Feed.objects.all().delete()
         Connection.objects.all().delete()
         Channel.objects.all().delete()
         ProviderKey.objects.all().delete()
+        FeatureModel.objects.all().delete()
     shutil.rmtree(Path(settings.DATA_DIR) / "images", ignore_errors=True)

@@ -66,10 +66,21 @@ export async function fakeServer(page: Page, start: State = 'open') {
   let wrong = 0;
   let minutes: number | null = 15;
   const ago = (ms: number) => new Date(NOW - ms).toISOString();
-  const aiKeys: Record<string, { tail: string; ok: boolean } | null> = {
-    openai: { tail: '4f2a', ok: true },
+  // What each provider lists for a key it accepts. Made up, as the design's samples were.
+  const offered: Record<string, string[]> = {
+    openai: ['gpt-5.5', 'gpt-5.4-mini'],
+    anthropic: ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5'],
+  };
+  const aiKeys: Record<string, { tail: string; ok: boolean; models: string[] } | null> = {
+    openai: { tail: '4f2a', ok: true, models: offered.openai ?? [] },
     anthropic: null,
   };
+  const none = { provider: null, model: null } as { provider: string | null; model: string | null };
+  let aiFeatures = [
+    { feature: 'digest', provider: 'openai', model: 'gpt-5.4-mini' },
+    { feature: 'ask', provider: 'openai', model: 'gpt-5.5' },
+    { feature: 'watch', provider: 'openai', model: 'gpt-5.4-mini' },
+  ] as ({ feature: string } & typeof none)[];
   // The design's sample highlights. Their places are unknown, so each is found by its words,
   // as a highlight is when the text it was made in has changed.
   const sample = (
@@ -324,6 +335,7 @@ export async function fakeServer(page: Page, start: State = 'open') {
           provider,
           tail: key?.tail ?? null,
           ok: key?.ok ?? false,
+          models: key?.models ?? [],
         })),
       );
     }
@@ -337,9 +349,22 @@ export async function fakeServer(page: Page, start: State = 'open') {
       const key = String(body.key).trim();
       if (key.length < 8) return refuse(422, 'That is too short to be an API key.');
       // Stands in for asking the provider: real keys are long.
-      const saved = { tail: key.slice(-4), ok: key.length >= 20 };
+      const ok = key.length >= 20;
+      const saved = { tail: key.slice(-4), ok, models: ok ? (offered[provider] ?? []) : [] };
       aiKeys[provider] = saved;
       return reply(200, { provider, ...saved });
+    }
+    if (call === 'GET ai/features') return reply(200, aiFeatures);
+    const [, feature] = /^PUT ai\/features\/(digest|ask|watch)$/.exec(call) ?? [];
+    if (feature) {
+      const provider = String(body.provider);
+      const model = String(body.model);
+      if (!aiKeys[provider]?.models.includes(model)) {
+        return refuse(422, 'That provider does not list that model for your key.');
+      }
+      const made = { feature, provider, model };
+      aiFeatures = aiFeatures.map((choice) => (choice.feature === feature ? made : choice));
+      return reply(200, made);
     }
     if (call === 'GET sources/youtube') return reply(200, youtube);
     if (call === 'PUT sources/youtube/credentials') {
@@ -494,6 +519,7 @@ export async function fakeServer(page: Page, start: State = 'open') {
       feeds.splice(0, feeds.length);
       highlights = [];
       for (const provider of Object.keys(aiKeys)) aiKeys[provider] = null;
+      aiFeatures = aiFeatures.map(({ feature }) => ({ feature, ...none }));
       hackerNews = { enabled: false, synced_at: null, problem: '' };
       youtube = {
         ...youtube,
