@@ -18,6 +18,10 @@ MODELS: dict[str, dict[str, Any]] = {
         "data": [
             {"id": "gpt-older", "object": "model", "created": 1, "owned_by": "openai"},
             {"id": "gpt-example", "object": "model", "created": 2, "owned_by": "openai"},
+            # Not models that answer in text, so not ones a feature can run on.
+            {"id": "gpt-image-example", "object": "model", "created": 3, "owned_by": "openai"},
+            {"id": "text-embedding-example", "object": "model", "created": 0, "owned_by": "x"},
+            {"id": "gpt-example-mini-tts", "object": "model", "created": 4, "owned_by": "x"},
         ],
     },
     "api.anthropic.com": {
@@ -199,7 +203,7 @@ def test_the_daily_check_learns_new_models_and_a_withdrawn_key(
 ) -> None:
     put(owner_client, "openai", OPENAI_KEY)
     put(owner_client, "anthropic", ANTHROPIC_KEY)
-    newer = {"id": "gpt-newer", "object": "model", "created": 3, "owned_by": "openai"}
+    newer = {"id": "gpt-newer", "object": "model", "created": 9, "owned_by": "openai"}
     listed: dict[str, Any] = MODELS["api.openai.com"]
     monkeypatch.setitem(listed, "data", [*listed["data"], newer])
     provider.seen.clear()
