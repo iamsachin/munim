@@ -45,6 +45,13 @@ Not in the handoff, approved by the owner (2026-11-15): a word a search matched 
 
 Not in the handoff, approved by the owner (2026-11-15): something that deletes asks first, in a centred dialog (`Modal`, a panel up to 420 wide): a title that names the thing, one muted paragraph saying exactly what is lost and what is kept, then Cancel (focused) and the destructive ghost button (`danger`). The RSS screen's "Remove feed" sits in a row above the feed's articles, beside their count.
 
+Not in the handoff, approved by the owner (2026-11-15), for YouTube:
+
+- A video is a still in a 16:9 frame with a "▶ Play" pill on the scrim (`Player`). Pressing it loads the source's own player in place. The preview modal uses the same component.
+- A row's media box shows the item's own still; the striped box with its kind is the fallback.
+- The YouTube page is cards by default (still with the length in its corner, title in up to two lines, channel and age, save dot), with a Cards/List pair of chips in the header on that page only. Choosing a card opens the preview modal, playing.
+- A source that needs setting up gets a panel under the Connections table: a section label, one muted paragraph, the address to copy in mono, then the fields and Save in one row.
+
 Tints are `color-mix(in oklch, ...)`, never new colours: AI card fill is accent 9% in card, AI card border accent 45%, ask bar fill accent 10% in bg with a 3px ring of accent 16%, highlight mark accent 22%.
 
 Type: IBM Plex Sans 400/500/600, IBM Plex Mono 400/500. Base 13.5px, line-height 1.45. Sizes in use: 9, 10, 10.5, 11, 11.5, 12, 12.5, 13, 13.5, 14, 14.5, 15, 15.5, 17, 22. These fractional sizes are intentional; define each as a theme token and never round them. Mono is for source codes, counts, ages, metadata and upper-case section labels (10.5px, letter-spacing 0.08em).
