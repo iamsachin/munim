@@ -31,3 +31,13 @@ export function removalOf({ articles, kept }: { articles: number; kept: number }
   if (gone === 0) return `Its ${count(kept, 'article')} ${yours}. Nothing is deleted.`;
   return `${count(gone, 'article')} ${gone === 1 ? 'is' : 'are'} deleted. The ${String(kept)} ${yours}.`;
 }
+
+/**
+ * Sources Munim cannot read, and why, in one line each. Only official ways in are used, and
+ * these have none open to a personal reader today.
+ */
+export const UNAVAILABLE = {
+  RD: 'Reddit must approve an app before it may read anything.',
+  X: 'X charges for every post an app reads.',
+  IG: 'Instagram has no official way to read a personal feed.',
+} as const;

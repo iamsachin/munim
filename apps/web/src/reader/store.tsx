@@ -7,15 +7,14 @@ export const SCOPES = ['Everything', 'Saved', 'This week', 'Open item'] as const
 export type Scope = (typeof SCOPES)[number];
 
 /**
- * What still runs on sample data in the browser: watches, Ask, connections and AI settings.
- * Items, feeds, highlights and sign-in are the server's.
+ * What still runs on sample data in the browser: watches, Ask and AI settings. Items, feeds,
+ * highlights, connections and sign-in are the server's.
  */
 export interface ReaderState {
   watchOff: ReadonlySet<string>;
   watchNew: readonly string[];
   scope: Scope;
   asks: readonly { q: string; scope: Scope }[];
-  disconnected: ReadonlySet<string>;
   ai: AiState;
 }
 
@@ -24,7 +23,6 @@ export const INITIAL: ReaderState = {
   watchNew: [],
   scope: 'Everything',
   asks: [],
-  disconnected: new Set(),
   ai: AI_INITIAL,
 };
 

@@ -217,6 +217,12 @@ test('stream: an empty stream, a failed one, and a failed item each say so', asy
     page.getByText('Nothing here yet. Connect a source and its items appear here.'),
   ).toBeVisible();
   await expect(page).toHaveScreenshot('stream-empty-dark.png');
+  // A source Munim cannot read says why, instead of asking for a connection that cannot be made.
+  await page.getByRole('link', { name: /^Reddit/ }).click();
+  await expect(
+    page.getByText('Not available yet. Reddit must approve an app before it may read anything.'),
+  ).toBeVisible();
+  await page.getByRole('link', { name: /^Stream/ }).click();
 
   await page.unroute('**/api/items?*');
   await page.route('**/api/items?*', (route) => route.fulfill({ status: 500, body: '' }));
@@ -258,9 +264,7 @@ test('stream: a feed article is read in the thread pane, and can be highlighted 
 test('replies: no source can be replied to yet, and each says why', async ({ page }) => {
   await open(page, '/stream');
   const thread = page.getByRole('complementary', { name: 'Thread' });
-  await expect(
-    thread.getByText('Replying on Reddit arrives with the Reddit connection.'),
-  ).toBeVisible();
+  await expect(thread.getByText('Replying on Reddit is not available yet.')).toBeVisible();
   await expect(thread.getByRole('link', { name: 'Open original' })).toHaveAttribute(
     'href',
     /^https:\/\/example\.com\/items\/\d+$/,
@@ -874,16 +878,30 @@ test('rss: with no feeds, and when the server fails, the screen says so', async 
   await expect(page.getByRole('button', { name: /^Wire Notes/ })).toBeVisible();
 });
 
-test('connections: disconnect and reconnect', async ({ page }) => {
+test('connections: sources Munim cannot read say why, and feeds show their real state', async ({
+  page,
+}) => {
   await open(page, '/connections');
-  const row = page.getByRole('row').filter({ hasText: 'Reddit' });
-  await page.getByRole('button', { name: 'Disconnect Reddit' }).click();
-  await expect(row).toContainText('Disconnected');
-  await page.getByRole('button', { name: 'Connect Reddit' }).click();
-  await expect(row).toContainText('Connected');
+  for (const [name, reason] of [
+    ['Reddit', 'Reddit must approve an app before it may read anything.'],
+    ['X', 'X charges for every post an app reads.'],
+    ['Instagram', 'Instagram has no official way to read a personal feed.'],
+  ] as const) {
+    const row = page.getByRole('row').filter({ hasText: reason });
+    await expect(row).toContainText('Not available yet');
+    await expect(
+      page.getByRole('button', { name: `Later: ${name} is not available yet` }),
+    ).toBeDisabled();
+  }
+  const rss = page.getByRole('row').filter({ hasText: 'RSS' });
+  await expect(rss).toContainText('5 feeds');
+  await expect(rss).toContainText('31 min ago');
+  await expect(rss).toContainText('Connected');
   await expect(
     page.getByRole('button', { name: 'Later: Calendar is not available yet' }),
   ).toBeDisabled();
+  await page.getByRole('link', { name: 'Manage feeds' }).click();
+  await expect(page).toHaveURL(/\/rss$/);
 });
 
 test('connections: YouTube is disconnected, and can be connected again with one click', async ({

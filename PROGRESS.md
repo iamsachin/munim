@@ -8,9 +8,11 @@ Last updated: 2026-11-14
 
 Milestone 3 in progress. Merged: the Django scaffold (#6), the account API (#8), the web app signing in against the server (#9), RSS (#10), background polling (#11), the Stream on real items (#12), feed articles readable in the thread pane (#13), rich text as blocks with images fetched through the server (#14), Hacker News with its discussions (#15), sealed storage for secrets with the AI provider keys on the server (#16), the Docker Compose install (#17), full-text search in the Stream (#18), search matches marked in the open article (#19), highlights on the server (#20), removing a feed (#21), the Encryption card (#22), export and delete-all (#23), the trusted-proxies setting (#24), and YouTube through OAuth with click-to-play and a card view (#25).
 
-Still on sample data in the browser: watches, digest, Ask, every Connections row except Hacker News and YouTube, and on the AI screen the models, usage and limit (the provider keys are real).
+Still on sample data in the browser: watches, digest, Ask, and on the AI screen the models, usage and limit (the provider keys are real).
 
-Next: Reddit (needs the owner to register an app), then the AI features.
+Reddit is not possible today: Reddit requires its approval before an app may read anything (2026-11-15). It joins X and Instagram as "Not available yet" on Connections, each with its reason, and is built only if Reddit approves the owner's request.
+
+Next: the AI features.
 
 ## 0. Preparation
 
@@ -93,7 +95,8 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] Rich text: every source's text becomes blocks on the server (headings, lists, quotes, code, links, bold and italic), with images fetched through the server and kept in the data folder
 - [x] Hacker News: the front page and each story's discussion, switched on and off in Connections
 - [x] YouTube: the owner's subscriptions through OAuth, set up and connected on Connections; videos play where they are; the YouTube page is cards by default (approved)
-- [ ] Reddit (official OAuth)
+- [ ] Reddit (official OAuth): waits for Reddit's approval; shown as "Not available yet" until then
+- [x] Connections says only what is true: Hacker News, YouTube and feeds from the server; Reddit, X and Instagram "Not available yet" with the reason
 - [x] Saving an item (full text of feed articles)
 - [ ] Saving: comment threads, transcripts, thumbnails
 - [x] Search (Postgres full-text) in the Stream: the words typed are looked for together first, then anywhere, in titles and article text, in any form; quoted phrases, OR and exclusions as written. Replies are not searched yet.
@@ -110,7 +113,7 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [ ] Digest (daily, weekly)
 - [ ] Ask with citations
 - [ ] Watches matching
-- [ ] Replies where the official API allows (Reddit first)
+- [ ] Replies where the official API allows (none of the connected sources does; Reddit would, once approved)
 - [ ] **Approved by owner**
 
 ## Later

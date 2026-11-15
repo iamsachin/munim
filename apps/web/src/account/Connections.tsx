@@ -1,35 +1,27 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { Link } from 'react-router';
 import { api, reason, sessionOver, type YouTube } from '../api/client';
-import { age, useHackerNews, useSetHackerNews } from '../reader/queries';
-import { toggled, useReader } from '../reader/store';
-import { SectionLabel, SourceTag, SOURCES, StatusDot, type Source } from '../ui/atoms';
+import { UNAVAILABLE } from '../reader/copy';
+import { age, useFeeds, useHackerNews, useSetHackerNews } from '../reader/queries';
+import { SectionLabel, SourceTag, SOURCES, StatusDot } from '../ui/atoms';
 import { Button, buttonClass } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Cell, Table, TableHeader, TableRow, Th } from '../ui/Table';
 
 const COLS = 'grid-cols-[34px_110px_minmax(80px,1fr)_minmax(0,150px)_90px_110px_100px]';
 
-// Mock, from the handoff, except Access: only Reddit can be written to (see NO_REPLY), and
-// except Hacker News and YouTube, whose rows show what the server says.
-const CONNECTED: { src: Source; account: string; access: string; sync: string }[] = [
-  { src: 'RD', account: 'u/you', access: 'Read, reply, vote', sync: '2 min ago' },
-  { src: 'X', account: '@you', access: 'Read', sync: '5 min ago' },
-  { src: 'IG', account: '@you', access: 'Read', sync: '14 min ago' },
-  { src: 'HN', account: 'Front page', access: 'Read', sync: '' },
-  { src: 'YT', account: 'Your subscriptions', access: 'Read', sync: '9 min ago' },
-  { src: 'RSS', account: '5 feeds', access: 'Read', sync: '31 min ago' },
-];
 const PLANNED = [
   ['CAL', 'Calendar'],
   ['ML', 'Mail'],
   ['BUD', 'Budget'],
 ] as const;
 
+/** Every row is what the server says. A source Munim cannot read says so, and why. */
 export function Connections() {
-  const { state, update } = useReader();
   const hackerNews = useHackerNews();
   const setHackerNews = useSetHackerNews();
+  const feeds = useFeeds();
   const [now] = useState(() => Date.now());
   const queries = useQueryClient();
   const youtube = useQuery({ queryKey: ['youtube'], queryFn: api.youtube });
@@ -47,6 +39,32 @@ export function Connections() {
     return short ? `${short.slice(0, -1)} ${unit} ago` : '';
   };
   const yt = youtube.data;
+  const hn = hackerNews.data;
+
+  // What is wrong with each, if anything is: it could not be read or changed, or its last fetch
+  // failed.
+  const hnTrouble = hackerNews.isError
+    ? 'Could not load'
+    : setHackerNews.isError
+      ? 'Could not change'
+      : hn?.enabled && hn.problem
+        ? 'Not syncing'
+        : '';
+  const ytTrouble = youtube.isError
+    ? 'Could not load'
+    : disconnect.isError
+      ? 'Could not change'
+      : yt?.connected && yt.problem
+        ? 'Not syncing'
+        : '';
+  const failing = feeds.data?.filter((feed) => feed.problem).length ?? 0;
+  const count = feeds.data?.length ?? 0;
+  // Feeds are fetched one by one; the row shows when the latest of them was.
+  const fetched = feeds.data
+    ?.map((feed) => feed.fetched_at)
+    .filter((at) => at != null)
+    .sort()
+    .at(-1);
 
   return (
     <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
@@ -71,121 +89,157 @@ export function Connections() {
             <span className="sr-only">Actions</span>
           </Th>
         </TableHeader>
-        {CONNECTED.map((c) => {
-          if (c.src === 'YT') {
-            const trouble = youtube.isError
-              ? 'Could not load'
-              : disconnect.isError
-                ? 'Could not change'
-                : yt?.connected && yt.problem
-                  ? 'Not syncing'
-                  : '';
-            return (
-              <TableRow key={c.src} pad={6} hover={false} className={`${COLS} items-center`}>
-                <Cell>
-                  <SourceTag src={c.src} />
-                </Cell>
-                <Cell className="font-semibold">YouTube</Cell>
-                <Cell className="truncate font-mono text-sm text-mute">
-                  {yt?.connected ? yt.account : yt?.configured ? 'Ready to connect' : 'Not set up'}
-                </Cell>
-                <Cell className="text-note text-mute">{c.access}</Cell>
-                <Cell className="font-mono text-meta text-mute">
-                  {yt?.connected ? ago(yt.synced_at) : ''}
-                </Cell>
-                <Cell className="flex items-center gap-6 text-note">
-                  <StatusDot tone={yt?.connected && !trouble ? 'ok' : 'a3'} />
-                  {trouble ||
-                    (youtube.isPending ? 'Checking' : yt?.connected ? 'Connected' : 'Disconnected')}
-                </Cell>
-                <Cell className="justify-self-end">
-                  {yt?.connected ? (
-                    <Button
-                      size="md"
-                      aria-label="Disconnect YouTube"
-                      disabled={disconnect.isPending}
-                      onClick={() => {
-                        disconnect.mutate();
-                      }}
-                    >
-                      Disconnect
-                    </Button>
-                  ) : yt?.configured && yt.redirect_ok ? (
-                    // A link, not a call: the browser itself goes to Google and comes back.
-                    <a
-                      href="/api/sources/youtube/start"
-                      aria-label="Connect YouTube"
-                      className={buttonClass({ size: 'md' })}
-                    >
-                      Connect
-                    </a>
-                  ) : (
-                    <Button
-                      size="md"
-                      aria-label="Set up YouTube"
-                      aria-expanded={settingUp}
-                      disabled={!yt}
-                      onClick={() => {
-                        setSettingUp(true);
-                      }}
-                    >
-                      Set up
-                    </Button>
-                  )}
-                </Cell>
-              </TableRow>
-            );
-          }
-          const real = c.src === 'HN' ? hackerNews : undefined;
-          const off = real ? !real.data?.enabled : state.disconnected.has(c.src);
-          const name = SOURCES[c.src].name;
-          const sync = real ? ago(real.data?.synced_at) : c.sync;
-          // What is wrong, if anything is: the row could not be read or changed, or the source
-          // could not be fetched.
-          const problem = !real
-            ? ''
-            : real.isError
-              ? 'Could not load'
-              : setHackerNews.isError
-                ? 'Could not change'
-                : real.data?.enabled && real.data.problem
-                  ? 'Not syncing'
-                  : '';
-          const status =
-            problem || (real?.isPending ? 'Checking' : off ? 'Disconnected' : 'Connected');
-          return (
-            <TableRow key={c.src} pad={6} hover={false} className={`${COLS} items-center`}>
-              <Cell>
-                <SourceTag src={c.src} />
-              </Cell>
-              <Cell className="font-semibold">{name}</Cell>
-              <Cell className="font-mono text-sm text-mute">{c.account}</Cell>
-              <Cell className="text-note text-mute">{c.access}</Cell>
-              <Cell className="font-mono text-meta text-mute">{off ? '' : sync}</Cell>
-              <Cell
-                className="flex items-center gap-6 text-note"
-                title={problem === 'Not syncing' ? real?.data?.problem : undefined}
+
+        <TableRow pad={6} hover={false} className={`${COLS} items-center`}>
+          <Cell>
+            <SourceTag src="HN" />
+          </Cell>
+          <Cell className="font-semibold">Hacker News</Cell>
+          <Cell className="font-mono text-sm text-mute">Front page</Cell>
+          <Cell className="text-note text-mute">Read</Cell>
+          <Cell className="font-mono text-meta text-mute">
+            {hn?.enabled ? ago(hn.synced_at) : ''}
+          </Cell>
+          <Cell
+            className="flex items-center gap-6 text-note"
+            title={hnTrouble === 'Not syncing' ? hn?.problem : undefined}
+          >
+            <StatusDot tone={hn?.enabled && !hnTrouble ? 'ok' : 'a3'} />
+            {hnTrouble ||
+              (hackerNews.isPending ? 'Checking' : hn?.enabled ? 'Connected' : 'Disconnected')}
+          </Cell>
+          <Cell className="justify-self-end">
+            <Button
+              size="md"
+              aria-label={`${hn?.enabled ? 'Disconnect' : 'Connect'} Hacker News`}
+              disabled={!hn || setHackerNews.isPending}
+              onClick={() => {
+                setHackerNews.mutate(!hn?.enabled);
+              }}
+            >
+              {hn?.enabled ? 'Disconnect' : 'Connect'}
+            </Button>
+          </Cell>
+        </TableRow>
+
+        <TableRow pad={6} hover={false} className={`${COLS} items-center`}>
+          <Cell>
+            <SourceTag src="YT" />
+          </Cell>
+          <Cell className="font-semibold">YouTube</Cell>
+          <Cell className="truncate font-mono text-sm text-mute">
+            {yt?.connected ? yt.account : yt?.configured ? 'Ready to connect' : 'Not set up'}
+          </Cell>
+          <Cell className="text-note text-mute">Read</Cell>
+          <Cell className="font-mono text-meta text-mute">
+            {yt?.connected ? ago(yt.synced_at) : ''}
+          </Cell>
+          <Cell
+            className="flex items-center gap-6 text-note"
+            title={ytTrouble === 'Not syncing' ? yt?.problem : undefined}
+          >
+            <StatusDot tone={yt?.connected && !ytTrouble ? 'ok' : 'a3'} />
+            {ytTrouble ||
+              (youtube.isPending ? 'Checking' : yt?.connected ? 'Connected' : 'Disconnected')}
+          </Cell>
+          <Cell className="justify-self-end">
+            {yt?.connected ? (
+              <Button
+                size="md"
+                aria-label="Disconnect YouTube"
+                disabled={disconnect.isPending}
+                onClick={() => {
+                  disconnect.mutate();
+                }}
               >
-                <StatusDot tone={off || problem ? 'a3' : 'ok'} />
-                {status}
-              </Cell>
-              <Cell className="justify-self-end">
-                <Button
-                  size="md"
-                  aria-label={`${off ? 'Connect' : 'Disconnect'} ${name}`}
-                  disabled={real && (!real.data || setHackerNews.isPending)}
-                  onClick={() => {
-                    if (real) setHackerNews.mutate(off);
-                    else update((s) => ({ disconnected: toggled(s.disconnected, c.src) }));
-                  }}
-                >
-                  {off ? 'Connect' : 'Disconnect'}
-                </Button>
-              </Cell>
-            </TableRow>
-          );
-        })}
-        {/* The handoff fades these rows to 55%, which makes them unreadable; muted text says the same. */}
+                Disconnect
+              </Button>
+            ) : yt?.configured && yt.redirect_ok ? (
+              // A link, not a call: the browser itself goes to Google and comes back.
+              <a
+                href="/api/sources/youtube/start"
+                aria-label="Connect YouTube"
+                className={buttonClass({ size: 'md' })}
+              >
+                Connect
+              </a>
+            ) : (
+              <Button
+                size="md"
+                aria-label="Set up YouTube"
+                aria-expanded={settingUp}
+                disabled={!yt}
+                onClick={() => {
+                  setSettingUp(true);
+                }}
+              >
+                Set up
+              </Button>
+            )}
+          </Cell>
+        </TableRow>
+
+        {/* Feeds are added and removed one by one on the RSS screen; this row sums them up. */}
+        <TableRow pad={6} hover={false} className={`${COLS} items-center`}>
+          <Cell>
+            <SourceTag src="RSS" />
+          </Cell>
+          <Cell className="font-semibold">RSS</Cell>
+          <Cell className="font-mono text-sm text-mute">
+            {feeds.data ? `${String(count)} ${count === 1 ? 'feed' : 'feeds'}` : ''}
+          </Cell>
+          <Cell className="text-note text-mute">Read</Cell>
+          <Cell className="font-mono text-meta text-mute">{ago(fetched)}</Cell>
+          <Cell
+            className="flex items-center gap-6 text-note"
+            title={
+              failing ? `${String(failing)} of ${String(count)} could not be refreshed` : undefined
+            }
+          >
+            <StatusDot
+              tone={count > 0 && !failing ? 'ok' : feeds.data && !failing ? 'line' : 'a3'}
+            />
+            {feeds.isError
+              ? 'Could not load'
+              : feeds.isPending
+                ? 'Checking'
+                : failing
+                  ? 'Not syncing'
+                  : count > 0
+                    ? 'Connected'
+                    : 'No feeds yet'}
+          </Cell>
+          <Cell className="justify-self-end">
+            <Link to="/rss" aria-label="Manage feeds" className={buttonClass({ size: 'md' })}>
+              Manage
+            </Link>
+          </Cell>
+        </TableRow>
+
+        {/* Sources Munim cannot read, each with the reason. Muted, not faded: fading the
+            handoff's rows to 55% made them unreadable. */}
+        {(Object.keys(UNAVAILABLE) as (keyof typeof UNAVAILABLE)[]).map((src) => (
+          <TableRow key={src} pad={6} hover={false} className={`${COLS} items-center`}>
+            <Cell>
+              <SourceTag src={src} />
+            </Cell>
+            <Cell className="font-semibold text-mute">{SOURCES[src].name}</Cell>
+            <Cell className="col-span-3 text-note text-mute">{UNAVAILABLE[src]}</Cell>
+            <Cell className="flex items-center gap-6 text-note text-mute">
+              <StatusDot tone="line" />
+              Not available yet
+            </Cell>
+            <Cell className="justify-self-end">
+              <Button
+                size="md"
+                disabled
+                aria-label={`Later: ${SOURCES[src].name} is not available yet`}
+              >
+                Later
+              </Button>
+            </Cell>
+          </TableRow>
+        ))}
         {PLANNED.map(([code, name]) => (
           <TableRow key={code} pad={6} hover={false} className={`${COLS} items-center`}>
             <Cell className="font-mono text-code font-medium text-mute">{code}</Cell>
