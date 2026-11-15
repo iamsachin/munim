@@ -11,6 +11,20 @@ from ai.models import Provider
 TIMEOUT_SECONDS = 10
 # More than any provider lists; a bound on what one answer can make Munim store.
 MOST_MODELS = 500
+# Kinds of OpenAI model that make pictures, sound or numbers, named as OpenAI names them. These
+# are kinds, not models: a new text model appears by itself, and a new kind missing from here
+# is only one more line in the list the owner chooses from.
+NOT_TEXT = (
+    "image",
+    "audio",
+    "realtime",
+    "live",
+    "transcribe",
+    "tts",
+    "whisper",
+    "embedding",
+    "moderation",
+)
 
 # Replaced in tests, so that nothing there reaches a real provider.
 TRANSPORT: httpx2.BaseTransport | None = None
@@ -33,14 +47,13 @@ def models_of(provider: Provider, key: str) -> list[str] | None:
                 max_retries=0,
                 http_client=openai.DefaultHttpxClient(transport=TRANSPORT),
             ) as client:
-                # shortcut: OpenAI lists every kind of model (speech, images, embeddings) and
-                # does not say which answer in text, so all are offered; filter when it does.
+                # OpenAI lists every kind of model and does not say which answer in text.
                 listed = sorted(
                     islice(client.models.list(), MOST_MODELS),
                     key=lambda model: model.created,
                     reverse=True,
                 )
-                return [model.id for model in listed]
+                return [m.id for m in listed if not any(kind in m.id for kind in NOT_TEXT)]
         with anthropic.Anthropic(
             api_key=key,
             timeout=TIMEOUT_SECONDS,
