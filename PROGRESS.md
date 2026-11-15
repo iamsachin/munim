@@ -95,7 +95,7 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] Rich text: every source's text becomes blocks on the server (headings, lists, quotes, code, links, bold and italic), with images fetched through the server and kept in the data folder
 - [x] Hacker News: the front page and each story's discussion, switched on and off in Connections
 - [x] YouTube: the owner's subscriptions through OAuth, set up and connected on Connections; videos play where they are; the YouTube page is cards by default (approved)
-- [ ] Reddit (official OAuth): waits for Reddit's approval; shown as "Not available yet" until then
+- [ ] Reddit (official OAuth, read-only, kept out of AI calls): waits for Reddit's approval of the request sent 2026-11-15; shown as "Not available yet" until then
 - [x] Connections says only what is true: Hacker News, YouTube and feeds from the server; Reddit, X and Instagram "Not available yet" with the reason
 - [x] Saving an item (full text of feed articles)
 - [ ] Saving: comment threads, transcripts, thumbnails
@@ -113,7 +113,7 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [ ] Digest (daily, weekly)
 - [ ] Ask with citations
 - [ ] Watches matching
-- [ ] Replies where the official API allows (none of the connected sources does; Reddit would, once approved)
+- [ ] Replies where the official API allows (none of the connected sources does; Reddit stays read-only)
 - [ ] **Approved by owner**
 
 ## Later

@@ -14,3 +14,4 @@ __pycache__/
 .pytest_cache/
 apps/server/data/
 apps/server/static/
+*.tsbuildinfo
