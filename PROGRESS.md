@@ -8,11 +8,11 @@ Last updated: 2026-11-14
 
 Milestone 3 in progress. Merged: the Django scaffold (#6), the account API (#8), the web app signing in against the server (#9), RSS (#10), background polling (#11), the Stream on real items (#12), feed articles readable in the thread pane (#13), rich text as blocks with images fetched through the server (#14), Hacker News with its discussions (#15), sealed storage for secrets with the AI provider keys on the server (#16), the Docker Compose install (#17), full-text search in the Stream (#18), search matches marked in the open article (#19), highlights on the server (#20), removing a feed (#21), the Encryption card (#22), export and delete-all (#23), the trusted-proxies setting (#24), and YouTube through OAuth with click-to-play and a card view (#25).
 
-Still on sample data in the browser: watches, digest and Ask. The AI screen is all the server's: keys, models, each feature's model, the prices the owner enters, usage and the monthly limit. Nothing calls a model yet, so usage is empty until Ask does.
+Still on sample data in the browser: watches and digest. Ask is real: the worker puts a question to the model chosen for it, from the items in its scope, and the answer cites them. The AI screen is all the server's: keys, models, each feature's model, the prices the owner enters, usage and the monthly limit.
 
 Reddit is not possible today: Reddit requires its approval before an app may read anything (2026-11-15). It joins X and Instagram as "Not available yet" on Connections, each with its reason, and is built only if Reddit approves the owner's request.
 
-Next: Ask with citations, the first feature to call a model.
+Next: Digest (its schedule is an open decision), then watch matching.
 
 ## 0. Preparation
 
@@ -109,9 +109,9 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] OpenAI and Anthropic providers, keys set in the UI
 - [x] Per-feature model selection: each provider's own model list, fetched with the key and again daily; the choice is kept on the server
 - [x] Usage tracking and display: each call's tokens and cost at the price the owner entered for its model; a monthly limit in dollars that pauses AI (the Prices table waits for the owner's approval)
-- [ ] Summaries on demand, through Ask (no automatic summaries)
+- [x] Summaries on demand, through Ask (no automatic summaries)
 - [ ] Digest (daily, weekly)
-- [ ] Ask with citations
+- [x] Ask with citations: over everything, saved, this week or the open item; answered by the worker; only the items given can be cited; Reddit content is never sent
 - [ ] Watches matching
 - [ ] Replies where the official API allows (none of the connected sources does; Reddit stays read-only)
 - [ ] **Approved by owner**

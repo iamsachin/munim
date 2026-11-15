@@ -14,8 +14,8 @@ from ninja import Field, Router, Schema, Status
 from procrastinate.exceptions import AlreadyEnqueued
 
 from account.auth import Open
-from reader import feeds, icons, images, search, tasks, youtube
-from reader.models import Connection, Feed, Highlight, Item, Source
+from reader import ask, feeds, icons, images, search, tasks, youtube
+from reader.models import Ask, Connection, Feed, Highlight, Item, Source
 
 router = Router(tags=["reader"], auth=Open())
 
@@ -250,17 +250,9 @@ def _thumb(item: Item) -> str | None:
     return f"/api/items/{item.pk}/images/0" if item.media and next(pictures, None) else None
 
 
-def _icon_of(item: Item) -> str | None:
-    """Where the icon of the item's site is asked for: its feed's site, or its source's own.
-    An article whose feed was removed has no site left to ask."""
-    if item.feed_id:
-        return f"/api/feeds/{item.feed_id}/icon"
-    return f"/api/sources/{item.source}/icon" if item.source in icons.SITES else None
-
-
 def _row(item: Item) -> dict[str, Any]:
     return {
-        "icon": _icon_of(item),
+        "icon": icons.address_of(item),
         "id": item.pk,
         "source": item.source,
         "title": item.title,
@@ -501,7 +493,7 @@ def _highlight(highlight: Highlight) -> HighlightOut:
         source=item.source,  # type: ignore[arg-type]
         title=item.title,
         origin=item.feed.title if item.feed else item.origin,
-        icon=_icon_of(item),
+        icon=icons.address_of(item),
     )
 
 
@@ -671,6 +663,90 @@ def disconnect_youtube(request: HttpRequest) -> YouTubeOut:
     """Forgets the Google sign-in. Videos already fetched stay."""
     youtube.disconnect(youtube.connection())
     return _youtube(request)
+
+
+class AskIn(Schema):
+    question: str = Field(min_length=1, max_length=2000)
+    scope: Literal["everything", "saved", "week", "item"]
+    # The item asked about, when the scope is one item.
+    item_id: int | None = None
+
+
+class Cite(Schema):
+    """An item an answer cites, as it was when the answer was written."""
+
+    # Null if the item has since been removed.
+    item_id: int | None
+    source: SourceCode
+    title: str
+    origin: str
+    icon: str | None
+
+
+class AskOut(Schema):
+    """A question and its answer. The answer cites items by number: [1] is the first cite."""
+
+    id: int
+    question: str
+    scope: Literal["everything", "saved", "week", "item"]
+    # Waiting for the worker, answered, or not answered (`problem` says why).
+    status: Literal["pending", "answered", "failed"]
+    answer: str
+    problem: str
+    cites: list[Cite]
+    asked_at: datetime
+
+
+def _ask(asked: Ask, kept: set[int]) -> AskOut:
+    status = "pending" if asked.answered_at is None else "failed" if asked.problem else "answered"
+    cites = [
+        {**cite, "item_id": cite["item"] if cite["item"] in kept else None} for cite in asked.cites
+    ]
+    return AskOut.model_validate(
+        {
+            "id": asked.pk,
+            "question": asked.question,
+            "scope": asked.scope,
+            "status": status,
+            "answer": asked.answer,
+            "problem": asked.problem,
+            "cites": cites,
+            "asked_at": asked.asked_at,
+        }
+    )
+
+
+def _asks(asked: list[Ask]) -> list[AskOut]:
+    cited = {cite["item"] for one in asked for cite in one.cites}
+    kept = set(Item.objects.filter(pk__in=cited).values_list("pk", flat=True))
+    return [_ask(one, kept) for one in asked]
+
+
+# shortcut: the last fifty questions; page through them if anyone wants older ones back.
+MOST_ASKS = 50
+
+
+@router.get("/asks", response=list[AskOut])
+def list_asks(request: HttpRequest) -> list[AskOut]:
+    """The questions asked, oldest first, as a conversation reads."""
+    latest = list(Ask.objects.order_by("-asked_at", "-id")[:MOST_ASKS])
+    return _asks(latest[::-1])
+
+
+@router.post("/asks", response={201: AskOut})
+def ask_question(request: HttpRequest, body: AskIn) -> Status[AskOut]:
+    """Takes a question. The worker puts it to the model, so the answer comes later; what
+    stops it being asked at all (no model, the limit, no item) is its answer at once."""
+    wanted = body.item_id if body.scope == "item" else None
+    item = Item.objects.filter(pk=wanted).first() if wanted is not None else None
+    asked = Ask(question=body.question.strip(), scope=body.scope, item=item)
+    asked.problem = ask.refusal(asked)
+    if asked.problem:
+        asked.answered_at = timezone.now()
+    asked.save()
+    if not asked.problem:
+        tasks.answer_ask.defer(ask_id=asked.pk)
+    return Status(201, _asks([asked])[0])
 
 
 @router.get("/counts", response=Counts)

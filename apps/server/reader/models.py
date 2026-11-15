@@ -152,3 +152,35 @@ class Highlight(models.Model):
 
     def __str__(self) -> str:
         return self.quote[:60]
+
+
+class Ask(models.Model):
+    """A question the owner asked, and what the model answered from the items in its scope.
+    Answered by the worker: until then `answered_at` is empty."""
+
+    class Scope(models.TextChoices):
+        EVERYTHING = "everything", "Everything"
+        SAVED = "saved", "Saved"
+        WEEK = "week", "This week"
+        ITEM = "item", "Open item"
+
+    question = models.TextField()
+    scope = models.CharField(max_length=10, choices=Scope.choices)
+    # The item asked about, when the scope is one item. The exchange outlives the item.
+    item = models.ForeignKey(
+        Item, null=True, blank=True, on_delete=models.SET_NULL, related_name="asks"
+    )
+    answer = models.TextField(blank=True)
+    # The items the answer cites, in the order of their numbers in it: each as it was then
+    # (item, source, title, origin, icon), so a citation survives its item.
+    cites = models.JSONField(default=list, blank=True)
+    # Why there is no answer, in words for the owner. Empty if there is one.
+    problem = models.CharField(max_length=300, blank=True)
+    asked_at = models.DateTimeField(auto_now_add=True)
+    answered_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["asked_at", "id"]
+
+    def __str__(self) -> str:
+        return self.question[:60]

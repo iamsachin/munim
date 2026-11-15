@@ -476,6 +476,31 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/asks': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Asks
+     * @description The questions asked, oldest first, as a conversation reads.
+     */
+    get: operations['reader_api_list_asks'];
+    put?: never;
+    /**
+     * Ask Question
+     * @description Takes a question. The worker puts it to the model, so the answer comes later; what
+     *     stops it being asked at all (no model, the limit, no item) is its answer at once.
+     */
+    post: operations['reader_api_ask_question'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/counts': {
     parameters: {
       query?: never;
@@ -1079,6 +1104,68 @@ export interface components {
       client_id: string;
       /** Client Secret */
       client_secret: string;
+    };
+    /**
+     * AskOut
+     * @description A question and its answer. The answer cites items by number: [1] is the first cite.
+     */
+    AskOut: {
+      /** Id */
+      id: number;
+      /** Question */
+      question: string;
+      /**
+       * Scope
+       * @enum {string}
+       */
+      scope: 'everything' | 'saved' | 'week' | 'item';
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: 'pending' | 'answered' | 'failed';
+      /** Answer */
+      answer: string;
+      /** Problem */
+      problem: string;
+      /** Cites */
+      cites: components['schemas']['Cite'][];
+      /**
+       * Asked At
+       * Format: date-time
+       */
+      asked_at: string;
+    };
+    /**
+     * Cite
+     * @description An item an answer cites, as it was when the answer was written.
+     */
+    Cite: {
+      /** Item Id */
+      item_id: number | null;
+      /**
+       * Source
+       * @enum {string}
+       */
+      source: 'RD' | 'X' | 'IG' | 'HN' | 'YT' | 'RSS';
+      /** Title */
+      title: string;
+      /** Origin */
+      origin: string;
+      /** Icon */
+      icon: string | null;
+    };
+    /** AskIn */
+    AskIn: {
+      /** Question */
+      question: string;
+      /**
+       * Scope
+       * @enum {string}
+       */
+      scope: 'everything' | 'saved' | 'week' | 'item';
+      /** Item Id */
+      item_id?: number | null;
     };
     /** Counts */
     Counts: {
@@ -1991,6 +2078,50 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['YouTubeOut'];
+        };
+      };
+    };
+  };
+  reader_api_list_asks: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AskOut'][];
+        };
+      };
+    };
+  };
+  reader_api_ask_question: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AskIn'];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AskOut'];
         };
       };
     };

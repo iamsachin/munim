@@ -5,20 +5,22 @@ import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { SuggestChip } from '../ui/Chip';
 import { Input } from '../ui/Input';
-import { ask, useReader } from './store';
+import { useAsk } from './queries';
+import { useReader } from './store';
 
 /**
  * The AI card on an open thread or article. Nothing is summarised automatically: a summary is
  * one question away, and costs tokens only when asked for.
  */
-export function AskCard({ what }: { what: 'thread' | 'article' }) {
+export function AskCard({ what, item }: { what: 'thread' | 'article'; item: number }) {
   const { update } = useReader();
+  const ask = useAsk();
   const navigate = useNavigate();
   const [question, setQuestion] = useState('');
 
   const send = (q: string) => {
     // An empty question still opens Ask, scoped to this item.
-    if (!ask(update, q, 'Open item')) update({ scope: 'Open item' });
+    if (!ask(q, 'Open item', item)) update({ scope: 'Open item', openItem: item });
     void navigate('/ask');
   };
 

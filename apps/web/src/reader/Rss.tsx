@@ -233,7 +233,7 @@ export function Rss() {
             <h2 className="text-headline leading-headline font-semibold text-pretty">
               {current.title}
             </h2>
-            <AskCard what="article" />
+            <AskCard what="article" item={current.id} />
             {article.isPending && <LoadingRows what="the article" rows={4} />}
             {article.isError && (
               <ErrorState what="the article" onRetry={() => void article.refetch()} />

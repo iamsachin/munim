@@ -5,7 +5,7 @@ from procrastinate.contrib.django import app
 from procrastinate.exceptions import UniqueViolation
 from procrastinate.jobs import Status
 
-from reader import feeds, hackernews, youtube
+from reader import ask, feeds, hackernews, youtube
 
 POLL_EVERY = "*/15 * * * *"
 
@@ -32,6 +32,13 @@ def poll_hacker_news(timestamp: int) -> None:
 def poll_youtube(timestamp: int) -> None:
     """Every hour, and when it is connected: fetch new videos from subscribed channels."""
     youtube.refresh()
+
+
+@app.task
+def answer_ask(ask_id: int) -> None:
+    """When the owner asks something: put the question to the model. Run again after a crash,
+    it leaves a question that already has its answer alone."""
+    ask.answer(ask_id)
 
 
 @app.periodic(cron="*/5 * * * *")

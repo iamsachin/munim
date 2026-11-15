@@ -1,5 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, type Item, type ItemPatch, type ItemQuery } from '../api/client';
+import { api, type Ask, type Item, type ItemPatch, type ItemQuery } from '../api/client';
+import { useReader, type Scope } from './store';
 
 // shortcut: the page asks again every minute to pick up what the worker has fetched; switch to
 // server-sent events if a minute proves too slow or the asking too wasteful.
@@ -135,4 +136,48 @@ export function useSetHackerNews() {
       queries.setQueryData(['hacker-news'], now);
     },
   });
+}
+
+/** Each scope as the server knows it. */
+const SCOPE_CODES = {
+  Everything: 'everything',
+  Saved: 'saved',
+  'This week': 'week',
+  'Open item': 'item',
+} as const satisfies Record<Scope, Ask['scope']>;
+
+/** What was asked and answered. Asked again every moment while an answer is being waited for. */
+export const useAsks = () =>
+  useQuery({
+    queryKey: ['asks'],
+    queryFn: api.asks,
+    refetchInterval: (query) =>
+      query.state.data?.some((asked) => asked.status === 'pending') ? 1500 : false,
+  });
+
+/**
+ * Sends a question to the server, where the worker puts it to the model: the answer comes to
+ * the Ask screen when it is ready. Returns false, sending nothing, if the question is blank.
+ * `item` is the open item, for a question about it.
+ */
+export function useAsk() {
+  const { state, update } = useReader();
+  const queries = useQueryClient();
+  const send = useMutation({
+    // Named, so that the Ask screen can say which questions could not be sent.
+    mutationKey: ['ask'],
+    mutationFn: api.ask,
+    onSuccess: () => queries.invalidateQueries({ queryKey: ['asks'] }),
+  });
+  return (question: string, scope: Scope = state.scope, item = state.openItem) => {
+    const text = question.trim();
+    if (!text) return false;
+    update({ scope, openItem: item });
+    send.mutate({
+      question: text,
+      scope: SCOPE_CODES[scope],
+      item_id: scope === 'Open item' ? (item ?? null) : null,
+    });
+    return true;
+  };
 }

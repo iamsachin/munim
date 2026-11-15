@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { ask, useReader } from '../reader/store';
+import { useAsk } from '../reader/queries';
+import { useReader } from '../reader/store';
 import { AiBadge } from '../ui/atoms';
 import { Button } from '../ui/Button';
 
 /** The always-visible question field. Submitting queues the question and opens the Ask screen. */
 export function AskBar() {
-  const { state, update } = useReader();
+  const { state } = useReader();
+  const ask = useAsk();
   const navigate = useNavigate();
   const [draft, setDraft] = useState('');
 
@@ -16,7 +18,7 @@ export function AskBar() {
         role="search"
         onSubmit={(e) => {
           e.preventDefault();
-          if (!ask(update, draft)) return;
+          if (!ask(draft)) return;
           setDraft('');
           void navigate('/ask');
         }}

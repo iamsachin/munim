@@ -107,6 +107,41 @@ export async function fakeServer(page: Page, start: State = 'open') {
     { feature: 'ask', provider: 'openai', model: 'gpt-5.5' },
     { feature: 'watch', provider: 'openai', model: 'gpt-5.4-mini' },
   ] as ({ feature: string } & typeof none)[];
+  // What was asked: one worked example, as the design has, about sources this install reads.
+  const SAMPLE_ASK = {
+    id: 1,
+    question: 'What did people say about keeping feeds in sync this week?',
+    scope: 'everything',
+    status: 'answered',
+    answer:
+      'Three items touch on it. On Hacker News the consensus is to cache aggressively and poll less often [1]. Wire Notes argues that a sync protocol should be boring, because the clever ones lose data [2]. Wire Talks shows conflict-free sync in a twelve-minute video [3].',
+    problem: '',
+    cites: [
+      {
+        item_id: 1,
+        source: 'HN',
+        title: 'Ask HN: How do you keep track of long discussions?',
+        origin: '208 points',
+        icon: iconOf('HN'),
+      },
+      {
+        item_id: 2,
+        source: 'RSS',
+        title: 'The case for boring sync protocols',
+        origin: 'Wire Notes',
+        icon: iconOf('RSS', NO_ICON_FEED),
+      },
+      {
+        item_id: 3,
+        source: 'YT',
+        title: 'Conflict-free sync explained in 12 minutes',
+        origin: 'Wire Talks',
+        icon: iconOf('YT'),
+      },
+    ],
+    asked_at: ago(2 * 3_600_000),
+  };
+  let asks = [SAMPLE_ASK];
   // Spend, with the design's sample figures: prices for the two models in use, a limit, and
   // what each feature used this month and last.
   let aiLimit: number | null = 10;
@@ -427,6 +462,47 @@ export async function fakeServer(page: Page, start: State = 'open') {
       spent,
       paused: aiLimit !== null && spent >= aiLimit,
     });
+    if (call === 'GET asks') {
+      const told = asks.map((asked) => ({ ...asked }));
+      // What was waiting when this was asked for is answered by the time it is asked again,
+      // as when the worker finishes between two looks.
+      asks = asks.map((asked) =>
+        asked.status === 'pending'
+          ? {
+              ...asked,
+              status: 'answered',
+              answer: `The stand-in server has no model. It was asked: ${asked.question} [1]`,
+              cites: [SAMPLE_ASK.cites[0]].filter((cite) => cite !== undefined),
+            }
+          : asked,
+      );
+      return reply(200, told);
+    }
+    if (call === 'POST asks') {
+      const model = aiFeatures.find((choice) => choice.feature === 'ask');
+      const usable = !!model?.provider && !!aiKeys[model.provider]?.ok;
+      // What stops a question being put to a model is its answer at once, as on the server.
+      const problem = limitNow().paused
+        ? "AI is paused: this month's limit is reached. Raise it under AI, or wait for next month."
+        : !usable
+          ? 'No model is chosen for Ask. Choose one under AI.'
+          : body.scope === 'item' && body.item_id == null
+            ? 'Open an item first, then ask about it.'
+            : '';
+      const asked = {
+        ...SAMPLE_ASK,
+        id: Math.max(0, ...asks.map((one) => one.id)) + 1,
+        question: String(body.question),
+        scope: String(body.scope),
+        status: problem ? 'failed' : 'pending',
+        answer: '',
+        problem,
+        cites: [] as typeof SAMPLE_ASK.cites,
+        asked_at: ago(0),
+      };
+      asks = [...asks, asked];
+      return reply(201, asked);
+    }
     if (call === 'GET ai/limit') return reply(200, limitNow());
     if (call === 'PUT ai/limit') {
       aiLimit = body.limit === null ? null : Number(body.limit);
@@ -620,6 +696,7 @@ export async function fakeServer(page: Page, start: State = 'open') {
       aiFeatures = aiFeatures.map(({ feature }) => ({ feature, ...none }));
       aiPrices = [];
       aiUsage = { this: { rows: [], cost: 0 }, last: { rows: [], cost: 0 } };
+      asks = [];
       hackerNews = { enabled: false, synced_at: null, problem: '' };
       youtube = {
         ...youtube,

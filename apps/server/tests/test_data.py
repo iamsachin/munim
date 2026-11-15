@@ -14,7 +14,7 @@ from account.models import Device, Preferences
 from ai import spend
 from ai.models import FeatureModel, ModelPrice, ProviderKey, Usage
 from munim import vault
-from reader.models import Connection, Feed, Highlight, Item
+from reader.models import Ask, Connection, Feed, Highlight, Item
 
 from .conftest import PASSPHRASE, post
 
@@ -52,6 +52,13 @@ def filled(owner_client: Client, settings: Any) -> Client:
     FeatureModel.objects.create(feature="ask", provider="openai", model="gpt-example")
     ModelPrice.objects.create(provider="openai", model="gpt-example", input=2, output=8)
     spend.record("ask", "openai", "gpt-example", 1_000_000, 0)
+    Ask.objects.create(
+        question="What is wrong with sync?",
+        scope="saved",
+        answer="It is fast until it is wrong [1].",
+        cites=[{"item": saved.pk, "source": "RSS", "title": saved.title, "origin": "Wire Notes"}],
+        answered_at=timezone.now(),
+    )
     images = Path(settings.DATA_DIR) / "images" / "ab"
     images.mkdir(parents=True)
     (images / "abcdef").write_bytes(b"picture")
@@ -72,6 +79,7 @@ def test_the_export_holds_everything_the_owner_put_in_and_no_secrets(filled: Cli
     assert sorted(archive.namelist()) == [
         "README.txt",
         "ai-usage.json",
+        "asks.json",
         "feeds.json",
         "highlights.json",
         "items.json",
@@ -103,6 +111,15 @@ def test_the_export_holds_everything_the_owner_put_in_and_no_secrets(filled: Cli
             "ai_models": {"ask": "openai/gpt-example"},
             "ai_limit": "10.00",
             "ai_prices": {"openai/gpt-example": {"input": "2.0000", "output": "8.0000"}},
+        }
+    ]
+    assert read("asks.json") == [
+        {
+            "question": "What is wrong with sync?",
+            "scope": "Saved",
+            "answer": "It is fast until it is wrong [1].",
+            "cites": ["The case for boring sync protocols"],
+            "asked_at": read("asks.json")[0]["asked_at"],
         }
     ]
     (call,) = read("ai-usage.json")
@@ -137,7 +154,8 @@ def test_deleting_everything_needs_the_passphrase_and_leaves_the_account(
     assert Item.objects.count() == 2
 
     assert delete(filled, PASSPHRASE).status_code == 204
-    for model in (Item, Feed, Highlight, Connection, ProviderKey, FeatureModel, ModelPrice, Usage):
+    stored = (Item, Feed, Highlight, Connection, ProviderKey, FeatureModel, ModelPrice, Usage, Ask)
+    for model in stored:
         assert model.objects.count() == 0, model
     assert not (Path(settings.DATA_DIR) / "images").exists()
 

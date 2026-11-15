@@ -18,6 +18,7 @@ export type Highlight = Schemas['HighlightOut'];
 /** Where the icon of a source that is one site is, at the server (which fetches and keeps it). */
 export const sourceIcon = (source: 'HN' | 'YT') => `/api/sources/${source}/icon`;
 
+export type Ask = Schemas['AskOut'];
 export type AiKey = Schemas['KeyOut'];
 export type AiChoice = Schemas['ChoiceOut'];
 export type AiPrice = Schemas['Price'];
@@ -113,6 +114,8 @@ export const api = {
   noteHighlight: ({ id, note }: { id: number; note: string }) =>
     call<Highlight>('PATCH', `highlights/${String(id)}`, { note } satisfies Schemas['NoteIn']),
   removeHighlight: (id: number) => call<undefined>('DELETE', `highlights/${String(id)}`),
+  asks: () => call<Ask[]>('GET', 'asks'),
+  ask: (question: Schemas['AskIn']) => call<Ask>('POST', 'asks', question),
   aiKeys: () => call<AiKey[]>('GET', 'ai/keys'),
   setAiKey: ({ provider, key }: { provider: AiKey['provider']; key: string }) =>
     call<AiKey>('PUT', `ai/keys/${provider}`, { key } satisfies Schemas['KeyIn']),

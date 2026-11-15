@@ -538,7 +538,7 @@ test('youtube: a card opens its video large and playing; the list is one press a
   await expect(rows(page)).toHaveCount(5);
 });
 
-test('ask bar: a question opens Ask with an honest placeholder answer; blank does nothing', async ({
+test('ask bar: a question opens Ask, waits for its answer and shows it with what it cites; blank does nothing', async ({
   page,
 }) => {
   await open(page, '/today');
@@ -548,9 +548,47 @@ test('ask bar: a question opens Ask with an honest placeholder answer; blank doe
   await bar.fill('What changed in sync this week?');
   await bar.press('Enter');
   await expect(page).toHaveURL(/\/ask$/);
-  await expect(page.getByText('What changed in sync this week?')).toBeVisible();
-  await expect(page.getByText(/Answers are not connected yet/)).toBeVisible();
   await expect(bar).toHaveValue('');
+  const asked = page.getByRole('main').locator('> div > div').filter({
+    hasText: 'What changed in sync this week?',
+  });
+  // The worker has not answered yet; the page asks again until it has.
+  await expect(asked.getByRole('status')).toHaveText('Waiting for the answer.');
+  await expect(asked).toContainText('It was asked: What changed in sync this week? [1]');
+  await expect(asked.getByRole('status')).toHaveCount(0);
+  await expect(asked).toContainText('Ask HN: How do you keep track of long discussions?');
+  await expect(asked).toContainText('From everything');
+  // It is the server's, so it is still there after a reload.
+  await page.reload();
+  await expect(page.getByText('It was asked: What changed in sync this week? [1]')).toBeVisible();
+});
+
+test('ask: a question that cannot be sent says so, and one with no model says why', async ({
+  page,
+}) => {
+  await open(page, '/ask');
+  await page.route('**/api/asks', (route) =>
+    route.request().method() === 'POST' ? route.fulfill({ status: 500 }) : route.fallback(),
+  );
+  await page.getByRole('button', { name: 'What is new about sync protocols?' }).click();
+  await expect(page.getByRole('alert')).toHaveText(
+    'This question could not be sent. Ask it again.',
+  );
+  await page.unroute('**/api/asks');
+
+  await page.getByRole('link', { name: 'AI', exact: true }).click();
+  await page.getByRole('button', { name: 'Remove key for OpenAI' }).click();
+  const bar = page.getByRole('search').getByLabel('Ask');
+  await bar.fill('Anything new?');
+  await bar.press('Enter');
+  await expect(page.getByText('No model is chosen for Ask. Choose one under AI.')).toBeVisible();
+});
+
+test('ask: with nothing asked yet the screen says so', async ({ page }) => {
+  await fakeServer(page);
+  await page.route('**/api/asks', (route) => route.fulfill({ json: [] }));
+  await page.goto('/ask');
+  await expect(page.getByText('Nothing asked yet.')).toBeVisible();
 });
 
 test('thread question is scoped to the open item', async ({ page }) => {
