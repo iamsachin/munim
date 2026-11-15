@@ -496,7 +496,7 @@ function Thread({ id, now, q }: { id: number; now: number; q: string }) {
       </div>
       <h2 className="text-title leading-title font-semibold text-pretty">{it.title}</h2>
 
-      <AskCard what={isArticle ? 'article' : 'thread'} />
+      <AskCard what={isArticle ? 'article' : 'thread'} item={it.id} />
 
       {matches.count > 0 && (
         <div className="flex items-center gap-6 font-mono text-meta text-mute">

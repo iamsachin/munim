@@ -6,21 +6,23 @@ export const SCOPES = ['Everything', 'Saved', 'This week', 'Open item'] as const
 export type Scope = (typeof SCOPES)[number];
 
 /**
- * What still runs on sample data in the browser: watches and Ask. Items, feeds, highlights,
- * connections, AI settings and sign-in are the server's.
+ * What still runs on sample data in the browser: watches. Items, feeds, highlights, questions
+ * and answers, connections, AI settings and sign-in are the server's.
  */
 export interface ReaderState {
   watchOff: ReadonlySet<string>;
   watchNew: readonly string[];
+  /** What the next question is asked of. */
   scope: Scope;
-  asks: readonly { q: string; scope: Scope }[];
+  /** The item "Open item" means: the one a question was last asked from. */
+  openItem: number | undefined;
 }
 
 export const INITIAL: ReaderState = {
   watchOff: new Set(),
   watchNew: [],
   scope: 'Everything',
-  asks: [],
+  openItem: undefined,
 };
 
 type Update = (patch: Partial<ReaderState> | ((s: ReaderState) => Partial<ReaderState>)) => void;
@@ -66,14 +68,3 @@ export function watchRows(s: ReaderState): WatchRow[] {
 
 export const matchCount = (s: ReaderState) =>
   watchRows(s).reduce((n, w) => n + (w.on ? w.count : 0), 0);
-
-/** Queues a question for the Ask screen. Returns false, changing nothing, if it is blank. */
-export function ask(update: Update, question: string, scope?: Scope) {
-  const q = question.trim();
-  if (!q) return false;
-  update((s) => ({
-    scope: scope ?? s.scope,
-    asks: [...s.asks, { q, scope: scope ?? s.scope }],
-  }));
-  return true;
-}

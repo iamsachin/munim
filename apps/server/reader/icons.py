@@ -13,6 +13,7 @@ from urllib.parse import urljoin
 from django.conf import settings
 
 from reader import feeds, images
+from reader.models import Item
 
 MAX_ICON_BYTES = 1_000_000
 MAX_PAGE_BYTES = 2_000_000
@@ -25,6 +26,14 @@ TYPES = images.ALLOWED_TYPES | {"image/x-icon", "image/vnd.microsoft.icon"}
 SITES = {"HN": "https://news.ycombinator.com/", "YT": "https://www.youtube.com/"}
 
 NONE = "That site has no icon Munim can show."
+
+
+def address_of(item: Item) -> str | None:
+    """Where the browser asks Munim for the icon of the item's site: its feed's site, or its
+    source's own. An article whose feed was removed has no site left to ask."""
+    if item.feed_id:
+        return f"/api/feeds/{item.feed_id}/icon"
+    return f"/api/sources/{item.source}/icon" if item.source in SITES else None
 
 
 class _Links(HTMLParser):

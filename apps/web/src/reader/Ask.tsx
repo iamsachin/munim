@@ -1,33 +1,21 @@
-import { useQuery } from '@tanstack/react-query';
-import { api } from '../api/client';
+import { useMutationState } from '@tanstack/react-query';
+import type { Ask as Asked } from '../api/client';
 import { ScreenHeader } from '../shell/ScreenHeader';
-import { AiBadge, SectionLabel, type Source } from '../ui/atoms';
+import { AiBadge, SectionLabel } from '../ui/atoms';
 import { Card } from '../ui/Card';
 import { Chip, SuggestChip } from '../ui/Chip';
 import { CitationRow } from '../ui/CitationRow';
-import { ask, SCOPES, useReader } from './store';
+import { EmptyState, ErrorState, LoadingRows } from '../ui/States';
+import { EMPTY } from './copy';
+import { useAsk, useAsks } from './queries';
+import { SCOPES, useReader } from './store';
 
-interface Exchange {
-  q: string;
-  scope: string;
-  a: string;
-  cites: { src: Source; title: string; from: string }[];
-}
-
-// Mock: the one worked example from the handoff.
-const SAMPLE: Exchange = {
-  q: 'What did people say about API rate limits this week?',
-  scope: 'From everything',
-  a: 'Three threads touch on it. On r/selfhosted, several people say replies from third-party clients fail roughly one time in ten [1]. @api_watch reports that read limits dropped on the free tier of X while posting limits are unchanged [2]. On Hacker News the consensus is to cache aggressively and poll less often [3].',
-  cites: [
-    {
-      src: 'RD',
-      title: 'What finally got you to move your feeds off five different apps?',
-      from: 'r/selfhosted',
-    },
-    { src: 'X', title: 'Rate limits changed again. Summary of what moved', from: '@api_watch' },
-    { src: 'HN', title: 'Ask HN: How do you keep track of long discussions?', from: '208 points' },
-  ],
+/** What a question was asked of, as the answer's card says it. */
+const FROM: Record<Asked['scope'], string> = {
+  everything: 'From everything',
+  saved: 'From saved',
+  week: 'From this week',
+  item: 'From open item',
 };
 
 const TRY = [
@@ -36,22 +24,20 @@ const TRY = [
   'What is new about sync protocols?',
 ];
 
+/**
+ * What was asked and what was answered. A question goes to the server, where the worker puts
+ * it to the model the owner chose for Ask; the answer appears here when it is ready, with the
+ * items it rests on.
+ */
 export function Ask() {
   const { state, update } = useReader();
-  // The server decides: it is where this month's cost and the limit are.
-  const paused = useQuery({ queryKey: ['ai-limit'], queryFn: api.aiLimit }).data?.paused ?? false;
-  const log: Exchange[] = [
-    SAMPLE,
-    ...state.asks.map(({ q, scope }) => ({
-      q,
-      scope: `From ${scope.toLowerCase()}`,
-      // Honest placeholders until the AI milestone.
-      a: paused
-        ? "AI is paused: this month's limit is reached. Raise it under AI, or wait for next month."
-        : `Answers are not connected yet. This question would be run over ${scope.toLowerCase()}.`,
-      cites: [],
-    })),
-  ];
+  const ask = useAsk();
+  const asks = useAsks();
+  // Questions that never reached the server, so are not in its list: they are said here.
+  const unsent = useMutationState({
+    filters: { mutationKey: ['ask'], status: 'error' },
+    select: (mutation) => (mutation.state.variables as { question: string }).question,
+  });
 
   return (
     <main className="flex min-h-0 flex-1 flex-col">
@@ -70,19 +56,52 @@ export function Ask() {
         ))}
       </ScreenHeader>
       <div className="flex min-h-0 max-w-820 flex-1 flex-col gap-14 overflow-y-auto px-16 py-20">
-        {log.map((m, n) => (
-          <div key={n} className="flex flex-col gap-10">
-            <div className="max-w-4/5 self-end rounded-8 bg-card px-12 py-8 text-prose">{m.q}</div>
+        {asks.isPending && <LoadingRows what="what was asked" rows={3} />}
+        {asks.isError && <ErrorState what="what was asked" onRetry={() => void asks.refetch()} />}
+        {asks.data?.length === 0 && unsent.length === 0 && (
+          <EmptyState compact>{EMPTY.asks}</EmptyState>
+        )}
+        {asks.data?.map((asked) => (
+          <div key={asked.id} className="flex flex-col gap-10">
+            <div className="max-w-4/5 self-end rounded-8 bg-card px-12 py-8 text-prose">
+              {asked.question}
+            </div>
             <Card tone="ai" className="gap-8">
               <div className="flex items-center gap-8">
                 <AiBadge />
-                <span className="font-mono text-code text-mute">{m.scope}</span>
+                <span className="font-mono text-code text-mute">{FROM[asked.scope]}</span>
               </div>
-              <div className="text-prose leading-prose text-pretty">{m.a}</div>
-              {m.cites.map((c, i) => (
-                <CitationRow key={c.title} index={i + 1} {...c} />
+              {asked.status === 'pending' ? (
+                <div role="status" className="text-prose text-mute">
+                  Waiting for the answer.
+                </div>
+              ) : (
+                // pre-line keeps the paragraphs the model wrote.
+                <div className="text-prose leading-prose text-pretty whitespace-pre-line">
+                  {asked.answer || asked.problem}
+                </div>
+              )}
+              {asked.cites.map((cite, i) => (
+                <CitationRow
+                  key={i}
+                  index={i + 1}
+                  src={cite.source}
+                  icon={cite.icon}
+                  title={cite.title}
+                  from={cite.origin}
+                />
               ))}
             </Card>
+          </div>
+        ))}
+        {unsent.map((question, n) => (
+          <div key={n} className="flex flex-col gap-4">
+            <div className="max-w-4/5 self-end rounded-8 bg-card px-12 py-8 text-prose">
+              {question}
+            </div>
+            <div role="alert" className="self-end text-note text-a3">
+              This question could not be sent. Ask it again.
+            </div>
           </div>
         ))}
         <div className="flex flex-wrap items-center gap-6">
@@ -91,7 +110,7 @@ export function Ask() {
             <SuggestChip
               key={t}
               onClick={() => {
-                ask(update, t);
+                ask(t);
               }}
             >
               {t}

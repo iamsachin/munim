@@ -732,6 +732,50 @@
         "security": [{ "Open": [] }]
       }
     },
+    "/api/asks": {
+      "get": {
+        "operationId": "reader_api_list_asks",
+        "summary": "List Asks",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/AskOut" },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "description": "The questions asked, oldest first, as a conversation reads.",
+        "tags": ["reader"],
+        "security": [{ "Open": [] }]
+      },
+      "post": {
+        "operationId": "reader_api_ask_question",
+        "summary": "Ask Question",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/AskOut" } }
+            }
+          }
+        },
+        "description": "Takes a question. The worker puts it to the model, so the answer comes later; what\nstops it being asked at all (no model, the limit, no item) is its answer at once.",
+        "tags": ["reader"],
+        "requestBody": {
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AskIn" } } },
+          "required": true
+        },
+        "security": [{ "Open": [] }]
+      }
+    },
     "/api/counts": {
       "get": {
         "operationId": "reader_api_counts",
@@ -1546,6 +1590,65 @@
         },
         "required": ["client_id", "client_secret"],
         "title": "YouTubeCredentials",
+        "type": "object"
+      },
+      "AskOut": {
+        "description": "A question and its answer. The answer cites items by number: [1] is the first cite.",
+        "properties": {
+          "id": { "title": "Id", "type": "integer" },
+          "question": { "title": "Question", "type": "string" },
+          "scope": {
+            "enum": ["everything", "saved", "week", "item"],
+            "title": "Scope",
+            "type": "string"
+          },
+          "status": {
+            "enum": ["pending", "answered", "failed"],
+            "title": "Status",
+            "type": "string"
+          },
+          "answer": { "title": "Answer", "type": "string" },
+          "problem": { "title": "Problem", "type": "string" },
+          "cites": {
+            "items": { "$ref": "#/components/schemas/Cite" },
+            "title": "Cites",
+            "type": "array"
+          },
+          "asked_at": { "format": "date-time", "title": "Asked At", "type": "string" }
+        },
+        "required": ["id", "question", "scope", "status", "answer", "problem", "cites", "asked_at"],
+        "title": "AskOut",
+        "type": "object"
+      },
+      "Cite": {
+        "description": "An item an answer cites, as it was when the answer was written.",
+        "properties": {
+          "item_id": { "anyOf": [{ "type": "integer" }, { "type": "null" }], "title": "Item Id" },
+          "source": {
+            "enum": ["RD", "X", "IG", "HN", "YT", "RSS"],
+            "title": "Source",
+            "type": "string"
+          },
+          "title": { "title": "Title", "type": "string" },
+          "origin": { "title": "Origin", "type": "string" },
+          "icon": { "anyOf": [{ "type": "string" }, { "type": "null" }], "title": "Icon" }
+        },
+        "required": ["item_id", "source", "title", "origin", "icon"],
+        "title": "Cite",
+        "type": "object"
+      },
+      "AskIn": {
+        "properties": {
+          "question": { "maxLength": 2000, "minLength": 1, "title": "Question", "type": "string" },
+          "scope": {
+            "enum": ["everything", "saved", "week", "item"],
+            "title": "Scope",
+            "type": "string"
+          },
+          "item_id": { "anyOf": [{ "type": "integer" }, { "type": "null" }], "title": "Item Id" }
+        },
+        "required": ["question", "scope"],
+        "title": "AskIn",
         "type": "object"
       },
       "Counts": {

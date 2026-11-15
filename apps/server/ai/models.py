@@ -44,6 +44,14 @@ class FeatureModel(models.Model):
         return f"{self.get_feature_display()}: {self.model}"
 
 
+def usable(feature: str) -> tuple[FeatureModel, ProviderKey] | None:
+    """The model a feature runs on and the key to call it with, or None if the feature is off:
+    no model is chosen, or its provider's key is missing, rejected or no longer lists it."""
+    chosen = FeatureModel.objects.filter(feature=feature).first()
+    key = chosen and ProviderKey.objects.filter(provider=chosen.provider, ok=True).first()
+    return (chosen, key) if chosen and key and chosen.model in key.models else None
+
+
 class ModelPrice(models.Model):
     """What the owner says a model costs, in dollars for a million tokens. Providers' lists of
     models carry no prices, so the owner copies them from the provider's pricing page."""

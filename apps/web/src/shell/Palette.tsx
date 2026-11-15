@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useSession } from '../account/session';
 import { api } from '../api/client';
-import { ask, useReader } from '../reader/store';
+import { useAsk } from '../reader/queries';
 import { useTheme } from '../settings';
 import { SOURCES, type Source } from '../ui/atoms';
 import { cx } from '../ui/cx';
@@ -20,7 +20,7 @@ interface Command {
  * Focus stays in the field; arrow keys move through the list and Enter runs the marked command.
  */
 export function Palette({ onClose, onHelp }: { onClose: () => void; onHelp: () => void }) {
-  const { update } = useReader();
+  const ask = useAsk();
   const session = useSession();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
@@ -66,7 +66,7 @@ export function Palette({ onClose, onHelp }: { onClose: () => void; onHelp: () =
           {
             label: `Ask: ${question}`,
             run: () => {
-              ask(update, question);
+              ask(question);
               void navigate('/ask');
             },
           },

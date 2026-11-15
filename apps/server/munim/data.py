@@ -14,7 +14,7 @@ from django.utils.text import slugify
 
 from account.models import Preferences
 from ai.models import FeatureModel, ModelPrice, ProviderKey, Usage
-from reader.models import Channel, Connection, Feed, Highlight, Item
+from reader.models import Ask, Channel, Connection, Feed, Highlight, Item
 
 ABOUT = """\
 Everything Munim held when this archive was made.
@@ -22,6 +22,7 @@ Everything Munim held when this archive was made.
 feeds.json        the feeds you follow
 items.json        every item: where it came from, what you did with it, its text and replies
 highlights.json   your highlights and notes, each with the id of its item
+asks.json         what you asked, what was answered, and the items each answer cited
 settings.json     the settings kept on the server
 ai-usage.json     each call made to an AI model: when, by which feature, its tokens and cost
 saved/            the text of each item you saved, as a plain file
@@ -104,6 +105,20 @@ def export() -> IO[bytes]:
             "ai-usage.json",
             (dict(call) for call in Usage.objects.order_by("at").values().iterator()),
         )
+        _rows(
+            archive,
+            "asks.json",
+            (
+                {
+                    "question": a.question,
+                    "scope": a.get_scope_display(),
+                    "answer": a.answer or a.problem,
+                    "cites": [cite["title"] for cite in a.cites],
+                    "asked_at": a.asked_at,
+                }
+                for a in Ask.objects.iterator()
+            ),
+        )
         for item in items.filter(saved_at__isnull=False).iterator():
             name = f"saved/{item.pk}-{slugify(item.title)[:60] or 'untitled'}.txt"
             archive.writestr(name, f"{item.title}\n{item.url}\n\n{item.body}\n")
@@ -112,10 +127,12 @@ def export() -> IO[bytes]:
 
 
 def delete_all() -> None:
-    """Removes what the owner put in: feeds, items with their highlights, which sources are on,
+    """Removes what the owner put in: feeds, items with their highlights, what was asked and
+    answered, which sources are on,
     the API keys, the model chosen for each AI feature, the prices and the record of AI use. The
     account itself (passphrase, devices, lock setting, AI limit) stays."""
     with transaction.atomic():
+        Ask.objects.all().delete()
         Item.objects.all().delete()
         Feed.objects.all().delete()
         Connection.objects.all().delete()
