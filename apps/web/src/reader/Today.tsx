@@ -6,8 +6,7 @@ import { buttonClass } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { EmptyState, ErrorState, LoadingRows } from '../ui/States';
 import { EMPTY } from './copy';
-import { DIGESTS } from './fixtures';
-import { useHighlights, useItems } from './queries';
+import { useDigests, useHighlights, useItems } from './queries';
 import { useReader, watchRows } from './store';
 
 const SOURCE_ORDER: Source[] = ['RD', 'X', 'IG', 'HN', 'YT', 'RSS'];
@@ -43,9 +42,13 @@ function Section({
 export function Today() {
   const { state } = useReader();
   const highlights = useHighlights();
+  const digests = useDigests();
+  const daily = digests.data?.daily;
   const items = useItems();
   const later = useItems({ show: 'later' });
   const [now] = useState(() => Date.now());
+  // The owner's own date, as a digest's day is written: 2026-11-15.
+  const today = new Date(now).toLocaleDateString('en-CA');
 
   // "New since yesterday": what was published in the last day, grouped by where it came from.
   const fresh = (items.data ?? []).filter((item) => now - Date.parse(item.published_at) < DAY_MS);
@@ -67,12 +70,27 @@ export function Today() {
           <Card tone="ai" className="gap-8">
             <div className="flex items-center gap-8">
               <AiBadge />
-              <h2 className="font-semibold">This morning&apos;s digest</h2>
+              <h2 className="font-semibold">
+                {/* Said as this morning's only if it is today's. */}
+                {daily && daily.day !== today ? 'The last digest' : "This morning's digest"}
+              </h2>
               <Link to="/digest" className={`${buttonClass()} ml-auto`}>
                 Open digest
               </Link>
             </div>
-            <div className="text-prose leading-prose text-pretty">{DIGESTS.Daily.lead}</div>
+            {digests.isPending && <LoadingRows what="the digest" rows={2} />}
+            {digests.isError && (
+              <ErrorState what="the digest" onRetry={() => void digests.refetch()} />
+            )}
+            {digests.data && (
+              <div className="text-prose leading-prose text-pretty">
+                {daily
+                  ? daily.lead || daily.problem
+                  : digests.data.on
+                    ? EMPTY.digest
+                    : 'Digest is off. Switch it on under Digest.'}
+              </div>
+            )}
           </Card>
 
           <Section label="New since yesterday" to="/stream" action="Open stream">

@@ -348,6 +348,7 @@ def test_the_poll_is_scheduled_every_fifteen_minutes() -> None:
         "reader.tasks.poll_hacker_news": "*/15 * * * *",
         "reader.tasks.poll_youtube": "7 * * * *",
         "reader.tasks.recover_jobs": "*/5 * * * *",
+        "reader.tasks.write_digests": "0 * * * *",
     }
 
 

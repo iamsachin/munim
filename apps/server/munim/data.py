@@ -14,7 +14,7 @@ from django.utils.text import slugify
 
 from account.models import Preferences
 from ai.models import FeatureModel, ModelPrice, ProviderKey, Usage
-from reader.models import Ask, Channel, Connection, Feed, Highlight, Item
+from reader.models import Ask, Channel, Connection, Digest, Feed, Highlight, Item
 
 ABOUT = """\
 Everything Munim held when this archive was made.
@@ -24,6 +24,7 @@ items.json        every item: where it came from, what you did with it, its text
 highlights.json   your highlights and notes, each with the id of its item, or the question
                   whose answer it is from
 asks.json         what you asked, what was answered, and the items each answer cited
+digests.json      the digests written for you, and the items each names
 settings.json     the settings kept on the server
 ai-usage.json     each call made to an AI model: when, by which feature, its tokens and cost
 saved/            the text of each item you saved, as a plain file
@@ -100,6 +101,8 @@ def export() -> IO[bytes]:
                     "sources_on": sorted(on),
                     "ai_models": {c.feature: f"{c.provider}/{c.model}" for c in chosen},
                     "ai_limit": prefs.ai_limit,
+                    "digest_on": prefs.digest_on,
+                    "time_zone": prefs.time_zone,
                     "ai_prices": {
                         f"{p.provider}/{p.model}": {"input": p.input, "output": p.output}
                         for p in ModelPrice.objects.all()
@@ -126,6 +129,26 @@ def export() -> IO[bytes]:
                 for a in Ask.objects.iterator()
             ),
         )
+        _rows(
+            archive,
+            "digests.json",
+            (
+                {
+                    "kind": d.kind,
+                    "day": d.day,
+                    "lead": d.lead or d.problem,
+                    "sections": [
+                        {
+                            "head": section["head"],
+                            "text": section["text"],
+                            "items": [cite["title"] for cite in section["cites"]],
+                        }
+                        for section in d.sections
+                    ],
+                }
+                for d in Digest.objects.iterator()
+            ),
+        )
         for item in items.filter(saved_at__isnull=False).iterator():
             name = f"saved/{item.pk}-{slugify(item.title)[:60] or 'untitled'}.txt"
             archive.writestr(name, f"{item.title}\n{item.url}\n\n{item.body}\n")
@@ -135,11 +158,12 @@ def export() -> IO[bytes]:
 
 def delete_all() -> None:
     """Removes what the owner put in: feeds, items with their highlights, what was asked and
-    answered, which sources are on,
+    answered, the digests, which sources are on,
     the API keys, the model chosen for each AI feature, the prices and the record of AI use. The
     account itself (passphrase, devices, lock setting, AI limit) stays."""
     with transaction.atomic():
         Ask.objects.all().delete()
+        Digest.objects.all().delete()
         Item.objects.all().delete()
         Feed.objects.all().delete()
         Connection.objects.all().delete()

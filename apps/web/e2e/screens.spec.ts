@@ -763,6 +763,76 @@ test('ask: with nothing asked yet the screen says so', async ({ page }) => {
   await expect(page.getByText('Nothing asked yet.')).toBeVisible();
 });
 
+test('digest: it is off until switched on, with the time zone of this browser; a day with nothing written says why', async ({
+  page,
+}) => {
+  await fakeServer(page);
+  const none = { daily: null, weekly: null };
+  await page.route('**/api/digests', (route) => route.fulfill({ json: { on: false, ...none } }));
+  let sent: unknown;
+  await page.route('**/api/digests/on', (route) => {
+    sent = route.request().postDataJSON();
+    return route.fulfill({ json: { on: true, ...none } });
+  });
+  await page.goto('/digest');
+  const toggle = page.getByRole('switch', { name: 'Write digests' });
+  await expect(toggle).toHaveAttribute('aria-checked', 'false');
+  await expect(
+    page.getByText(/^Digest is off\. Switched on, one is written each day/),
+  ).toBeVisible();
+  await expect(page).toHaveScreenshot('digest-off-dark.png');
+  expect(await axeFailures(page)).toEqual([]);
+
+  // Seven o'clock is the owner's: switching it on says where this browser is.
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-checked', 'true');
+  expect(sent).toEqual({ on: true, time_zone: expect.stringMatching(/\w/) });
+  await expect(page.getByText('No digest yet. The first one is written at 7:00.')).toBeVisible();
+
+  // A day on which nothing could be written has the reason where the digest would be.
+  await page.unroute('**/api/digests');
+  await page.route('**/api/digests', (route) =>
+    route.fulfill({
+      json: {
+        on: true,
+        weekly: null,
+        daily: {
+          kind: 'daily',
+          day: '2026-11-14',
+          lead: '',
+          sections: [],
+          problem: 'No model is chosen for Digest. Choose one under AI.',
+          written_at: new Date(NOW).toISOString(),
+        },
+      },
+    }),
+  );
+  await page.reload();
+  await expect(page.getByRole('heading', { level: 2 })).toHaveText('Saturday 14 November');
+  await expect(page.getByText('No model is chosen for Digest. Choose one under AI.')).toBeVisible();
+  await page.getByRole('button', { name: 'Weekly' }).click();
+  await expect(page.getByText('No digest yet. The first one is written at 7:00.')).toBeVisible();
+});
+
+test('digest: the weekly one is headed by its week, and an item it names opens in the Stream', async ({
+  page,
+}) => {
+  await open(page, '/digest');
+  await expect(page.getByRole('switch', { name: 'Write digests' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await page.getByRole('button', { name: 'Weekly' }).click();
+  await expect(page.getByRole('heading', { level: 2 })).toHaveText(/^Week of \d+ \w+$/);
+  await page
+    .getByRole('link', { name: /Show HN: A local-first archive for everything you read/ })
+    .click();
+  await expect(page).toHaveURL(/\/stream\?item=3$/);
+  await expect(
+    page.getByRole('complementary', { name: 'Thread' }).getByRole('heading', { level: 2 }),
+  ).toHaveText('Show HN: A local-first archive for everything you read');
+});
+
 test('thread question is scoped to the open item', async ({ page }) => {
   await open(page, '/stream');
   const title = await page

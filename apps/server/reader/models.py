@@ -205,3 +205,30 @@ class Ask(models.Model):
 
     def __str__(self) -> str:
         return self.question[:60]
+
+
+class Digest(models.Model):
+    """What came in, written up by a model for the owner: one a day, and one a week."""
+
+    class Kind(models.TextChoices):
+        DAILY = "daily", "Daily"
+        WEEKLY = "weekly", "Weekly"
+
+    kind = models.CharField(max_length=6, choices=Kind.choices)
+    # The date it is for, on the owner's own clock: there is one of each kind for a day.
+    day = models.DateField()
+    lead = models.TextField(blank=True)
+    # Each section as {head, text, cites}; a cite is an item as it was then (see Ask.cites).
+    sections = models.JSONField(default=list, blank=True)
+    # Why nothing was written, in words for the owner. Empty if something was.
+    problem = models.CharField(max_length=300, blank=True)
+    written_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-day", "-id"]
+        constraints = [
+            models.UniqueConstraint(fields=["kind", "day"], name="one_digest_of_a_kind_a_day")
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.kind} {self.day}"

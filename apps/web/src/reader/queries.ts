@@ -147,6 +147,27 @@ const SCOPE_CODES = {
 } as const satisfies Record<Scope, Ask['scope']>;
 
 /**
+ * The latest daily and weekly digest, and whether they are being written. Switched on with
+ * none yet, it is looked for again every so often: the worker writes it, not this request.
+ */
+export const useDigests = () =>
+  useQuery({
+    queryKey: ['digests'],
+    queryFn: api.digests,
+    refetchInterval: (query) => (query.state.data?.on && !query.state.data.daily ? 10_000 : false),
+  });
+
+export function useSetDigests() {
+  const queries = useQueryClient();
+  return useMutation({
+    mutationFn: api.setDigests,
+    onSuccess: (digests) => {
+      queries.setQueryData(['digests'], digests);
+    },
+  });
+}
+
+/**
  * What was asked and answered. While an answer is being written it is asked for a few times a
  * second, so the words are seen as they arrive.
  */
