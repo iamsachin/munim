@@ -241,6 +241,9 @@ def test_a_question_is_answered_by_the_worker_from_matching_items_with_citations
             "title": "Show HN: an offline archive",
             "origin": "612 points",
             "icon": "/api/sources/HN/icon",
+            "quote": "",
+            "reply": None,
+            "who": "",
         }
     ]
     # The call is on the record, at the price entered for the model.
@@ -256,6 +259,33 @@ def test_a_question_is_answered_by_the_worker_from_matching_items_with_citations
     # Run again, as after a crash, it does not ask or charge twice.
     answer_ask(ask_id=waiting["id"])
     assert len(model.seen) == 1
+
+
+def test_a_citation_carries_the_words_it_rests_on_if_the_item_has_them(
+    library: dict[str, Item],
+) -> None:
+    items = [library["sync"], library["hn"]]
+    text, cites = ask.cited(
+        'Boring is best [1 "sync protocols  should be BORING"]. So they say [1]. '
+        'Sync is hard [2: “Sync is the hard part.”], very [2 "Sync is the hard part"]. '
+        'Cheese is nice [2 "cheese is nice"]. Again [1 "Sync protocols should be boring"]. '
+        'No such item [7 "Sync"]. And [1 "clever',
+        items,
+    )
+    # Each distinct passage has its own number; the same one again keeps its number. Words an
+    # item does not have are not shown as its words: the item is cited without them. A
+    # citation still being written, at the end, is not shown yet.
+    assert text == (
+        "Boring is best [1]. So they say [2]. Sync is hard [3], very [3]. "
+        "Cheese is nice [4]. Again [1]. No such item . And "
+    )
+    assert [(str(c["title"])[:8], c["quote"], c["reply"], c["who"]) for c in cites] == [
+        # As the item has the words, whatever their case and spacing in the answer.
+        ("The case", "Sync protocols should be boring", None, ""),
+        ("The case", "", None, ""),
+        ("Show HN:", "Sync is the hard part", 0, "marrow_fern"),
+        ("Show HN:", "", None, ""),
+    ]
 
 
 def test_only_what_was_given_can_be_cited(library: dict[str, Item]) -> None:
@@ -461,6 +491,9 @@ def test_a_follow_up_is_answered_from_the_same_items_with_what_was_said_before(
             "title": "Show HN: an offline archive",
             "origin": "612 points",
             "icon": "/api/sources/HN/icon",
+            "quote": "",
+            "reply": None,
+            "who": "",
         }
     )
     assert first["about"] is None

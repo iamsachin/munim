@@ -113,6 +113,10 @@ export async function fakeServer(page: Page, start: State = 'open') {
     title: 'Ask HN: How do you keep track of long discussions?',
     origin: '208 points',
     icon: iconOf('HN'),
+    // The words of the item a citation rests on, if any, and the reply they are in.
+    quote: '',
+    reply: null as number | null,
+    who: '',
   };
   const ARCHIVE_THREAD = {
     item_id: 3,
@@ -120,6 +124,9 @@ export async function fakeServer(page: Page, start: State = 'open') {
     title: 'Show HN: A local-first archive for everything you read',
     origin: '612 points',
     icon: iconOf('HN'),
+    quote: '',
+    reply: null as number | null,
+    who: '',
   };
   // What was asked: one worked example, as the design has, about sources this install reads.
   const SAMPLE_ASK = {
@@ -140,6 +147,9 @@ export async function fakeServer(page: Page, start: State = 'open') {
         title: 'The case for boring sync protocols',
         origin: 'Wire Notes',
         icon: iconOf('RSS', NO_ICON_FEED),
+        quote: '',
+        reply: null,
+        who: '',
       },
       {
         item_id: 3,
@@ -147,6 +157,9 @@ export async function fakeServer(page: Page, start: State = 'open') {
         title: 'Conflict-free sync explained in 12 minutes',
         origin: 'Wire Talks',
         icon: iconOf('YT'),
+        quote: '',
+        reply: null,
+        who: '',
       },
     ],
     asked_at: ago(2 * 3_600_000),
@@ -158,9 +171,18 @@ export async function fakeServer(page: Page, start: State = 'open') {
     question: 'Summarize this thread',
     scope: 'item',
     about: ARCHIVE_THREAD,
+    // Each claim rests on words of a reply in the thread, which its citation shows.
     answer:
-      'Most replies like that the archive keeps everything on your own disk, and ask how it copes with two devices changing the same note [1].\n\nA few doubt that search will stay fast past a few thousand items, and one wrote a script that mails them the threads they starred [1].',
-    cites: [ARCHIVE_THREAD],
+      'Readers think it was right to build export before anything else [1].\n\nOne asks how large the index gets for ten thousand articles, and the author says about 400 MB with full text [2].',
+    cites: [
+      {
+        ...ARCHIVE_THREAD,
+        quote: 'Export as the first feature is the right call',
+        reply: 0,
+        who: 'pfk',
+      },
+      { ...ARCHIVE_THREAD, quote: 'About 400 MB with full text', reply: 2, who: 'author' },
+    ],
     asked_at: ago(5 * 3_600_000),
   };
   let asks = [SAMPLE_POST_ASK, SAMPLE_ASK];
@@ -564,6 +586,9 @@ export async function fakeServer(page: Page, start: State = 'open') {
                 title: item.title,
                 origin: item.origin,
                 icon: iconOf(item.source, item.feed),
+                quote: '',
+                reply: null,
+                who: '',
               }
             : null,
         status: problem ? 'failed' : 'pending',

@@ -654,18 +654,23 @@ test('ask: a conversation about a post is one chat under a link to the post; a p
 }) => {
   await open(page, '/ask');
   const thread = 'Show HN: A local-first archive for everything you read';
-  const row = page.getByRole('row', { name: new RegExp(thread) });
+  const row = page
+    .getByRole('table', { name: 'Conversations' })
+    .getByRole('row', { name: new RegExp(thread) });
   await row.getByRole('button').click();
   const pane = page.getByRole('region', { name: 'Conversation' });
-  // The post is named once, above the conversation: no answer says again what it is from,
-  // cites it again, or carries marks that would all point at it.
+  // The post is named once, above the conversation: no answer says again what it is from.
+  // A citation shows the words of the thread it rests on, and who wrote them.
   await expect(pane.getByRole('heading')).toHaveText(thread);
-  await expect(pane).toContainText('changing the same note.');
-  await expect(pane).not.toContainText('[1]');
   await expect(pane).not.toContainText('From open item');
   await expect(pane.getByText(thread)).toHaveCount(1);
+  await expect(pane).toContainText('before anything else [1].');
+  const cites = pane.getByRole('link', { name: /“/ });
+  await expect(cites).toHaveCount(2);
+  await expect(cites.nth(0)).toContainText('“Export as the first feature is the right call”pfk');
+  await expect(cites.nth(1)).toContainText('“About 400 MB with full text”author');
 
-  const quote = 'a script that mails them the threads they starred';
+  const quote = 'how large the index gets for ten thousand articles';
   await selectText(page, quote);
   await page.getByRole('button', { name: 'Highlight', exact: true }).click();
   await expect(pane.locator('mark')).toHaveText(quote);
@@ -681,8 +686,21 @@ test('ask: a conversation about a post is one chat under a link to the post; a p
   await expect(page.getByRole('main').locator('mark').first()).toHaveText(quote);
   expect(await axeFailures(page)).toEqual([]);
 
+  // A citation is a link to its words: the post opens in the Stream with them marked and in
+  // view, as a search match is.
+  await page.getByRole('link', { name: 'Ask', exact: true }).click();
+  await row.getByRole('button').click();
+  await cites.nth(1).click();
+  await expect(page).toHaveURL(/\/stream\?item=3&quote=About\+400\+MB\+with\+full\+text&reply=2$/);
+  const opened = page.getByRole('complementary', { name: 'Thread' });
+  await expect(opened.getByRole('heading', { level: 2 })).toHaveText(thread);
+  await expect(opened.locator('mark[data-found]')).toHaveText('About 400 MB with full text');
+  await expect(opened.getByRole('status')).toHaveText('Match 1 of 1');
+  await expect(page).toHaveScreenshot('ask-citation-opened-dark.png');
+
   // The heading is a link to the post itself, which opens in the Stream.
   await page.getByRole('link', { name: 'Ask', exact: true }).click();
+  await expect(page).toHaveURL(/\/ask$/);
   await row.getByRole('button').click();
   await pane.getByRole('link', { name: thread }).click();
   await expect(page).toHaveURL(/\/stream\?item=3$/);
@@ -710,7 +728,10 @@ test('ask: a conversation about a post is one chat under a link to the post; a p
     }),
   );
   await page.goto('/ask');
-  await selectText(page, 'Sync protocols');
+  // Tried until it holds: the screen is drawn again once the session is known.
+  await expect(async () => {
+    await selectText(page, 'Sync protocols');
+  }).toPass();
   await expect(page.getByRole('button', { name: 'Highlight', exact: true })).toHaveCount(0);
 });
 

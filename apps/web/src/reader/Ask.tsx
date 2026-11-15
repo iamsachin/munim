@@ -34,6 +34,16 @@ const TRY = [
   'What is new about sync protocols?',
 ];
 
+/** The address of what a citation rests on: its item open in the Stream, at the words quoted. */
+function place(cite: Asked['cites'][number]) {
+  const at = new URLSearchParams({ item: String(cite.item_id) });
+  if (cite.quote) {
+    at.set('quote', cite.quote);
+    if (cite.reply !== null) at.set('reply', String(cite.reply));
+  }
+  return `/stream?${at.toString()}`;
+}
+
 const COLS = 'grid-cols-[34px_minmax(0,1fr)_40px_30px]';
 
 /**
@@ -51,11 +61,16 @@ function Answer({
   plain: boolean;
 }) {
   const own = highlights.filter((h) => h.ask_id === asked.id);
-  // Lines with words, as the server counts them. Said plainly, an answer has no citation
-  // marks: they would all point at the one post named above the conversation.
+  // Lines with words, as the server counts them. Said plainly, an answer keeps only the
+  // citation marks that have words to show: the rest would all point at the one post named
+  // above the conversation.
   const lines = asked.answer
     .split('\n')
-    .map((line) => (plain ? line.replace(/ ?\[\d+\]/g, '') : line))
+    .map((line) =>
+      plain
+        ? line.replace(/ ?\[(\d+)\]/g, (mark, n) => (asked.cites[Number(n) - 1]?.quote ? mark : ''))
+        : line,
+    )
     .filter((line) => line.trim());
   // Where a highlight is in a line: where it was made if those are still its words, or
   // wherever its words now are.
@@ -118,16 +133,23 @@ function Exchange({
             Waiting for the answer.
           </div>
         )}
-        {(plain ? [] : asked.cites).map((cite, i) => (
-          <CitationRow
-            key={i}
-            index={i + 1}
-            src={cite.source}
-            icon={cite.icon}
-            title={cite.title}
-            from={cite.origin}
-          />
-        ))}
+        {asked.cites.map(
+          (cite, i) =>
+            // Said plainly, a citation with no words to show would only repeat the post.
+            (!plain || cite.quote) && (
+              <CitationRow
+                key={i}
+                index={i + 1}
+                src={cite.source}
+                icon={cite.icon}
+                title={plain ? undefined : cite.title}
+                quote={cite.quote}
+                // Words from a reply are said with who wrote them.
+                from={cite.who || cite.origin}
+                to={cite.item_id === null ? undefined : place(cite)}
+              />
+            ),
+        )}
       </Card>
     </>
   );

@@ -69,3 +69,19 @@ test('search matches are found across bold text, in the text of the item only', 
   expect(marks[0]?.[0]?.found).toEqual([[12, 24]]);
   expect(marks[1]?.[0]?.found).toEqual([]);
 });
+
+test('words an item was opened at are marked as a match, where they are said to be or wherever they went', () => {
+  const replies = [[paragraph('Agreed.')], [paragraph('Export ', 'first', ' is right.')]];
+  // In a reply, whatever their case, across bold text.
+  const marks = marksFor([ARTICLE, ...replies], [], [], { reply: 1, quote: 'export first is' });
+  expect(marks[2]?.[0]?.found).toEqual([[0, 15]]);
+  expect(marks.flat().filter((unit) => unit.found.length)).toHaveLength(1);
+  // The reply has moved: the words are found where they now are. In the item's own text too.
+  const moved = marksFor([ARTICLE, replies[1] ?? []], [], [], { reply: 4, quote: 'first is' });
+  expect(moved[1]?.[0]?.found).toEqual([[7, 15]]);
+  const own = marksFor([ARTICLE, ...replies], [], [], { reply: null, quote: 'Keep a log' });
+  expect(own[0]?.[2]?.found).toEqual([[0, 10]]);
+  // Words that are nowhere mark nothing.
+  const none = marksFor([ARTICLE], [], [], { reply: null, quote: 'cheese' });
+  expect(none.flat().every((unit) => unit.found.length === 0)).toBe(true);
+});
