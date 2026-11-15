@@ -205,6 +205,24 @@ test('stream: opening an item marks it read; the default row is left alone', asy
   await expect(row(/^Show HN: A local-first/)).toHaveCount(0);
 });
 
+test("stream: a row shows its site's own icon, or the source's mark where there is none", async ({
+  page,
+}) => {
+  await open(page, '/stream');
+  const row = (title: string) => page.getByRole('row').filter({ hasText: title });
+  await expect(
+    row('Show HN: A local-first archive').locator('img[src="/api/sources/HN/icon"]'),
+  ).toBeVisible();
+  await expect(
+    row('A year of running my own feed reader').locator('img[src^="/api/feeds/"]'),
+  ).toBeVisible();
+  // This feed's site has no icon, and Reddit has no site Munim can ask: each shows its mark.
+  for (const title of ['The case for boring sync protocols', 'Is anyone still using RSS']) {
+    await expect(row(title).locator('img')).toHaveCount(0);
+    await expect(row(title).locator('svg')).toBeVisible();
+  }
+});
+
 test('stream: an empty stream, a failed one, and a failed item each say so', async ({ page }) => {
   await fakeServer(page);
   // The rows show ages, so the picture must not depend on when the test runs.

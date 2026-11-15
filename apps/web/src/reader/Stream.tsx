@@ -210,7 +210,7 @@ export function Stream() {
                   className={cx(COLS, 'min-h-44 items-center')}
                 >
                   <Cell>
-                    <SourceTag src={item.source} />
+                    <SourceTag src={item.source} icon={item.icon} />
                   </Cell>
                   <Cell className="flex min-w-0 items-center gap-10">
                     {item.media && (
@@ -470,7 +470,7 @@ function Thread({ id, now, q }: { id: number; now: number; q: string }) {
   return (
     <aside aria-label="Thread" className={frame}>
       <div className="flex items-center gap-8 font-mono text-meta text-mute">
-        <SourceTag src={it.source} inheritSize />
+        <SourceTag src={it.source} icon={it.icon} inheritSize />
         {/* Truncates at narrow widths so the buttons keep their place. */}
         <span className="min-w-0 truncate">
           {it.origin} · {age(it.published_at, now)}

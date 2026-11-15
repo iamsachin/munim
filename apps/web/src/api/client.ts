@@ -15,6 +15,9 @@ export type YouTube = Schemas['YouTubeOut'];
 /** A passage the owner marked, with its note and what it was taken from. */
 export type Highlight = Schemas['HighlightOut'];
 /** What the browser knows of a provider's key: its last four characters and whether it works. */
+/** Where the icon of a source that is one site is, at the server (which fetches and keeps it). */
+export const sourceIcon = (source: 'HN' | 'YT') => `/api/sources/${source}/icon`;
+
 export type AiKey = Schemas['KeyOut'];
 export type AiChoice = Schemas['ChoiceOut'];
 export type AiPrice = Schemas['Price'];

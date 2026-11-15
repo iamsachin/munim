@@ -67,7 +67,9 @@ def test_the_stream_lists_items_newest_first(stream: Client) -> None:
         "later_at": None,
         "media": None,
         "thumb": None,
+        "icon": first["icon"],
     }
+    assert first["icon"].startswith("/api/feeds/")
 
 
 def test_an_opened_item_has_its_text_and_address(stream: Client) -> None:

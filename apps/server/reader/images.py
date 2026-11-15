@@ -35,9 +35,24 @@ def source_of(item: Item, index: int) -> str:
     return str(sources[index])
 
 
-def _place(url: str) -> Path:
+def name_of(url: str) -> str:
+    """The file an address is kept in: its hash, in a folder named by the hash's start."""
     name = hashlib.sha256(url.encode()).hexdigest()
-    return Path(settings.DATA_DIR) / "images" / name[:2] / name
+    return f"{name[:2]}/{name}"
+
+
+def _place(url: str) -> Path:
+    return Path(settings.DATA_DIR) / "images" / name_of(url)
+
+
+def put(path: Path, data: bytes) -> None:
+    """Writes a file under another name and moves it into place, so a half-written file is
+    never served. The other name is its own, so two requests for one file cannot move each
+    other's."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    part = path.with_name(f"{path.name}.{uuid.uuid4().hex}.part")
+    part.write_bytes(data)
+    os.replace(part, path)
 
 
 def fetch(url: str) -> tuple[bytes, str]:
@@ -54,11 +69,6 @@ def fetch(url: str) -> tuple[bytes, str]:
     if got is None or got.content_type not in ALLOWED_TYPES:
         raise ImageProblem("That is not a picture Munim can show.")
 
-    place.parent.mkdir(parents=True, exist_ok=True)
-    # Written under another name and moved into place, so a half-written file is never served.
-    for path, data in ((place, got.content), (kind_file, got.content_type.encode())):
-        # Its own name, so two requests for one image cannot move each other's file.
-        part = path.with_name(f"{path.name}.{uuid.uuid4().hex}.part")
-        part.write_bytes(data)
-        os.replace(part, path)
+    put(place, got.content)
+    put(kind_file, got.content_type.encode())
     return got.content, got.content_type

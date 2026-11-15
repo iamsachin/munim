@@ -45,6 +45,7 @@ def test_a_passage_is_marked_and_listed_with_what_it_came_from(
         "source": "RSS",
         "title": "The case for boring sync protocols",
         "origin": "Wire Notes",
+        "icon": f"/api/feeds/{article.feed_id}/icon",
     }
     assert owner_client.get("/api/highlights").json() == [highlight]
     assert owner_client.get("/api/counts").json()["highlights"] == 1

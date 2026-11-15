@@ -74,7 +74,7 @@ export function Highlights() {
                 h.note && <div className="text-mute">Note: {h.note}</div>
               )}
               <div className="flex items-baseline gap-10 font-mono text-meta text-mute">
-                <SourceTag src={h.source} />
+                <SourceTag src={h.source} icon={h.icon} />
                 <span className="min-w-0 truncate">
                   {h.title} · {h.origin}
                 </span>

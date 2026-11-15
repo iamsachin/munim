@@ -768,6 +768,8 @@ export interface components {
       media: ('Video' | 'Image') | null;
       /** Thumb */
       thumb: string | null;
+      /** Icon */
+      icon: string | null;
     };
     /** Code */
     Code: {
@@ -880,6 +882,8 @@ export interface components {
       media: ('Video' | 'Image') | null;
       /** Thumb */
       thumb: string | null;
+      /** Icon */
+      icon: string | null;
       /** Url */
       url: string;
       /** Blocks */
@@ -1011,6 +1015,8 @@ export interface components {
       title: string;
       /** Origin */
       origin: string;
+      /** Icon */
+      icon: string | null;
     };
     /** HighlightIn */
     HighlightIn: {

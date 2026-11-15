@@ -16,6 +16,32 @@ const HOUR = 3_600_000;
 
 const SAMPLE_PNG = readFileSync(new URL('./sample.png', import.meta.url));
 
+// Stand-ins for sites' own icons: plain coloured shapes, so a picture of a screen shows where
+// an icon goes and that it is not Munim's own mark. The real server serves each site's file.
+const shape = (fill: string, inner: string) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><rect width="16" height="16" rx="3" fill="${fill}"/>${inner}</svg>`;
+const HN_ICON = shape(
+  '#f60',
+  '<path d="M4.5 3.5 8 9v4M11.5 3.5 8 9" stroke="#fff" stroke-width="1.8" fill="none"/>',
+);
+const YT_ICON = shape('#f00', '<path d="M6 4.5v7l6-3.5z" fill="#fff"/>');
+const FEED_FILLS = ['#2a7', '#36c', '#a4c', '#c63'];
+const feedIcon = (feed: number) =>
+  shape(
+    FEED_FILLS[feed % FEED_FILLS.length] ?? '#888',
+    '<circle cx="8" cy="8" r="3" fill="#fff"/>',
+  );
+const NO_ICON_FEED = 5;
+/** Where an item's icon is asked for, as the server says it: its feed's, or its source's own. */
+const iconOf = (source: string, feed?: number | null) =>
+  source === 'RSS'
+    ? feed
+      ? `/api/feeds/${String(feed)}/icon`
+      : null
+    : source === 'HN' || source === 'YT'
+      ? `/api/sources/${source}/icon`
+      : null;
+
 const text = (value: string, extra: object = {}) => ({
   text: value,
   marks: [],
@@ -217,6 +243,12 @@ export async function fakeServer(page: Page, start: State = 'open') {
     media: item.media,
     // A YouTube video has its still; the other samples have none, as before.
     thumb: item.source === 'YT' ? `/api/items/${String(item.id)}/images/0` : null,
+    icon: iconOf(item.source, item.feed),
+  });
+  /** A highlight as the server tells it: with the icon of what it was taken from. */
+  const told = <T extends { source: string; origin: string }>(highlight: T) => ({
+    ...highlight,
+    icon: iconOf(highlight.source, feeds.find((feed) => feed.title === highlight.origin)?.id),
   });
   const newest = (key: 'savedAt' | 'laterAt') => (a: Stored, b: Stored) =>
     (b[key] ?? '').localeCompare(a[key] ?? '');
@@ -321,7 +353,9 @@ export async function fakeServer(page: Page, start: State = 'open') {
     if (call === 'GET highlights') {
       return reply(
         200,
-        [...highlights].sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id - a.id),
+        [...highlights]
+          .sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id - a.id)
+          .map(told),
       );
     }
     const [, itemId] = /^POST items\/(\d+)\/highlights$/.exec(call) ?? [];
@@ -343,7 +377,7 @@ export async function fakeServer(page: Page, start: State = 'open') {
         quote: String(body.quote),
       };
       highlights = [...highlights, made];
-      return reply(201, made);
+      return reply(201, told(made));
     }
     const [, verb, highlightId] = /^(PATCH|DELETE) highlights\/(\d+)$/.exec(call) ?? [];
     if (verb === 'DELETE') {
@@ -518,6 +552,15 @@ export async function fakeServer(page: Page, start: State = 'open') {
         highlights: highlights.length,
         sources,
       });
+    }
+    const [, iconSource] = /^GET sources\/(HN|YT)\/icon$/.exec(call) ?? [];
+    const [, iconFeed] = /^GET feeds\/(\d+)\/icon$/.exec(call) ?? [];
+    if (iconSource || iconFeed) {
+      // One feed stands for a site with no icon: its rows show the RSS mark instead.
+      if (iconFeed === String(NO_ICON_FEED)) return refuse(404, 'No icon');
+      const body =
+        iconSource === 'HN' ? HN_ICON : iconSource === 'YT' ? YT_ICON : feedIcon(Number(iconFeed));
+      return route.fulfill({ status: 200, contentType: 'image/svg+xml', body });
     }
     if (/^GET items\/\d+\/images\/0$/.test(call)) {
       return route.fulfill({ status: 200, contentType: 'image/png', body: SAMPLE_PNG });
