@@ -1,8 +1,9 @@
 """The reader's API: feeds, and the items in the stream."""
 
 import secrets
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated, Any, Literal
+from zoneinfo import available_timezones
 
 import httpx
 from django.db import transaction
@@ -14,8 +15,9 @@ from ninja import Field, Router, Schema, Status
 from procrastinate.exceptions import AlreadyEnqueued
 
 from account.auth import Open
+from account.models import Preferences
 from reader import ask, feeds, icons, images, search, tasks, youtube
-from reader.models import Ask, Connection, Feed, Highlight, Item, Source
+from reader.models import Ask, Connection, Digest, Feed, Highlight, Item, Source
 
 router = Router(tags=["reader"], auth=Open())
 
@@ -798,6 +800,110 @@ def ask_question(request: HttpRequest, body: AskIn) -> Status[AskOut]:
     if not asked.problem:
         tasks.answer_ask.defer(ask_id=asked.pk)
     return Status(201, _asks([asked])[0])
+
+
+class DigestSection(Schema):
+    head: str
+    text: str
+    # The items the text is about, each as it was when the digest was written.
+    cites: list[Cite]
+
+
+class DigestOut(Schema):
+    kind: Literal["daily", "weekly"]
+    # The date it is for, on the owner's clock.
+    day: date
+    lead: str
+    sections: list[DigestSection]
+    # Why nothing was written that day, or empty.
+    problem: str
+    written_at: datetime
+
+
+class DigestsOut(Schema):
+    """Whether digests are written, and the latest of each kind, if any."""
+
+    on: bool
+    daily: DigestOut | None
+    weekly: DigestOut | None
+
+
+class DigestSwitch(Schema):
+    on: bool
+    # The browser's time zone, as it names it ("Asia/Tokyo"): seven o'clock is the owner's.
+    time_zone: str = Field(max_length=64)
+
+
+def _digests() -> DigestsOut:
+    latest = {
+        kind: Digest.objects.filter(kind=kind).first()
+        for kind in (Digest.Kind.DAILY, Digest.Kind.WEEKLY)
+    }
+    named = {
+        cite["item"]
+        for one in latest.values()
+        if one
+        for section in one.sections
+        for cite in section["cites"]
+    }
+    kept = set(Item.objects.filter(pk__in=named).values_list("pk", flat=True))
+
+    def told(one: Digest | None) -> DigestOut | None:
+        if one is None:
+            return None
+        sections = [
+            {
+                **section,
+                "cites": [
+                    {**cite, "item_id": cite["item"] if cite["item"] in kept else None}
+                    for cite in section["cites"]
+                ],
+            }
+            for section in one.sections
+        ]
+        return DigestOut.model_validate(
+            {
+                "kind": one.kind,
+                "day": one.day,
+                "lead": one.lead,
+                "sections": sections,
+                "problem": one.problem,
+                "written_at": one.written_at,
+            }
+        )
+
+    return DigestsOut(
+        on=Preferences.load().digest_on,
+        daily=told(latest[Digest.Kind.DAILY]),
+        weekly=told(latest[Digest.Kind.WEEKLY]),
+    )
+
+
+@router.get("/digests", response=DigestsOut)
+def list_digests(request: HttpRequest) -> DigestsOut:
+    """The latest daily and weekly digest, and whether they are being written."""
+    return _digests()
+
+
+@router.put("/digests/on", response={200: DigestsOut, 422: Error})
+def switch_digests(request: HttpRequest, body: DigestSwitch) -> Status[DigestsOut] | Status[Error]:
+    """Switches the writing of digests on or off. Switched on, today's is written by the
+    worker at once if it is already past seven where the owner is."""
+    if body.time_zone not in available_timezones():
+        return Status(422, Error(detail="That is not a time zone Munim knows."))
+    prefs = Preferences.load()
+    prefs.digest_on, prefs.time_zone = body.on, body.time_zone
+    prefs.save(update_fields=["digest_on", "time_zone"])
+    if body.on:
+        # In a transaction of its own: if the hourly run is already queued the insert fails,
+        # and that must not spoil the request's.
+        try:
+            with transaction.atomic():
+                # The periodic decorator hides the task's arguments from the type checker.
+                tasks.write_digests.defer(timestamp=0)  # type: ignore[call-arg]
+        except AlreadyEnqueued:
+            pass
+    return Status(200, _digests())
 
 
 @router.get("/counts", response=Counts)

@@ -813,6 +813,54 @@
         "security": [{ "Open": [] }]
       }
     },
+    "/api/digests": {
+      "get": {
+        "operationId": "reader_api_list_digests",
+        "summary": "List Digests",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/DigestsOut" } }
+            }
+          }
+        },
+        "description": "The latest daily and weekly digest, and whether they are being written.",
+        "tags": ["reader"],
+        "security": [{ "Open": [] }]
+      }
+    },
+    "/api/digests/on": {
+      "put": {
+        "operationId": "reader_api_switch_digests",
+        "summary": "Switch Digests",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/DigestsOut" } }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          }
+        },
+        "description": "Switches the writing of digests on or off. Switched on, today's is written by the\nworker at once if it is already past seven where the owner is.",
+        "tags": ["reader"],
+        "requestBody": {
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/DigestSwitch" } }
+          },
+          "required": true
+        },
+        "security": [{ "Open": [] }]
+      }
+    },
     "/api/counts": {
       "get": {
         "operationId": "reader_api_counts",
@@ -1707,6 +1755,57 @@
         },
         "required": ["question", "scope"],
         "title": "AskIn",
+        "type": "object"
+      },
+      "DigestOut": {
+        "properties": {
+          "kind": { "enum": ["daily", "weekly"], "title": "Kind", "type": "string" },
+          "day": { "format": "date", "title": "Day", "type": "string" },
+          "lead": { "title": "Lead", "type": "string" },
+          "sections": {
+            "items": { "$ref": "#/components/schemas/DigestSection" },
+            "title": "Sections",
+            "type": "array"
+          },
+          "problem": { "title": "Problem", "type": "string" },
+          "written_at": { "format": "date-time", "title": "Written At", "type": "string" }
+        },
+        "required": ["kind", "day", "lead", "sections", "problem", "written_at"],
+        "title": "DigestOut",
+        "type": "object"
+      },
+      "DigestSection": {
+        "properties": {
+          "head": { "title": "Head", "type": "string" },
+          "text": { "title": "Text", "type": "string" },
+          "cites": {
+            "items": { "$ref": "#/components/schemas/Cite" },
+            "title": "Cites",
+            "type": "array"
+          }
+        },
+        "required": ["head", "text", "cites"],
+        "title": "DigestSection",
+        "type": "object"
+      },
+      "DigestsOut": {
+        "description": "Whether digests are written, and the latest of each kind, if any.",
+        "properties": {
+          "on": { "title": "On", "type": "boolean" },
+          "daily": { "anyOf": [{ "$ref": "#/components/schemas/DigestOut" }, { "type": "null" }] },
+          "weekly": { "anyOf": [{ "$ref": "#/components/schemas/DigestOut" }, { "type": "null" }] }
+        },
+        "required": ["on", "daily", "weekly"],
+        "title": "DigestsOut",
+        "type": "object"
+      },
+      "DigestSwitch": {
+        "properties": {
+          "on": { "title": "On", "type": "boolean" },
+          "time_zone": { "maxLength": 64, "title": "Time Zone", "type": "string" }
+        },
+        "required": ["on", "time_zone"],
+        "title": "DigestSwitch",
         "type": "object"
       },
       "Counts": {

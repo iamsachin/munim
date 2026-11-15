@@ -522,6 +522,47 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/digests': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Digests
+     * @description The latest daily and weekly digest, and whether they are being written.
+     */
+    get: operations['reader_api_list_digests'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/digests/on': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Switch Digests
+     * @description Switches the writing of digests on or off. Switched on, today's is written by the
+     *     worker at once if it is already past seven where the owner is.
+     */
+    put: operations['reader_api_switch_digests'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/counts': {
     parameters: {
       query?: never;
@@ -1203,6 +1244,56 @@ export interface components {
       item_id?: number | null;
       /** Follows */
       follows?: number | null;
+    };
+    /** DigestOut */
+    DigestOut: {
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: 'daily' | 'weekly';
+      /**
+       * Day
+       * Format: date
+       */
+      day: string;
+      /** Lead */
+      lead: string;
+      /** Sections */
+      sections: components['schemas']['DigestSection'][];
+      /** Problem */
+      problem: string;
+      /**
+       * Written At
+       * Format: date-time
+       */
+      written_at: string;
+    };
+    /** DigestSection */
+    DigestSection: {
+      /** Head */
+      head: string;
+      /** Text */
+      text: string;
+      /** Cites */
+      cites: components['schemas']['Cite'][];
+    };
+    /**
+     * DigestsOut
+     * @description Whether digests are written, and the latest of each kind, if any.
+     */
+    DigestsOut: {
+      /** On */
+      on: boolean;
+      daily: components['schemas']['DigestOut'] | null;
+      weekly: components['schemas']['DigestOut'] | null;
+    };
+    /** DigestSwitch */
+    DigestSwitch: {
+      /** On */
+      on: boolean;
+      /** Time Zone */
+      time_zone: string;
     };
     /** Counts */
     Counts: {
@@ -2194,6 +2285,59 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['AskOut'];
+        };
+      };
+    };
+  };
+  reader_api_list_digests: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['DigestsOut'];
+        };
+      };
+    };
+  };
+  reader_api_switch_digests: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['DigestSwitch'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['DigestsOut'];
+        };
+      };
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Error'];
         };
       };
     };

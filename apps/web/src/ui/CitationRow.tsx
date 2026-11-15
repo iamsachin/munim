@@ -34,7 +34,7 @@ export function CitationRow({
       ? 'grid-cols-[34px_minmax(0,1fr)]'
       : 'grid-cols-[20px_34px_minmax(0,1fr)_auto]',
     surface === 'bg' ? 'bg-bg' : 'bg-card',
-    to && 'text-ink hover:bg-card',
+    to && cx('text-ink', surface === 'bg' ? 'hover:bg-card' : 'hover:bg-line'),
   );
   const cells = (
     <>

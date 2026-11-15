@@ -19,6 +19,7 @@ export type Highlight = Schemas['HighlightOut'];
 export const sourceIcon = (source: 'HN' | 'YT') => `/api/sources/${source}/icon`;
 
 export type Ask = Schemas['AskOut'];
+export type Digests = Schemas['DigestsOut'];
 export type AiKey = Schemas['KeyOut'];
 export type AiChoice = Schemas['ChoiceOut'];
 export type AiPrice = Schemas['Price'];
@@ -123,6 +124,13 @@ export const api = {
   removeAiKey: (provider: AiKey['provider']) => call<undefined>('DELETE', `ai/keys/${provider}`),
   aiPrices: () => call<AiPrice[]>('GET', 'ai/prices'),
   setAiPrice: (price: AiPrice) => call<AiPrice>('PUT', 'ai/prices', price),
+  digests: () => call<Digests>('GET', 'digests'),
+  /** Switches digests on or off. Seven o'clock is the owner's, so the browser says where it is. */
+  setDigests: (on: boolean) =>
+    call<Digests>('PUT', 'digests/on', {
+      on,
+      time_zone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    } satisfies Schemas['DigestSwitch']),
   aiLimit: () => call<AiLimit>('GET', 'ai/limit'),
   setAiLimit: (limit: number | null) =>
     call<AiLimit>('PUT', 'ai/limit', { limit } satisfies Schemas['Limit']),

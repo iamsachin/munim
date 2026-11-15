@@ -19,6 +19,10 @@ export const EMPTY = {
   prices: 'No model is in use yet. Choose one above.',
 } as const;
 
+/** Digest calls a model without being asked each time, so it says what switching it on does. */
+export const DIGEST_OFF =
+  'Digest is off. Switched on, one is written each day at 7:00 and each Sunday, by the model chosen for Digest under AI.';
+
 /**
  * What removing a feed does to its articles, said before it is done. `kept` of them are ones the
  * owner saved, queued or highlighted: those stay.

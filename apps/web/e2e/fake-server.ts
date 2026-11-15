@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import type { Page } from '@playwright/test';
+import type { Digests } from '../src/api/client';
 import { FAKE_ITEMS } from './fake-items';
 
 /*
@@ -186,6 +187,65 @@ export async function fakeServer(page: Page, start: State = 'open') {
     asked_at: ago(5 * 3_600_000),
   };
   let asks = [SAMPLE_POST_ASK, SAMPLE_ASK];
+  // The latest digests, as the design has them, about what this install reads. Digest is on.
+  const named = (...ids: number[]) =>
+    ids.flatMap((id) => {
+      const item = FAKE_ITEMS.find((one) => one.id === id);
+      return item
+        ? [
+            {
+              ...ARCHIVE_THREAD,
+              item_id: id,
+              source: item.source,
+              title: item.title,
+              origin: item.origin,
+              icon: iconOf(item.source, item.feed),
+            },
+          ]
+        : [];
+    });
+  const day = (daysAgo: number) => ago(daysAgo * 24 * 3_600_000).slice(0, 10);
+  let digestsOn = true;
+  let digests = {
+    daily: {
+      kind: 'daily',
+      day: day(0),
+      lead: 'Eighteen new items since yesterday morning. The busiest discussion is the Hacker News thread on a local-first reading archive, and two of your feeds published long pieces.',
+      sections: [
+        {
+          head: 'Threads worth opening',
+          text: 'The Show HN thread has 388 comments, mostly about storage format and import. The SQLite thread argues over using it as an application file format.',
+          cites: named(3, 8),
+        },
+        {
+          head: 'From your feeds',
+          text: 'Low Tech Notes published a year in review of running a feed reader. Plain Crypto posted notes on end-to-end encryption for small apps.',
+          cites: named(5, 11),
+        },
+        {
+          head: 'Video',
+          text: 'Two new videos, about half an hour in total: a home server rack build, and conflict-free sync explained.',
+          cites: named(4, 10),
+        },
+      ],
+      problem: '',
+      written_at: ago(3 * 3_600_000),
+    },
+    weekly: {
+      kind: 'weekly',
+      day: day(0),
+      lead: 'Sync and local-first storage came up in four separate sources this week. Most of what came in was from Hacker News and your feeds.',
+      sections: [
+        {
+          head: 'Most discussed',
+          text: 'The largest thread was the Show HN archive post, followed by the one on SQLite as an application file format.',
+          cites: named(3, 8),
+        },
+      ],
+      problem: '',
+      written_at: ago(3 * 3_600_000),
+    },
+  } as Pick<Digests, 'daily' | 'weekly'>;
   // Spend, with the design's sample figures: prices for the two models in use, a limit, and
   // what each feature used this month and last.
   let aiLimit: number | null = 10;
@@ -534,6 +594,11 @@ export async function fakeServer(page: Page, start: State = 'open') {
       spent,
       paused: aiLimit !== null && spent >= aiLimit,
     });
+    if (call === 'GET digests') return reply(200, { on: digestsOn, ...digests });
+    if (call === 'PUT digests/on') {
+      digestsOn = Boolean(body.on);
+      return reply(200, { on: digestsOn, ...digests });
+    }
     if (call === 'GET asks') {
       const told = asks.map((asked) => ({ ...asked }));
       // What is waiting moves on between two looks, as while the worker writes: first part
@@ -794,6 +859,7 @@ export async function fakeServer(page: Page, start: State = 'open') {
       aiPrices = [];
       aiUsage = { this: { rows: [], cost: 0 }, last: { rows: [], cost: 0 } };
       asks = [];
+      digests = { daily: null, weekly: null };
       hackerNews = { enabled: false, synced_at: null, problem: '' };
       youtube = {
         ...youtube,

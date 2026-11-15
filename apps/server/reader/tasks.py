@@ -5,7 +5,7 @@ from procrastinate.contrib.django import app
 from procrastinate.exceptions import UniqueViolation
 from procrastinate.jobs import Status
 
-from reader import ask, feeds, hackernews, youtube
+from reader import ask, digest, feeds, hackernews, youtube
 
 POLL_EVERY = "*/15 * * * *"
 
@@ -39,6 +39,15 @@ def answer_ask(ask_id: int) -> None:
     """When the owner asks something: put the question to the model. Run again after a crash,
     it leaves a question that already has its answer alone."""
     ask.answer(ask_id)
+
+
+@app.periodic(cron="0 * * * *")
+@app.task(queueing_lock="write_digests", lock="write_digests")
+def write_digests(timestamp: int) -> None:
+    """Every hour, and when Digest is switched on: write the digests that are due. Hourly,
+    because seven o'clock is on the owner's clock, and so that one missed is written late
+    rather than never. Run again, it leaves a digest that is already written alone."""
+    digest.write_due()
 
 
 @app.periodic(cron="*/5 * * * *")

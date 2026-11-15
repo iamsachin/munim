@@ -14,9 +14,3 @@ export interface Match {
   title: string;
   age: string;
 }
-
-export interface Digest {
-  title: string;
-  lead: string;
-  sections: { head: string; text: string; items: { src: Source; title: string }[] }[];
-}

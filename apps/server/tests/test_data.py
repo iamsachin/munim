@@ -80,6 +80,7 @@ def test_the_export_holds_everything_the_owner_put_in_and_no_secrets(filled: Cli
         "README.txt",
         "ai-usage.json",
         "asks.json",
+        "digests.json",
         "feeds.json",
         "highlights.json",
         "items.json",
@@ -111,6 +112,8 @@ def test_the_export_holds_everything_the_owner_put_in_and_no_secrets(filled: Cli
             "sources_on": ["HN"],
             "ai_models": {"ask": "openai/gpt-example"},
             "ai_limit": "10.00",
+            "digest_on": False,
+            "time_zone": "",
             "ai_prices": {"openai/gpt-example": {"input": "2.0000", "output": "8.0000"}},
         }
     ]

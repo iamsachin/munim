@@ -37,6 +37,13 @@ class Preferences(models.Model):
         max_digits=8, decimal_places=2, null=True, blank=True, default=Decimal(10)
     )
 
+    # Whether digests are written. Off until the owner switches it on: it calls a model
+    # without being asked each time.
+    digest_on = models.BooleanField(default=False)
+    # The owner's time zone, as their browser named it when Digest was switched on ("" until
+    # then): "at seven" is on their clock, not the server's.
+    time_zone = models.CharField(max_length=64, blank=True)
+
     def __str__(self) -> str:
         return "preferences"
 
