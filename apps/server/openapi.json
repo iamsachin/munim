@@ -888,6 +888,115 @@
         },
         "security": [{ "Open": [] }]
       }
+    },
+    "/api/ai/prices": {
+      "get": {
+        "operationId": "ai_api_list_prices",
+        "summary": "List Prices",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/Price" },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["ai"],
+        "security": [{ "Open": [] }]
+      },
+      "put": {
+        "operationId": "ai_api_set_price",
+        "summary": "Set Price",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Price" } }
+            }
+          }
+        },
+        "description": "Sets a model's price. It counts for calls made from now on; past calls keep their cost.",
+        "tags": ["ai"],
+        "requestBody": {
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Price" } } },
+          "required": true
+        },
+        "security": [{ "Open": [] }]
+      }
+    },
+    "/api/ai/limit": {
+      "get": {
+        "operationId": "ai_api_get_limit",
+        "summary": "Get Limit",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/LimitOut" } }
+            }
+          }
+        },
+        "tags": ["ai"],
+        "security": [{ "Open": [] }]
+      },
+      "put": {
+        "operationId": "ai_api_set_limit",
+        "summary": "Set Limit",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/LimitOut" } }
+            }
+          }
+        },
+        "tags": ["ai"],
+        "requestBody": {
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Limit" } } },
+          "required": true
+        },
+        "security": [{ "Open": [] }]
+      }
+    },
+    "/api/ai/usage": {
+      "get": {
+        "operationId": "ai_api_usage",
+        "summary": "Usage",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "period",
+            "schema": {
+              "default": "this",
+              "enum": ["this", "last"],
+              "title": "Period",
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/UsageOut" } }
+            }
+          }
+        },
+        "description": "A month's calls, summed for each feature and model.",
+        "tags": ["ai"],
+        "security": [{ "Open": [] }]
+      }
     }
   },
   "components": {
@@ -1488,6 +1597,68 @@
         },
         "required": ["provider", "model"],
         "title": "ChoiceIn",
+        "type": "object"
+      },
+      "Price": {
+        "description": "What a model costs, in dollars for a million tokens, as the owner entered it.",
+        "properties": {
+          "provider": { "enum": ["openai", "anthropic"], "title": "Provider", "type": "string" },
+          "model": { "maxLength": 200, "minLength": 1, "title": "Model", "type": "string" },
+          "input": { "maximum": 10000, "minimum": 0, "title": "Input", "type": "number" },
+          "output": { "maximum": 10000, "minimum": 0, "title": "Output", "type": "number" }
+        },
+        "required": ["provider", "model", "input", "output"],
+        "title": "Price",
+        "type": "object"
+      },
+      "LimitOut": {
+        "properties": {
+          "limit": {
+            "anyOf": [{ "maximum": 100000, "minimum": 0, "type": "number" }, { "type": "null" }],
+            "title": "Limit"
+          },
+          "spent": { "title": "Spent", "type": "number" },
+          "paused": { "title": "Paused", "type": "boolean" }
+        },
+        "required": ["limit", "spent", "paused"],
+        "title": "LimitOut",
+        "type": "object"
+      },
+      "Limit": {
+        "properties": {
+          "limit": {
+            "anyOf": [{ "maximum": 100000, "minimum": 0, "type": "number" }, { "type": "null" }],
+            "title": "Limit"
+          }
+        },
+        "required": ["limit"],
+        "title": "Limit",
+        "type": "object"
+      },
+      "UsageOut": {
+        "properties": {
+          "rows": {
+            "items": { "$ref": "#/components/schemas/UsageRow" },
+            "title": "Rows",
+            "type": "array"
+          },
+          "cost": { "title": "Cost", "type": "number" }
+        },
+        "required": ["rows", "cost"],
+        "title": "UsageOut",
+        "type": "object"
+      },
+      "UsageRow": {
+        "properties": {
+          "feature": { "enum": ["digest", "ask", "watch"], "title": "Feature", "type": "string" },
+          "model": { "title": "Model", "type": "string" },
+          "requests": { "title": "Requests", "type": "integer" },
+          "tokens_in": { "title": "Tokens In", "type": "integer" },
+          "tokens_out": { "title": "Tokens Out", "type": "integer" },
+          "cost": { "anyOf": [{ "type": "number" }, { "type": "null" }], "title": "Cost" }
+        },
+        "required": ["feature", "model", "requests", "tokens_in", "tokens_out", "cost"],
+        "title": "UsageRow",
         "type": "object"
       }
     },

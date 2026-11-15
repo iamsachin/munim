@@ -13,7 +13,7 @@ from django.db import transaction
 from django.utils.text import slugify
 
 from account.models import Preferences
-from ai.models import FeatureModel, ProviderKey
+from ai.models import FeatureModel, ModelPrice, ProviderKey, Usage
 from reader.models import Channel, Connection, Feed, Highlight, Item
 
 ABOUT = """\
@@ -23,6 +23,7 @@ feeds.json        the feeds you follow
 items.json        every item: where it came from, what you did with it, its text and replies
 highlights.json   your highlights and notes, each with the id of its item
 settings.json     the settings kept on the server
+ai-usage.json     each call made to an AI model: when, by which feature, its tokens and cost
 saved/            the text of each item you saved, as a plain file
 
 Not here: the API keys and source sign-ins you gave Munim, your passphrase, and the pictures in
@@ -90,8 +91,18 @@ def export() -> IO[bytes]:
                     "lock_after_minutes": prefs.lock_after_minutes,
                     "sources_on": sorted(on),
                     "ai_models": {c.feature: f"{c.provider}/{c.model}" for c in chosen},
+                    "ai_limit": prefs.ai_limit,
+                    "ai_prices": {
+                        f"{p.provider}/{p.model}": {"input": p.input, "output": p.output}
+                        for p in ModelPrice.objects.all()
+                    },
                 }
             ],
+        )
+        _rows(
+            archive,
+            "ai-usage.json",
+            (dict(call) for call in Usage.objects.order_by("at").values().iterator()),
         )
         for item in items.filter(saved_at__isnull=False).iterator():
             name = f"saved/{item.pk}-{slugify(item.title)[:60] or 'untitled'}.txt"
@@ -102,8 +113,8 @@ def export() -> IO[bytes]:
 
 def delete_all() -> None:
     """Removes what the owner put in: feeds, items with their highlights, which sources are on,
-    the API keys and the model chosen for each AI feature. The account itself (passphrase,
-    devices, lock setting) stays."""
+    the API keys, the model chosen for each AI feature, the prices and the record of AI use. The
+    account itself (passphrase, devices, lock setting, AI limit) stays."""
     with transaction.atomic():
         Item.objects.all().delete()
         Feed.objects.all().delete()
@@ -111,4 +122,6 @@ def delete_all() -> None:
         Channel.objects.all().delete()
         ProviderKey.objects.all().delete()
         FeatureModel.objects.all().delete()
+        ModelPrice.objects.all().delete()
+        Usage.objects.all().delete()
     shutil.rmtree(Path(settings.DATA_DIR) / "images", ignore_errors=True)

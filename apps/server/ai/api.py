@@ -2,13 +2,15 @@
 
 from typing import Any, Literal
 
+from django.db.models import Count, Sum
 from django.http import HttpRequest
 from django.utils import timezone
 from ninja import Field, Router, Schema, Status
 
 from account.auth import Open
-from ai import providers
-from ai.models import Feature, FeatureModel, Provider, ProviderKey
+from account.models import Preferences
+from ai import providers, spend
+from ai.models import Feature, FeatureModel, ModelPrice, Provider, ProviderKey, Usage
 from munim import vault
 
 router = Router(tags=["ai"], auth=Open())
@@ -130,3 +132,95 @@ def choose_model(
         feature=feature, defaults={"provider": body.provider, "model": body.model}
     )
     return Status(200, _choice(feature, chosen))
+
+
+class Price(Schema):
+    """What a model costs, in dollars for a million tokens, as the owner entered it."""
+
+    provider: ProviderCode
+    model: str = Field(min_length=1, max_length=200)
+    input: float = Field(ge=0, le=10_000)
+    output: float = Field(ge=0, le=10_000)
+
+
+@router.get("/ai/prices", response=list[Price])
+def list_prices(request: HttpRequest) -> list[ModelPrice]:
+    return list(ModelPrice.objects.order_by("provider", "model"))
+
+
+@router.put("/ai/prices", response=Price)
+def set_price(request: HttpRequest, body: Price) -> ModelPrice:
+    """Sets a model's price. It counts for calls made from now on; past calls keep their cost."""
+    price, _ = ModelPrice.objects.update_or_create(
+        provider=body.provider,
+        model=body.model,
+        defaults={"input": round(body.input, 4), "output": round(body.output, 4)},
+    )
+    return price
+
+
+class Limit(Schema):
+    # Dollars in a month; null for no limit.
+    limit: float | None = Field(ge=0, le=100_000)
+
+
+class LimitOut(Limit):
+    # What this month has cost so far, and whether that has reached the limit.
+    spent: float
+    paused: bool
+
+
+def _limit() -> LimitOut:
+    limit = Preferences.load().ai_limit
+    return LimitOut.model_validate(
+        {"limit": limit, "spent": spend.spent(), "paused": spend.paused()}
+    )
+
+
+@router.get("/ai/limit", response=LimitOut)
+def get_limit(request: HttpRequest) -> LimitOut:
+    return _limit()
+
+
+@router.put("/ai/limit", response=LimitOut)
+def set_limit(request: HttpRequest, body: Limit) -> LimitOut:
+    Preferences.objects.update_or_create(
+        pk=1, defaults={"ai_limit": None if body.limit is None else round(body.limit, 2)}
+    )
+    return _limit()
+
+
+class UsageRow(Schema):
+    feature: FeatureCode
+    model: str
+    requests: int
+    tokens_in: int
+    tokens_out: int
+    # Null if no call in the row had a price, so nothing is known of its cost.
+    cost: float | None
+
+
+class UsageOut(Schema):
+    rows: list[UsageRow]
+    cost: float
+
+
+@router.get("/ai/usage", response=UsageOut)
+def usage(request: HttpRequest, period: Literal["this", "last"] = "this") -> UsageOut:
+    """A month's calls, summed for each feature and model."""
+    start, end = spend.month(back=1 if period == "last" else 0)
+    rows = (
+        Usage.objects.filter(at__gte=start, at__lt=end)
+        .values("feature", "model")
+        .annotate(
+            requests=Count("id"),
+            tokens_in=Sum("tokens_in"),
+            tokens_out=Sum("tokens_out"),
+            cost=Sum("cost"),
+        )
+        .order_by("model")
+    )
+    # In the order the features are listed everywhere else.
+    ordered = sorted(rows, key=lambda row: Feature.values.index(row["feature"]))
+    total = sum(row["cost"] or 0 for row in ordered)
+    return UsageOut.model_validate({"rows": ordered, "cost": total})

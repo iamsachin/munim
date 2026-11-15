@@ -1,5 +1,4 @@
 import { createContext, use, useState, type ReactNode } from 'react';
-import { AI_INITIAL, type AiState } from '../account/ai';
 import { WATCHES } from './fixtures';
 import type { Watch } from './types';
 
@@ -7,15 +6,14 @@ export const SCOPES = ['Everything', 'Saved', 'This week', 'Open item'] as const
 export type Scope = (typeof SCOPES)[number];
 
 /**
- * What still runs on sample data in the browser: watches, Ask and AI settings. Items, feeds,
- * highlights, connections and sign-in are the server's.
+ * What still runs on sample data in the browser: watches and Ask. Items, feeds, highlights,
+ * connections, AI settings and sign-in are the server's.
  */
 export interface ReaderState {
   watchOff: ReadonlySet<string>;
   watchNew: readonly string[];
   scope: Scope;
   asks: readonly { q: string; scope: Scope }[];
-  ai: AiState;
 }
 
 export const INITIAL: ReaderState = {
@@ -23,7 +21,6 @@ export const INITIAL: ReaderState = {
   watchNew: [],
   scope: 'Everything',
   asks: [],
-  ai: AI_INITIAL,
 };
 
 type Update = (patch: Partial<ReaderState> | ((s: ReaderState) => Partial<ReaderState>)) => void;

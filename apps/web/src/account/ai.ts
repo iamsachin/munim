@@ -1,5 +1,4 @@
-// AI settings: the rules, and mock data for what the server does not hold yet (usage, the
-// limit). Provider keys, their models and each feature's model are the server's.
+// AI settings: the names and rules the screens share. Everything else is the server's.
 import type { AiChoice, AiKey } from '../api/client';
 
 export const PROVIDERS = {
@@ -16,88 +15,15 @@ export const FEATURES = {
 } as const;
 export type Feature = keyof typeof FEATURES;
 
-export interface UsageRow {
-  feature: Feature;
-  model: string;
-  requests: number;
-  tokensIn: number;
-  tokensOut: number;
-  /** Estimated, in cents, so sums are exact. */
-  cents: number;
-}
+/** The months usage can be shown for, by the name the server knows each by. */
+export const PERIODS = { this: 'This month', last: 'Last month' } as const;
+export type Period = keyof typeof PERIODS;
 
-export const PERIODS = ['This month', 'Last month'] as const;
-export type Period = (typeof PERIODS)[number];
+export const usd = (dollars: number) => `$${dollars.toFixed(2)}`;
 
-export const USAGE: Record<Period, UsageRow[]> = {
-  'This month': [
-    {
-      feature: 'digest',
-      model: 'gpt-5.4-mini',
-      requests: 14,
-      tokensIn: 412_300,
-      tokensOut: 18_900,
-      cents: 31,
-    },
-    {
-      feature: 'ask',
-      model: 'gpt-5.5',
-      requests: 37,
-      tokensIn: 1_204_000,
-      tokensOut: 41_200,
-      cents: 342,
-    },
-    {
-      feature: 'watch',
-      model: 'gpt-5.4-mini',
-      requests: 512,
-      tokensIn: 603_000,
-      tokensOut: 5_100,
-      cents: 47,
-    },
-  ],
-  'Last month': [
-    {
-      feature: 'digest',
-      model: 'gpt-5.4-mini',
-      requests: 31,
-      tokensIn: 905_000,
-      tokensOut: 41_000,
-      cents: 68,
-    },
-    {
-      feature: 'ask',
-      model: 'gpt-5.5',
-      requests: 64,
-      tokensIn: 2_010_000,
-      tokensOut: 72_400,
-      cents: 591,
-    },
-    {
-      feature: 'watch',
-      model: 'gpt-5.4-mini',
-      requests: 1_340,
-      tokensIn: 1_612_000,
-      tokensOut: 13_400,
-      cents: 126,
-    },
-  ],
-};
-
-export const totalCents = (rows: readonly UsageRow[]) => rows.reduce((n, r) => n + r.cents, 0);
-
-export const usd = (cents: number) => `$${(cents / 100).toFixed(2)}`;
-
-export interface AiState {
-  /** Monthly limit in whole dollars; null for no limit. */
-  limit: number | null;
-}
-
-export const AI_INITIAL: AiState = { limit: 10 };
-
-/** AI features stop for the rest of the month once the estimated cost reaches the limit. */
-export const aiPaused = (ai: AiState) =>
-  ai.limit !== null && totalCents(USAGE['This month']) >= ai.limit * 100;
+/** Whether what is typed in a money field is an amount: a number, and not below zero. */
+export const isAmount = (text: string) =>
+  text.trim() !== '' && Number.isFinite(Number(text)) && Number(text) >= 0;
 
 /** A model as a select's value: ids are only unique within their provider. */
 export const optionOf = (provider: Provider, model: string) => `${provider}/${model}`;

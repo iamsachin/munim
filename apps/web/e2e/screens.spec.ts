@@ -563,6 +563,9 @@ test('nothing is summarised automatically: a summary is one press away, as an As
   await expect(page.getByText('Summarize this article')).toBeVisible();
 });
 
+/** The rows of the Providers table. A provider's name is also on the prices of its models. */
+const providers = (page: Page) => page.getByRole('table', { name: 'Providers' }).getByRole('row');
+
 test('ai: a new key makes that provider selectable; removing a key switches its features off', async ({
   page,
 }) => {
@@ -590,12 +593,30 @@ test('ai: a new key makes that provider selectable; removing a key switches its 
   await expect(field).toBeFocused();
   await field.fill('sk-ant-0123456789abcdefWXYZ');
   await field.press('Enter');
-  const anthropic = page.getByRole('row').filter({ hasText: 'Anthropic' });
+  const anthropic = providers(page).filter({ hasText: 'Anthropic' });
   await expect(anthropic).toContainText('Ends in WXYZ');
   await expect(anthropic).toContainText('Connected');
   await expect(page.getByText('sk-ant-0123456789abcdefWXYZ')).toHaveCount(0);
   await askModel.selectOption('claude-sonnet-5-5');
   await expect(askModel).toHaveValue('anthropic/claude-sonnet-5-5');
+
+  // A model in use is asked for its price. Until it has one, its cost is not counted.
+  const prices = page.getByRole('table', { name: 'Prices' });
+  const sonnet = prices.getByRole('row').filter({ hasText: 'claude-sonnet-5-5' });
+  await expect(sonnet).toContainText('No price, so its cost is not counted.');
+  await expect(prices.getByRole('row').filter({ hasText: 'gpt-5.5' })).toHaveCount(0);
+  await expect(page).toHaveScreenshot('ai-price-missing-dark.png');
+  const save = page.getByRole('button', { name: 'Save price of claude-sonnet-5-5' });
+  await expect(save).toBeDisabled();
+  await sonnet.getByLabel(/^Input price/).fill('3');
+  await sonnet.getByLabel(/^Output price/).fill('-15');
+  await expect(save).toBeDisabled();
+  await sonnet.getByLabel(/^Output price/).fill('15');
+  await sonnet.getByLabel(/^Output price/).press('Enter');
+  await expect(sonnet).not.toContainText('No price');
+  await expect(sonnet.getByLabel(/^Input price/)).toHaveValue('3');
+  // Nothing to save until it is changed again.
+  await expect(save).toBeDisabled();
 
   await page.getByRole('button', { name: 'Remove key for OpenAI' }).click();
   await expect(page.getByLabel('Model for Digest')).toHaveValue('');
@@ -604,6 +625,9 @@ test('ai: a new key makes that provider selectable; removing a key switches its 
   // The choice is the server's: it is still there when the page is loaded again.
   await page.reload();
   await expect(page.getByLabel('Model for Ask')).toHaveValue('anthropic/claude-sonnet-5-5');
+  await expect(
+    page.getByLabel('Output price of claude-sonnet-5-5, in dollars for a million tokens'),
+  ).toHaveValue('15');
   expect(await axeFailures(page)).toEqual([]);
 });
 
@@ -611,17 +635,17 @@ test('ai: a rejected key is reported and Cancel leaves things alone', async ({ p
   await open(page, '/ai');
   await page.getByRole('button', { name: 'Add key for Anthropic' }).click();
   await page.getByRole('button', { name: 'Cancel' }).click();
-  await expect(page.getByRole('row').filter({ hasText: 'Anthropic' })).toContainText('No key');
+  await expect(providers(page).filter({ hasText: 'Anthropic' })).toContainText('No key');
 
   await page.getByRole('button', { name: 'Replace key for OpenAI' }).click();
   // Too short to be a key at all: it is not saved, and the row says why.
   await page.getByLabel('OpenAI API key').fill('short');
-  await page.getByRole('button', { name: 'Save' }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByRole('alert')).toHaveText('That is too short to be an API key.');
   // Long enough to ask the provider, which rejects it: it is saved, marked as rejected.
   await page.getByLabel('OpenAI API key').fill('sk-too-short');
-  await page.getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByRole('row').filter({ hasText: 'OpenAI' })).toContainText('Key rejected');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(providers(page).filter({ hasText: 'OpenAI' })).toContainText('Key rejected');
   await expect(page.getByLabel('Model for Ask')).toBeDisabled();
   await expect(page).toHaveScreenshot('ai-no-working-key-dark.png');
   expect(await axeFailures(page)).toEqual([]);
@@ -642,14 +666,14 @@ test('ai: if the provider cannot be asked, the key is not saved and the row says
   );
   await page.getByRole('button', { name: 'Add key for Anthropic' }).click();
   await page.getByLabel('Anthropic API key').fill('sk-ant-0123456789abcdefWXYZ');
-  await page.getByRole('button', { name: 'Save' }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByRole('alert')).toHaveText(
     'Anthropic could not be reached, so the key was not checked.',
   );
   await expect(page.getByLabel('Anthropic API key')).toBeVisible();
   expect(await axeFailures(page)).toEqual([]);
   await page.getByRole('button', { name: 'Cancel' }).click();
-  await expect(page.getByRole('row').filter({ hasText: 'Anthropic' })).toContainText('No key');
+  await expect(providers(page).filter({ hasText: 'Anthropic' })).toContainText('No key');
 
   // If the keys cannot be read at all, the table says so.
   await page.route('**/api/ai/keys', (route) => route.fulfill({ status: 500, body: '' }));
@@ -664,7 +688,7 @@ test('ai: a change made after the session has locked brings up the lock screen',
   await page.getByRole('button', { name: 'Add key for Anthropic' }).click();
   await page.getByLabel('Anthropic API key').fill('sk-ant-0123456789abcdefWXYZ');
   server.lockNow();
-  await page.getByRole('button', { name: 'Save' }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Locked' })).toBeVisible();
 
   // Unlocked, the screen does not blame the key: nothing was wrong with it.
@@ -672,8 +696,8 @@ test('ai: a change made after the session has locked brings up the lock screen',
   await page.getByRole('button', { name: 'Unlock' }).click();
   await expect(page.getByRole('heading', { name: 'Locked' })).toHaveCount(0);
   await expect(page.getByRole('alert')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByRole('row').filter({ hasText: 'Anthropic' })).toContainText('Connected');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(providers(page).filter({ hasText: 'Anthropic' })).toContainText('Connected');
 });
 
 test('ai: reaching the monthly limit pauses AI and says so; no limit never pauses', async ({
@@ -682,7 +706,13 @@ test('ai: reaching the monthly limit pauses AI and says so; no limit never pause
   await open(page, '/ai');
   await expect(page.getByText('$4.20 of $10.00 this month')).toBeVisible();
   const limit = page.getByLabel('Monthly limit in dollars');
+  // What is not an amount is not sent: the limit stays as it was.
+  await limit.fill('-3');
+  await limit.press('Enter');
+  await expect(page.getByText('$4.20 of $10.00 this month')).toBeVisible();
   await limit.fill('4');
+  await limit.press('Enter');
+  await expect(page.getByText('$4.20 of $4.00 this month')).toBeVisible();
   await expect(page.getByRole('status')).toContainText('AI is paused');
   await expect(page).toHaveScreenshot('ai-paused-dark.png');
   expect(await axeFailures(page)).toEqual([]);
@@ -705,6 +735,33 @@ test('ai: usage can be viewed for last month', async ({ page }) => {
   await expect(usage.getByRole('row').last()).toContainText('$4.20');
   await page.getByRole('button', { name: 'Last month' }).click();
   await expect(usage.getByRole('row').last()).toContainText('$7.85');
+
+  // A month with no calls says so and has no total; a call on a model with no price says that.
+  await page.route('**/api/ai/usage?period=last', (route) =>
+    route.fulfill({ json: { rows: [], cost: 0 } }),
+  );
+  await page.route('**/api/ai/usage?period=this', (route) =>
+    route.fulfill({
+      json: {
+        rows: [
+          {
+            feature: 'ask',
+            model: 'gpt-5.5',
+            requests: 2,
+            tokens_in: 900,
+            tokens_out: 40,
+            cost: null,
+          },
+        ],
+        cost: 0,
+      },
+    }),
+  );
+  await page.reload();
+  await expect(usage.getByRole('row').nth(1)).toContainText('No price');
+  await page.getByRole('button', { name: 'Last month' }).click();
+  await expect(usage).toContainText('No AI use in this period.');
+  await expect(usage.getByText('Total')).toHaveCount(0);
 });
 
 test('read later: Done removes the row and updates the totals', async ({ page }) => {

@@ -11,7 +11,8 @@ from django.test import Client
 from django.utils import timezone
 
 from account.models import Device, Preferences
-from ai.models import FeatureModel, ProviderKey
+from ai import spend
+from ai.models import FeatureModel, ModelPrice, ProviderKey, Usage
 from munim import vault
 from reader.models import Connection, Feed, Highlight, Item
 
@@ -49,6 +50,8 @@ def filled(owner_client: Client, settings: Any) -> Client:
         checked_at=timezone.now(),
     )
     FeatureModel.objects.create(feature="ask", provider="openai", model="gpt-example")
+    ModelPrice.objects.create(provider="openai", model="gpt-example", input=2, output=8)
+    spend.record("ask", "openai", "gpt-example", 1_000_000, 0)
     images = Path(settings.DATA_DIR) / "images" / "ab"
     images.mkdir(parents=True)
     (images / "abcdef").write_bytes(b"picture")
@@ -68,6 +71,7 @@ def test_the_export_holds_everything_the_owner_put_in_and_no_secrets(filled: Cli
 
     assert sorted(archive.namelist()) == [
         "README.txt",
+        "ai-usage.json",
         "feeds.json",
         "highlights.json",
         "items.json",
@@ -97,8 +101,13 @@ def test_the_export_holds_everything_the_owner_put_in_and_no_secrets(filled: Cli
             "lock_after_minutes": 15,
             "sources_on": ["HN"],
             "ai_models": {"ask": "openai/gpt-example"},
+            "ai_limit": "10.00",
+            "ai_prices": {"openai/gpt-example": {"input": "2.0000", "output": "8.0000"}},
         }
     ]
+    (call,) = read("ai-usage.json")
+    assert (call["feature"], call["model"], call["tokens_in"]) == ("ask", "gpt-example", 1_000_000)
+    assert call["cost"] == "2.000000"
     saved = archive.read(next(n for n in archive.namelist() if n.startswith("saved/"))).decode()
     assert saved.startswith("The case for boring sync protocols\nhttps://wire.example/sync\n\n")
 
@@ -128,7 +137,7 @@ def test_deleting_everything_needs_the_passphrase_and_leaves_the_account(
     assert Item.objects.count() == 2
 
     assert delete(filled, PASSPHRASE).status_code == 204
-    for model in (Item, Feed, Highlight, Connection, ProviderKey, FeatureModel):
+    for model in (Item, Feed, Highlight, Connection, ProviderKey, FeatureModel, ModelPrice, Usage):
         assert model.objects.count() == 0, model
     assert not (Path(settings.DATA_DIR) / "images").exists()
 
@@ -137,6 +146,7 @@ def test_deleting_everything_needs_the_passphrase_and_leaves_the_account(
     assert User.objects.count() == 1
     assert Device.objects.count() == 1
     assert Preferences.load().lock_after_minutes == 15
+    assert Preferences.load().ai_limit == 10
     assert filled.get("/api/items").json() == []
     # Deleting again, with nothing there, is not an error.
     assert delete(filled, PASSPHRASE).status_code == 204

@@ -17,6 +17,9 @@ export type Highlight = Schemas['HighlightOut'];
 /** What the browser knows of a provider's key: its last four characters and whether it works. */
 export type AiKey = Schemas['KeyOut'];
 export type AiChoice = Schemas['ChoiceOut'];
+export type AiPrice = Schemas['Price'];
+export type AiLimit = Schemas['LimitOut'];
+export type AiUsage = Schemas['UsageOut'];
 
 /** Which items to list. Everything left out means "do not narrow by this". */
 export interface ItemQuery {
@@ -111,6 +114,12 @@ export const api = {
   setAiKey: ({ provider, key }: { provider: AiKey['provider']; key: string }) =>
     call<AiKey>('PUT', `ai/keys/${provider}`, { key } satisfies Schemas['KeyIn']),
   removeAiKey: (provider: AiKey['provider']) => call<undefined>('DELETE', `ai/keys/${provider}`),
+  aiPrices: () => call<AiPrice[]>('GET', 'ai/prices'),
+  setAiPrice: (price: AiPrice) => call<AiPrice>('PUT', 'ai/prices', price),
+  aiLimit: () => call<AiLimit>('GET', 'ai/limit'),
+  setAiLimit: (limit: number | null) =>
+    call<AiLimit>('PUT', 'ai/limit', { limit } satisfies Schemas['Limit']),
+  aiUsage: (period: 'this' | 'last') => call<AiUsage>('GET', `ai/usage?period=${period}`),
   aiFeatures: () => call<AiChoice[]>('GET', 'ai/features'),
   setAiFeature: ({ feature, ...choice }: { feature: AiChoice['feature'] } & Schemas['ChoiceIn']) =>
     call<AiChoice>('PUT', `ai/features/${feature}`, choice satisfies Schemas['ChoiceIn']),
