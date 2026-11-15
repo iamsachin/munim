@@ -374,7 +374,12 @@ def work() -> None:
 
 
 @pytest.mark.django_db(transaction=True)
-def test_a_job_left_behind_by_a_worker_that_died_is_run_again(client: Client, web: Any) -> None:
+def test_a_job_left_behind_by_a_worker_that_died_is_run_again(
+    client: Client, web: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A worker also queues whatever is due by the clock. This test counts jobs, so for its
+    # length nothing is scheduled: it must not depend on the minute it runs in.
+    monkeypatch.setattr(app.periodic_registry, "periodic_tasks", {})
     post(client, "setup", {"passphrase": PASSPHRASE})
     web(ok(RSS))
     post(client, "feeds", {"url": "https://lowtech.example/feed"})
@@ -406,6 +411,21 @@ def test_a_job_left_behind_by_a_worker_that_died_is_run_again(client: Client, we
     assert asked == ["lowtech.example"]
     assert waiting() == []
     assert client.get("/api/feeds").json()[0]["problem"] == "The feed's server answered 500."
+
+    # The same again, as it was found on a real install: by the time anyone looks, the next
+    # run has been queued behind the one left behind. That one is cleared, and the next runs.
+    asked.clear()
+    poll_feeds.defer(timestamp=0)  # type: ignore[call-arg]
+    with connection.cursor() as cursor:
+        cursor.execute("update procrastinate_jobs set status = 'doing'")
+    poll_feeds.defer(timestamp=0)  # type: ignore[call-arg]
+    work()
+    assert asked == []
+    assert [status for _, status in waiting()] == ["doing", "todo"]
+    recover_jobs.defer(timestamp=0)  # type: ignore[call-arg]
+    work()
+    assert asked == ["lowtech.example"]
+    assert waiting() == []
 
 
 def test_feeds_need_an_open_session(owner_client: Client, web: Any) -> None:
