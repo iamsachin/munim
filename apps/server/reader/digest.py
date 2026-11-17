@@ -15,7 +15,7 @@ from ai import providers, spend
 from ai.models import Feature, Provider, usable
 from munim import vault
 from reader import ask
-from reader.models import Digest, Item, Source
+from reader.models import KEPT_FROM_AI, Digest, Item, Source
 
 # When one is written, on the owner's own clock: daily at this hour, and the weekly one on
 # this day of the week too (Monday is 0, so 6 is Sunday).
@@ -96,7 +96,7 @@ def chosen(kind: str, now: datetime) -> list[Item]:
     last = Digest.objects.filter(kind=kind).exclude(lead="").first()
     since = last.written_at if last and last.written_at > now - 2 * span else now - span
     # Reddit's content is never sent to an AI provider (CLAUDE.md, Sources).
-    items = Item.objects.exclude(source=Source.REDDIT).select_related("feed")
+    items = Item.objects.exclude(source__in=KEPT_FROM_AI).select_related("feed")
     return list(
         items.filter(published_at__gte=since).order_by("-published_at")[
             : MOST_ITEMS[Digest.Kind(kind)]

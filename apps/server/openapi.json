@@ -861,6 +861,55 @@
         "security": [{ "Open": [] }]
       }
     },
+    "/api/sources/x": {
+      "get": {
+        "operationId": "reader_api_x_state",
+        "summary": "X State",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/XOut" } } }
+          }
+        },
+        "tags": ["reader"],
+        "security": [{ "Open": [] }]
+      },
+      "put": {
+        "operationId": "reader_api_set_x_token",
+        "summary": "Set X Token",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/XOut" } } }
+          }
+        },
+        "description": "Stores the token of the owner's X developer app, sealed. X is not asked anything here:\nit charges for what it returns, so the token is first used when a watch is looked for.",
+        "tags": ["reader"],
+        "requestBody": {
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/XToken" } }
+          },
+          "required": true
+        },
+        "security": [{ "Open": [] }]
+      },
+      "delete": {
+        "operationId": "reader_api_forget_x_token",
+        "summary": "Forget X Token",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/XOut" } } }
+          }
+        },
+        "description": "Forgets the token. Posts already fetched stay; nothing more is asked of X.",
+        "tags": ["reader"],
+        "security": [{ "Open": [] }]
+      }
+    },
     "/api/watches": {
       "get": {
         "operationId": "reader_api_list_watches",
@@ -925,9 +974,15 @@
             "content": {
               "application/json": { "schema": { "$ref": "#/components/schemas/WatchesOut" } }
             }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
           }
         },
-        "description": "Switches a watch on or off. Off, it looks at nothing and its matches are not shown.",
+        "description": "Switches a watch on or off, or on or off for X. Off, it looks at nothing and its\nmatches are not shown.",
         "tags": ["reader"],
         "requestBody": {
           "content": {
@@ -1908,6 +1963,29 @@
         "title": "DigestSwitch",
         "type": "object"
       },
+      "XOut": {
+        "description": "Whether Munim has a token for X, and how its last search went. Never the token.",
+        "properties": {
+          "connected": { "title": "Connected", "type": "boolean" },
+          "tail": { "title": "Tail", "type": "string" },
+          "synced_at": {
+            "anyOf": [{ "format": "date-time", "type": "string" }, { "type": "null" }],
+            "title": "Synced At"
+          },
+          "problem": { "title": "Problem", "type": "string" }
+        },
+        "required": ["connected", "tail", "synced_at", "problem"],
+        "title": "XOut",
+        "type": "object"
+      },
+      "XToken": {
+        "properties": {
+          "token": { "maxLength": 500, "minLength": 20, "title": "Token", "type": "string" }
+        },
+        "required": ["token"],
+        "title": "XToken",
+        "type": "object"
+      },
       "MatchOut": {
         "description": "An item that matched a watch.",
         "properties": {
@@ -1933,6 +2011,7 @@
           "name": { "title": "Name", "type": "string" },
           "kind": { "enum": ["keyword", "person", "topic"], "title": "Kind", "type": "string" },
           "on": { "title": "On", "type": "boolean" },
+          "on_x": { "title": "On X", "type": "boolean" },
           "week": { "title": "Week", "type": "integer" },
           "last": {
             "anyOf": [{ "format": "date-time", "type": "string" }, { "type": "null" }],
@@ -1940,7 +2019,7 @@
           },
           "problem": { "title": "Problem", "type": "string" }
         },
-        "required": ["id", "name", "kind", "on", "week", "last", "problem"],
+        "required": ["id", "name", "kind", "on", "on_x", "week", "last", "problem"],
         "title": "WatchOut",
         "type": "object"
       },
@@ -1971,8 +2050,11 @@
         "type": "object"
       },
       "WatchSwitch": {
-        "properties": { "on": { "title": "On", "type": "boolean" } },
-        "required": ["on"],
+        "description": "What to change. Anything left out stays as it is.",
+        "properties": {
+          "on": { "anyOf": [{ "type": "boolean" }, { "type": "null" }], "title": "On" },
+          "on_x": { "anyOf": [{ "type": "boolean" }, { "type": "null" }], "title": "On X" }
+        },
         "title": "WatchSwitch",
         "type": "object"
       },

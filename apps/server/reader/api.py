@@ -16,7 +16,7 @@ from procrastinate.exceptions import AlreadyEnqueued
 
 from account.auth import Open
 from account.models import Preferences
-from reader import ask, feeds, icons, images, search, tasks, watches, youtube
+from reader import ask, feeds, icons, images, search, tasks, watches, x, youtube
 from reader.models import Ask, Connection, Digest, Feed, Highlight, Item, Match, Source, Watch
 
 router = Router(tags=["reader"], auth=Open())
@@ -918,7 +918,11 @@ class WatchIn(Schema):
 
 
 class WatchSwitch(Schema):
-    on: bool
+    """What to change. Anything left out stays as it is."""
+
+    on: bool | None = None
+    # Whether X is searched for it too. A keyword or a person only.
+    on_x: bool | None = None
 
 
 class WatchOut(Schema):
@@ -926,6 +930,8 @@ class WatchOut(Schema):
     name: str
     kind: Literal["keyword", "person", "topic"]
     on: bool
+    # Whether X is searched for it too, once a day, which the owner pays X for.
+    on_x: bool
     # How many items matched it this week, and when the latest of them was published.
     week: int
     last: datetime | None
@@ -974,6 +980,7 @@ def _watches() -> WatchesOut:
                 name=w.name,
                 kind=w.kind,  # type: ignore[arg-type]
                 on=w.on,
+                on_x=w.on_x,
                 week=week.get(w.pk, 0),
                 last=last.get(w.pk),
                 problem=w.problem,
@@ -995,20 +1002,73 @@ def _watches() -> WatchesOut:
     )
 
 
-def _look(watch: Watch) -> None:
-    """A watch just added or switched on looks at once. By words that is done here, since it
-    asks nothing of anyone; a topic is left to the worker, which also calls the model."""
-    if watch.kind != Watch.Kind.TOPIC:
-        watches.check(watch)
-        return
-    # In a transaction of its own: if the hourly run is already queued the insert fails, and
-    # that must not spoil the request's.
+def _look_now() -> None:
+    """Has the worker look for the watches now, not on its next hour. In a transaction of its
+    own: if the hourly run is already queued the insert fails, and that must not spoil the
+    request's."""
     try:
         with transaction.atomic():
             # The periodic decorator hides the task's arguments from the type checker.
             tasks.match_watches.defer(timestamp=0)  # type: ignore[call-arg]
     except AlreadyEnqueued:
         pass
+
+
+def _look(watch: Watch) -> None:
+    """A watch just added or switched on looks at once. By words that is done here, since it
+    asks nothing of anyone; a topic is left to the worker, which also calls the model."""
+    if watch.kind != Watch.Kind.TOPIC:
+        watches.check(watch)
+        return
+    _look_now()
+
+
+class XOut(Schema):
+    """Whether Munim has a token for X, and how its last search went. Never the token."""
+
+    connected: bool
+    # The token's last four characters, to tell one from another; empty if there is none.
+    tail: str
+    synced_at: datetime | None
+    problem: str
+
+
+class XToken(Schema):
+    token: str = Field(min_length=20, max_length=500)
+
+
+def _x() -> XOut:
+    found = Connection.objects.filter(source=Source.X).first()
+    if found is None or not found.sealed:
+        return XOut(connected=False, tail="", synced_at=None, problem="")
+    return XOut(
+        connected=found.enabled,
+        tail=found.account,
+        synced_at=found.synced_at,
+        problem=found.problem,
+    )
+
+
+@router.get("/sources/x", response=XOut)
+def x_state(request: HttpRequest) -> XOut:
+    return _x()
+
+
+@router.put("/sources/x", response=XOut)
+def set_x_token(request: HttpRequest, body: XToken) -> XOut:
+    """Stores the token of the owner's X developer app, sealed. X is not asked anything here:
+    it charges for what it returns, so the token is first used when a watch is looked for."""
+    x.keep(body.token.strip())
+    if Watch.objects.filter(on=True, on_x=True).exists():
+        _look_now()
+    return _x()
+
+
+@router.delete("/sources/x", response=XOut)
+def forget_x_token(request: HttpRequest) -> XOut:
+    """Forgets the token. Posts already fetched stay; nothing more is asked of X."""
+    Connection.objects.filter(source=Source.X).delete()
+    return _x()
 
 
 @router.get("/watches", response=WatchesOut)
@@ -1029,15 +1089,25 @@ def add_watch(request: HttpRequest, body: WatchIn) -> Status[WatchesOut] | Statu
     return Status(201, _watches())
 
 
-@router.patch("/watches/{watch_id}", response=WatchesOut)
-def switch_watch(request: HttpRequest, watch_id: int, body: WatchSwitch) -> WatchesOut:
-    """Switches a watch on or off. Off, it looks at nothing and its matches are not shown."""
+@router.patch("/watches/{watch_id}", response={200: WatchesOut, 422: Error})
+def switch_watch(
+    request: HttpRequest, watch_id: int, body: WatchSwitch
+) -> Status[WatchesOut] | Status[Error]:
+    """Switches a watch on or off, or on or off for X. Off, it looks at nothing and its
+    matches are not shown."""
     watch = get_object_or_404(Watch, pk=watch_id)
-    watch.on = body.on
-    watch.save(update_fields=["on"])
-    if watch.on:
+    if body.on_x and watch.kind == Watch.Kind.TOPIC:
+        return Status(422, Error(detail="A topic is not looked for on X."))
+    if body.on is not None:
+        watch.on = body.on
+    if body.on_x is not None:
+        watch.on_x = body.on_x
+    watch.save(update_fields=["on", "on_x"])
+    if watch.on and body.on:
         _look(watch)
-    return _watches()
+    if watch.on and watch.on_x and (body.on or body.on_x):
+        _look_now()
+    return Status(200, _watches())
 
 
 @router.delete("/watches/{watch_id}", response=WatchesOut)

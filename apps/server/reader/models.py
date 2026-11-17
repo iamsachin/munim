@@ -45,6 +45,12 @@ class Source(models.TextChoices):
     RSS = "RSS", "RSS"
 
 
+# Sources whose content is never sent to an AI provider: Reddit by the terms of the owner's
+# request to it, X until its developer terms have been read to allow it (they forbid training
+# a model on its content, and say nothing found so far of answering from it).
+KEPT_FROM_AI = (Source.REDDIT, Source.X)
+
+
 class Connection(models.Model):
     """A source that is followed as a whole, not feed by feed: whether the owner has it on, and
     how its last fetch went. A source with no row is off."""
@@ -264,6 +270,10 @@ class Watch(models.Model):
     on = models.BooleanField(default=True)
     # The newest item it has looked at: later ones are still to be looked at.
     checked_to = models.PositiveBigIntegerField(default=0)
+    # Whether X is searched for it too, which the owner pays X for, and when it last was. A
+    # keyword or a person only (see reader/x.py).
+    on_x = models.BooleanField(default=False)
+    x_looked_at = models.DateTimeField(null=True, blank=True)
     # Why a topic could not be judged the last time, in words for the owner. Empty otherwise.
     problem = models.CharField(max_length=300, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

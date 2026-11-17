@@ -10,7 +10,7 @@ import { EmptyState, ErrorState, LoadingRows } from '../ui/States';
 import { Cell, Table, TableHeader, TableRow, Th } from '../ui/Table';
 import { Toggle } from '../ui/Toggle';
 import { EMPTY } from './copy';
-import { age, useAddWatch, useRemoveWatch, useSetWatch, useWatches } from './queries';
+import { age, useAddWatch, useRemoveWatch, useSetWatch, useWatches, useX } from './queries';
 
 type Kind = Told['watches'][number]['kind'];
 
@@ -21,7 +21,7 @@ const KINDS: Record<Kind, { name: string; how: string }> = {
   topic: { name: 'Topic', how: 'Matched by its words, and judged by the Watch model hourly' },
 };
 
-const COLS = 'grid-cols-[minmax(0,1fr)_90px_80px_100px_60px_70px]';
+const COLS = 'grid-cols-[minmax(0,1fr)_90px_80px_100px_60px_60px_70px]';
 const MATCH_COLS = 'grid-cols-[150px_34px_minmax(0,1fr)_40px]';
 const META = 'font-mono text-meta text-mute';
 
@@ -32,6 +32,8 @@ const META = 'font-mono text-meta text-mute';
  */
 export function Watches() {
   const watches = useWatches(true);
+  // X is searched for a watch only if the owner has given Munim a token for it.
+  const x = useX().data?.connected ?? false;
   const add = useAddWatch();
   const set = useSetWatch();
   const remove = useRemoveWatch();
@@ -99,9 +101,8 @@ export function Watches() {
           <Th>Kind</Th>
           <Th className="text-right">This week</Th>
           <Th>Last match</Th>
-          <Th>
-            <span className="sr-only">On or off</span>
-          </Th>
+          <Th>On X</Th>
+          <Th>Watching</Th>
           <Th>
             <span className="sr-only">Remove</span>
           </Th>
@@ -120,6 +121,20 @@ export function Watches() {
             </Cell>
             <Cell className={`${META} text-right`}>{w.week}</Cell>
             <Cell className={META}>{w.last ? `${age(w.last, now)} ago` : 'No matches'}</Cell>
+            <Cell>
+              {/* A topic is not looked for on X: only words and accounts can be asked of it. */}
+              {w.kind !== 'topic' && (
+                <Toggle
+                  on={w.on_x}
+                  label={`Look on X for ${w.name}`}
+                  disabled={!x}
+                  title={x ? undefined : 'Set up X under Connections first'}
+                  onChange={(on_x) => {
+                    set.mutate({ id: w.id, on_x });
+                  }}
+                />
+              )}
+            </Cell>
             <Cell className="justify-self-end">
               <Toggle
                 on={w.on}
@@ -142,6 +157,19 @@ export function Watches() {
           </TableRow>
         ))}
       </Table>
+      <p className="px-16 pt-8 text-note text-mute">
+        A watch that is on for X is searched there once a day, for at most 10 posts, which X charges
+        for.{' '}
+        {!x && (
+          <>
+            To use it,{' '}
+            <Link to="/connections" className="underline">
+              set up X under Connections
+            </Link>
+            .
+          </>
+        )}
+      </p>
       <div className="px-16">
         {watches.isPending && <LoadingRows what="watches" rows={3} />}
         {watches.isError && (

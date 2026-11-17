@@ -6,6 +6,7 @@ import {
   type ItemPatch,
   type ItemQuery,
   type Watches,
+  type X,
 } from '../api/client';
 import { useReader, type Scope } from './store';
 
@@ -175,6 +176,21 @@ function useWatchChange<In>(mutationFn: (input: In) => Promise<Watches>) {
     },
   });
 }
+/** Whether Munim has a token for X, and how its last search went. */
+export const useX = () => useQuery({ queryKey: ['x'], queryFn: api.x });
+
+function useXChange<In>(mutationFn: (input: In) => Promise<X>) {
+  const queries = useQueryClient();
+  return useMutation({
+    mutationFn,
+    onSuccess: (state) => {
+      queries.setQueryData(['x'], state);
+    },
+  });
+}
+export const useSetXToken = () => useXChange(api.setXToken);
+export const useForgetX = () => useXChange(api.forgetX);
+
 export const useAddWatch = () => useWatchChange(api.addWatch);
 export const useSetWatch = () => useWatchChange(api.setWatch);
 export const useRemoveWatch = () => useWatchChange(api.removeWatch);

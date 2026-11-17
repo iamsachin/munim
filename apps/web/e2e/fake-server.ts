@@ -218,6 +218,7 @@ export async function fakeServer(page: Page, start: State = 'open') {
     name,
     kind,
     on: true,
+    on_x: false,
     week,
     last: hoursAgo === null ? null : ago(hoursAgo * 3_600_000),
     problem: '',
@@ -255,6 +256,8 @@ export async function fakeServer(page: Page, start: State = 'open') {
       )
       .sort((a, b) => b.published_at.localeCompare(a.published_at)),
   });
+  // X has no token until one is pasted in.
+  let xState = { connected: false, tail: '', synced_at: null as string | null, problem: '' };
   let digestsOn = true;
   let digests = {
     daily: {
@@ -644,6 +647,21 @@ export async function fakeServer(page: Page, start: State = 'open') {
       spent,
       paused: aiLimit !== null && spent >= aiLimit,
     });
+    if (call === 'GET sources/x') return reply(200, xState);
+    if (call === 'PUT sources/x') {
+      // Only the token's last four characters are ever told.
+      xState = {
+        connected: true,
+        tail: String(body.token).slice(-4),
+        synced_at: null,
+        problem: '',
+      };
+      return reply(200, xState);
+    }
+    if (call === 'DELETE sources/x') {
+      xState = { connected: false, tail: '', synced_at: null, problem: '' };
+      return reply(200, xState);
+    }
     if (call === 'GET watches') return reply(200, watchesTold());
     if (call === 'POST watches') {
       const name = String(body.name).trim();
@@ -655,8 +673,15 @@ export async function fakeServer(page: Page, start: State = 'open') {
     }
     const [, watchVerb, watchId] = /^(PATCH|DELETE) watches\/(\d+)$/.exec(call) ?? [];
     if (watchVerb === 'PATCH') {
+      // What is left out stays as it is.
       watches = watches.map((watch) =>
-        watch.id === Number(watchId) ? { ...watch, on: Boolean(body.on) } : watch,
+        watch.id === Number(watchId)
+          ? {
+              ...watch,
+              on: body.on == null ? watch.on : Boolean(body.on),
+              on_x: body.on_x == null ? watch.on_x : Boolean(body.on_x),
+            }
+          : watch,
       );
       return reply(200, watchesTold());
     }

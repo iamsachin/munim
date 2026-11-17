@@ -61,6 +61,18 @@ While the Google project's publishing status is "Testing", Google ends the sign-
 and you connect again. Publishing the project removes that limit. Munim checks for new videos
 every hour and stays within Google's free daily allowance.
 
+## Connecting X
+
+X charges for every post an app reads, so Munim reads X only for watches. On the Watches screen
+a keyword or a person can be switched on for X; it is then searched there once a day, and at
+most 10 posts come back.
+
+1. In [X's developer console](https://console.x.com/), create an app and buy credits.
+2. Paste the app's Bearer Token into Munim under Connections, X, Set up.
+
+Munim stores the token sealed and never shows it again. Posts from X are not sent to an AI
+model.
+
 ## Upgrade
 
 ```sh

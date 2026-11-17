@@ -1328,7 +1328,6 @@ test('connections: sources Munim cannot read say why, and feeds show their real 
   await open(page, '/connections');
   for (const [name, reason] of [
     ['Reddit', 'Reddit must approve an app before it may read anything.'],
-    ['X', 'X charges for every post an app reads.'],
     ['Instagram', 'Instagram has no official way to read a personal feed.'],
   ] as const) {
     const row = page.getByRole('row').filter({ hasText: reason });
@@ -1353,6 +1352,47 @@ test('connections: sources Munim cannot read say why, and feeds show their real 
   await page.getByRole('link', { name: 'Connections' }).click();
   await expect(rss).toContainText('6 feeds');
   await expect(rss).toContainText('Just now');
+});
+
+test('x: a token is pasted in under Connections, and a watch is then switched on for X', async ({
+  page,
+}) => {
+  await open(page, '/watches');
+  // Without a token the switch cannot be used, and the screen says where X is set up. A topic
+  // has no such switch: X can only be asked for words and accounts.
+  const onX = page.getByRole('switch', { name: 'Look on X for rate limits' });
+  await expect(onX).toBeDisabled();
+  await expect(page.getByRole('switch', { name: 'Look on X for local-first' })).toHaveCount(0);
+  await page.getByRole('link', { name: 'set up X under Connections' }).click();
+
+  const row = page.getByRole('row').filter({ hasText: 'Watches only' });
+  await expect(row).toContainText('Not set up');
+  await expect(row).toContainText('Disconnected');
+  await page.getByRole('button', { name: 'Set up X' }).click();
+  const setup = page.getByRole('region', { name: 'X setup' });
+  await expect(setup).toContainText('at most 10 posts');
+  await expect(page).toHaveScreenshot('connections-x-setup-dark.png');
+  expect(await axeFailures(page)).toEqual([]);
+  await setup.getByLabel('X Bearer Token').fill('AAAA-made-up-token-for-the-test-WXYZ');
+  await setup.getByRole('button', { name: 'Save' }).click();
+  // Only its last characters are shown, never the token.
+  await expect(row).toContainText('Token ending WXYZ');
+  await expect(row).toContainText('Connected');
+  await expect(setup).toHaveCount(0);
+  await expect(page.getByText('made-up-token')).toHaveCount(0);
+
+  await page.getByRole('link', { name: /^Watches/ }).click();
+  await expect(onX).toBeEnabled();
+  await onX.click();
+  await expect(onX).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByRole('link', { name: 'set up X under Connections' })).toHaveCount(0);
+  await expect(page).toHaveScreenshot('watches-on-x-dark.png');
+  expect(await axeFailures(page)).toEqual([]);
+
+  // Disconnected, the token is forgotten.
+  await page.getByRole('link', { name: 'Connections', exact: true }).click();
+  await page.getByRole('button', { name: 'Disconnect X' }).click();
+  await expect(row).toContainText('Not set up');
 });
 
 test('connections: YouTube is disconnected, and can be connected again with one click', async ({
