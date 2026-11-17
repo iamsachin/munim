@@ -1746,32 +1746,25 @@ test('sign-in by email: the settings say so, there is no lock, and deleting ever
   await expect(page.getByText('Everything was deleted.')).toBeVisible();
 });
 
-test('with sign-in switched off there is no lock or sign-out, and the settings say so', async ({
+test("sign-in on an install with no mail: the code is in the server's log, and the screens say so", async ({
   page,
 }) => {
-  await fakeServer(page);
-  await page.route('**/api/session', (route) =>
-    route.fulfill({ json: { state: 'open', sign_in: 'off' } }),
-  );
+  await fakeServer(page, 'signed_out');
+  let state = 'signed_out';
+  await page.route('**/api/session', (route) => route.fulfill({ json: { state, sign_in: 'log' } }));
   await page.goto('/settings');
+  await expect(page.getByText('This install has no mail', { exact: false })).toBeVisible();
+  await page.getByRole('button', { name: 'Send me a code' }).click();
   await expect(
-    page.getByText('Sign-in is switched off on this install (MUNIM_NO_SIGN_IN).', { exact: false }),
+    page.getByText("A code was written to the server's log.", { exact: false }),
   ).toBeVisible();
-  // Nothing that would only pretend to keep someone out.
+  await page.getByLabel('Code').fill(GOOD_CODE);
+  state = 'open';
+  await page.getByLabel('Code').press('Enter');
+  await expect(
+    page.getByText('You sign in with a code that Munim writes to its own log', { exact: false }),
+  ).toBeVisible();
   await expect(page.getByRole('button', { name: 'Lock', exact: true })).toHaveCount(0);
-  await expect(page.getByRole('switch', { name: 'Lock when idle' })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Sign out' })).toHaveCount(0);
-  // The passphrase can still be changed, and other devices are still listed.
-  await expect(page.getByRole('button', { name: 'Change' })).toBeVisible();
-  await expect(page.getByText('Safari on iPhone')).toBeVisible();
-  await expect(page.getByRole('link', { name: /^Stream/ })).toHaveText(/22$/);
-  await expect(page).toHaveScreenshot('settings-no-sign-in-dark.png');
-  expect(await axeFailures(page)).toEqual([]);
-
-  // Nor is locking among the commands.
-  await page.keyboard.press('ControlOrMeta+k');
-  await expect(page.getByRole('dialog')).toBeVisible();
-  await expect(page.getByText('Lock now')).toHaveCount(0);
 });
 
 test('idle lock: with nothing touched for the chosen time the screen locks itself', async ({

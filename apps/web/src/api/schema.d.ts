@@ -875,7 +875,7 @@ export interface components {
        * Sign In
        * @enum {string}
        */
-      sign_in: 'passphrase' | 'email' | 'off';
+      sign_in: 'passphrase' | 'email' | 'log';
     };
     /** Error */
     Error: {

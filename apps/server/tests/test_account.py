@@ -408,29 +408,3 @@ def test_a_made_up_forwarded_address_does_not_buy_more_guesses(
         guess = sign_in("a guess", forwarded=f"10.0.0.{n}, 192.0.2.50")
         assert guess[1] == 401
     assert sign_in(forwarded="10.0.0.200, 192.0.2.50")[1] == 429
-
-
-def test_with_sign_in_switched_off_whoever_asks_is_the_owner_once_there_is_one(
-    client: Client, db: None, settings: Any
-) -> None:
-    settings.NO_SIGN_IN = True
-    # Until Munim is set up there is nobody to be: first-run setup is still shown.
-    assert client.get("/api/session").json() == {"state": "setup", "sign_in": "off"}
-    assert post(client, "setup", {"passphrase": PASSPHRASE}).status_code == 200
-
-    # A browser that has never signed in is let straight in, and is on the device list once.
-    other = Client()
-    assert other.get("/api/session").json() == {"state": "open", "sign_in": "off"}
-    assert other.get("/api/counts").status_code == 200
-    assert len(other.get("/api/devices").json()) == 2
-    # Lock and sign-out keep nobody out, so neither closes anything.
-    assert post(other, "lock", {}).status_code == 204
-    assert other.get("/api/counts").status_code == 200
-    assert post(other, "sign-out", {}).status_code == 204
-    assert other.get("/api/session").json()["state"] == "open"
-    # What asks for the passphrase still does: deleting everything is not done by accident.
-    assert post(other, "delete-all", {"passphrase": "wrong"}).status_code == 403
-
-    # Switched on again, that browser's session carries on; a new one must sign in.
-    settings.NO_SIGN_IN = False
-    assert Client().get("/api/session").json() == {"state": "signed_out", "sign_in": "passphrase"}

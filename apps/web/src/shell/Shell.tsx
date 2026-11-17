@@ -79,7 +79,7 @@ export function Shell() {
   // with it, and tells the server about activity that makes no API calls of its own.
   const { lockMinutes, signIn, set: setSession, refused } = session;
   useEffect(() => {
-    // Only a passphrase locks: with sign-in off, or by a mailed code, there is no idle lock.
+    // Only a passphrase locks: where sign-in is by a code there is no idle lock.
     if (session.state !== 'open' || lockMinutes === undefined || signIn !== 'passphrase') return;
     let lastActivity = Date.now();
     let lastReport = Date.now();

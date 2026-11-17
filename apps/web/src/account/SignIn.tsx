@@ -7,7 +7,7 @@ import { useSession } from './session';
 
 export function SignIn() {
   const session = useSession();
-  if (session.signIn === 'email') return <ByEmail />;
+  if (session.signIn !== 'passphrase') return <ByCode />;
   return (
     <AuthCard heading="Sign in" documentTitle="Sign in">
       <PassphraseForm
@@ -25,11 +25,13 @@ export function SignIn() {
 }
 
 /**
- * Sign-in where the install has mail set up: a code is sent to the owner's address, which
- * whoever runs the install has set, so nobody types an address here.
+ * Sign-in by a code. It is sent to the owner's address, which whoever runs the install has
+ * set, so nobody types an address here; on an install with no mail it is written to the
+ * server's log instead.
  */
-function ByEmail() {
+function ByCode() {
   const session = useSession();
+  const mailed = session.signIn === 'email';
   const [sent, setSent] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -45,7 +47,7 @@ function ByEmail() {
         // One was sent a moment ago, so there is a code to enter.
         setSent(true);
         setProblem(
-          `A code was sent a moment ago. Another can be sent in ${String(error.waitSeconds)} seconds.`,
+          `A code was made a moment ago. Another can be asked for in ${String(error.waitSeconds)} seconds.`,
         );
       } else setProblem(reason(error));
     } finally {
@@ -58,7 +60,10 @@ function ByEmail() {
       {sent ? (
         <>
           <p className="text-pretty text-mute">
-            A code was sent to the owner&apos;s email address. It works once, for ten minutes.
+            {mailed
+              ? "A code was sent to the owner's email address."
+              : "A code was written to the server's log."}{' '}
+            It works once, for ten minutes.
           </p>
           <PassphraseForm
             code
@@ -75,7 +80,9 @@ function ByEmail() {
       ) : (
         <>
           <p className="text-pretty text-mute">
-            Munim sends a code to its owner&apos;s email address. It cannot be sent anywhere else.
+            {mailed
+              ? "Munim sends a code to its owner's email address. It cannot be sent anywhere else."
+              : 'This install has no mail, so Munim writes a code to its own log on the server, where whoever runs it can read it.'}
           </p>
           <Button variant="primary" disabled={busy} onClick={() => void send()}>
             Send me a code
