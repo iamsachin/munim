@@ -72,3 +72,15 @@ def fetch(url: str) -> tuple[bytes, str]:
     put(place, got.content)
     put(kind_file, got.content_type.encode())
     return got.content, got.content_type
+
+
+def keep(item: Item) -> None:
+    """Fetches every picture of an item that is not on disk yet, so that it stays even if its
+    publisher takes it down. One that cannot be fetched is left: it is tried again if it is
+    ever looked at."""
+    for block in item.blocks:
+        if block["type"] in ("image", "video"):
+            try:
+                fetch(str(block["src"]))
+            except ImageProblem:
+                pass

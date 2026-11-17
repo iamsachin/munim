@@ -481,6 +481,10 @@ def change_item(request: HttpRequest, item_id: int, body: ItemPatch) -> ItemOut:
         # Asking for what is already so changes nothing, so "saved at" keeps its first time.
         if wanted is not None and wanted != (getattr(item, field) is not None):
             setattr(item, field, now if wanted else None)
+            if wanted and field == "saved_at":
+                # What is saved is kept whole: the worker fetches its pictures, even ones
+                # that were never shown.
+                tasks.keep_pictures.defer(item_id=item.pk)
     item.save()
     return ItemOut(**_row(item))
 

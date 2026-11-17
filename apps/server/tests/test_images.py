@@ -6,6 +6,7 @@ import pytest
 from django.test import Client
 
 from reader.models import Feed, Item
+from reader.tasks import keep_pictures
 
 from .conftest import post
 
@@ -111,3 +112,33 @@ def test_images_need_an_open_session(owner_client: Client, article: Item, web: A
     assert Client().get(f"/api/items/{article.pk}/images/0").status_code == 401
     post(owner_client, "lock")
     assert owner_client.get(f"/api/items/{article.pk}/images/0").status_code == 423
+
+
+def test_saving_an_item_fetches_its_pictures_even_ones_never_shown(
+    owner_client: Client, article: Item, web: Any, tmp_path: Path
+) -> None:
+    asked = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        asked.append(str(request.url))
+        # The second picture cannot be had: the first is kept all the same.
+        ok = request.url.path.endswith("chart.png")
+        return httpx.Response(
+            200 if ok else 404, content=PNG, headers={"Content-Type": "image/png"}
+        )
+
+    web(handler)
+    saved = owner_client.patch(f"/api/items/{article.pk}", {"saved": True}, "application/json")
+    assert saved.status_code == 200
+    # Nothing is fetched inside the request: the worker does it.
+    assert asked == []
+    keep_pictures(item_id=article.pk)
+    assert asked == ["https://cdn.example/chart.png", "https://cdn.example/photo.jpg"]
+    # It is on disk now, so showing it asks the publisher nothing more.
+    assert owner_client.get(f"/api/items/{article.pk}/images/0").content == PNG
+    assert len(asked) == 2
+    # Run again, as after a crash, only what is missing is asked for; an item since removed
+    # is no trouble.
+    keep_pictures(item_id=article.pk)
+    assert asked[2:] == ["https://cdn.example/photo.jpg"]
+    keep_pictures(item_id=99999)

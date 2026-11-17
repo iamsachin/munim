@@ -12,7 +12,7 @@ Nothing in the browser runs on sample data any more. Watches are real: matched o
 
 Reddit is not possible today: Reddit requires its approval before an app may read anything (2026-11-15). It joins X and Instagram as "Not available yet" on Connections, each with its reason, and is built only if Reddit approves the owner's request.
 
-Next: the owner's approval of milestones 3 and 4. Left unticked: Reddit (waits for Reddit), a saved item's pictures fetched at the moment of saving, and replies (no source allows them).
+Next: the owner's approval of milestones 3 and 4. Left unticked: Reddit (waits for Reddit) and replies (no source allows them).
 
 ## 0. Preparation
 
@@ -99,7 +99,7 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] Connections says only what is true: Hacker News, YouTube and feeds from the server; Reddit, X and Instagram "Not available yet" with the reason
 - [x] Saving an item (full text of feed articles)
 - [x] Saving keeps an item's full text and its comment thread as last fetched: no source ever deletes an item, and removing a feed leaves what was saved. Transcripts are dropped: no official API has them (owner's decision, 2026-11-15).
-- [ ] Saving: a saved item's pictures are kept only once they have been shown; they are not fetched at the moment of saving
+- [x] Saving an item fetches its pictures in the worker, shown or not, so they stay if the publisher takes them down
 - [x] Search (Postgres full-text) in the Stream: the words typed are looked for together first, then anywhere, in titles and article text, in any form; quoted phrases, OR and exclusions as written. Replies are not searched yet.
 - [x] Search matches shown in the open article: marked words, a tick for each down the edge, and a stepper (approved)
 - [x] Highlights on the server, stored with their position in the text: a highlight can cross bold, italic and links, is marked only where it was made, and is found again by its words if the text changes
