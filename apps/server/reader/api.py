@@ -930,10 +930,11 @@ class WatchOut(Schema):
 
 
 class MatchOut(Schema):
-    """An item that matched a watch. A topic's match is a model's judgement."""
+    """An item that matched a watch."""
 
     watch: str
-    kind: Literal["keyword", "person", "topic"]
+    # Whether a model judged it a match (a topic's), and not the watch's words.
+    judged: bool
     item_id: int
     source: SourceCode
     title: str
@@ -978,7 +979,7 @@ def _watches() -> WatchesOut:
         matches=[
             MatchOut(
                 watch=m.watch.name,
-                kind=m.watch.kind,  # type: ignore[arg-type]
+                judged=m.judged,
                 item_id=m.item.pk,
                 source=m.item.source,  # type: ignore[arg-type]
                 title=m.item.title,
@@ -992,7 +993,7 @@ def _watches() -> WatchesOut:
 
 def _look(watch: Watch) -> None:
     """A watch just added or switched on looks at once. By words that is done here, since it
-    asks nothing of anyone; a topic is left to the worker, which calls the model."""
+    asks nothing of anyone; a topic is left to the worker, which also calls the model."""
     if watch.kind != Watch.Kind.TOPIC:
         watches.check(watch)
         return

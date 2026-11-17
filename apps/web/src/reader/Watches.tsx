@@ -18,7 +18,7 @@ type Kind = Told['watches'][number]['kind'];
 const KINDS: Record<Kind, { name: string; how: string }> = {
   keyword: { name: 'Keyword', how: 'Matched by its words' },
   person: { name: 'Person', how: 'Matched by who published or replied' },
-  topic: { name: 'Topic', how: 'Judged by the Watch model, hourly' },
+  topic: { name: 'Topic', how: 'Matched by its words, and judged by the Watch model hourly' },
 };
 
 const COLS = 'grid-cols-[minmax(0,1fr)_90px_80px_100px_60px_70px]';
@@ -163,7 +163,8 @@ export function Watches() {
           >
             <Cell className="flex min-w-0 items-center gap-6 text-sm text-accent">
               <span className="truncate">{m.watch}</span>
-              {m.kind === 'topic' && <AiBadge />}
+              {/* Only a model's judgement is AI's: a topic's words can find an item too. */}
+              {m.judged && <AiBadge />}
             </Cell>
             <Cell>
               <SourceTag src={m.source} icon={m.icon} />

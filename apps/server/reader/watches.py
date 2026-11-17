@@ -1,7 +1,7 @@
 """Watches: things the owner wants to hear of, and the items that match each.
 
-A keyword or a person is matched by words, which costs nothing. A topic is judged by a model,
-on the titles and openings of new items only, once an hour.
+A keyword or a person is matched by words, which costs nothing. A topic is matched by its
+words too, and is also judged by a model, on the titles and openings of new items, once an hour.
 """
 
 from datetime import timedelta
@@ -63,7 +63,10 @@ def _by_words(watch: Watch, items: QuerySet[Item]) -> list[Item]:
         by = Q(origin__iexact=name) | Q(feed__title__iexact=name)
         return list(items.filter(by | Q(comments__contains=[{"who": name}])))
     # As the Stream's search finds them: the words together, in any form.
-    return list(items.filter(search.matching(watch.name)[0]))
+    together, anywhere = search.matching(watch.name)
+    # A topic is looser: its words anywhere in the title or the text will do.
+    wanted = together | anywhere if watch.kind == Watch.Kind.TOPIC and anywhere else together
+    return list(items.filter(wanted))
 
 
 def prompt(watch: Watch, items: list[Item]) -> str:
@@ -101,32 +104,34 @@ def _by_model(watch: Watch, items: list[Item]) -> list[Item]:
 
 
 def check(watch: Watch) -> None:
-    """Looks at the items this watch has not seen, and keeps the ones that match. A topic that
-    cannot be judged (no model, the limit, the provider) keeps the reason and its place, so
-    it is judged when it can be."""
+    """Looks at the items this watch has not seen, and keeps the ones that match. Words are
+    looked for in all of them, which costs nothing. A topic is also judged by the model, on
+    the newest of them; if it cannot be (no model, the limit, the provider), the watch keeps
+    the reason and its place, so it is judged when it can be."""
     unseen = _unseen(watch)
     newest = unseen.order_by("-pk").values_list("pk", flat=True).first()
     if newest is None:
         return
-    try:
-        if watch.kind == Watch.Kind.TOPIC:
-            # Reddit's content is never sent to an AI provider (CLAUDE.md, Sources). Only the
-            # newest are judged: a backlog is not worth its tokens.
-            given = list(
-                unseen.exclude(source=Source.REDDIT)
-                .select_related("feed")
-                .order_by("-pk")[:MOST_JUDGED]
-            )
-            matched = _by_model(watch, given) if given else []
-        else:
-            matched = _by_words(watch, unseen)
-    except (Unjudged, providers.Failed) as problem:
-        Watch.objects.filter(pk=watch.pk).update(problem=str(problem))
-        return
-    Match.objects.bulk_create(
-        [Match(watch=watch, item=item) for item in matched], ignore_conflicts=True
-    )
-    watch.checked_to, watch.problem = newest, ""
+    found = [Match(watch=watch, item=item) for item in _by_words(watch, unseen)]
+    Match.objects.bulk_create(found, ignore_conflicts=True)
+    if watch.kind == Watch.Kind.TOPIC:
+        # Reddit's content is never sent to an AI provider (CLAUDE.md, Sources). Only the
+        # newest are judged: a backlog is not worth its tokens.
+        given = list(
+            unseen.exclude(source=Source.REDDIT)
+            .select_related("feed")
+            .order_by("-pk")[:MOST_JUDGED]
+        )
+        try:
+            judged = _by_model(watch, given) if given else []
+        except (Unjudged, providers.Failed) as problem:
+            Watch.objects.filter(pk=watch.pk).update(problem=str(problem))
+            return
+        # What the words had already found stays a match by words: only the rest is the
+        # model's judgement.
+        Match.objects.bulk_create(
+            [Match(watch=watch, item=item, judged=True) for item in judged], ignore_conflicts=True
+        )
     Watch.objects.filter(pk=watch.pk).update(checked_to=newest, problem="")
 
 

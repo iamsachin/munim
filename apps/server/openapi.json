@@ -1909,10 +1909,10 @@
         "type": "object"
       },
       "MatchOut": {
-        "description": "An item that matched a watch. A topic's match is a model's judgement.",
+        "description": "An item that matched a watch.",
         "properties": {
           "watch": { "title": "Watch", "type": "string" },
-          "kind": { "enum": ["keyword", "person", "topic"], "title": "Kind", "type": "string" },
+          "judged": { "title": "Judged", "type": "boolean" },
           "item_id": { "title": "Item Id", "type": "integer" },
           "source": {
             "enum": ["RD", "X", "IG", "HN", "YT", "RSS"],
@@ -1923,7 +1923,7 @@
           "icon": { "anyOf": [{ "type": "string" }, { "type": "null" }], "title": "Icon" },
           "published_at": { "format": "date-time", "title": "Published At", "type": "string" }
         },
-        "required": ["watch", "kind", "item_id", "source", "title", "icon", "published_at"],
+        "required": ["watch", "judged", "item_id", "source", "title", "icon", "published_at"],
         "title": "MatchOut",
         "type": "object"
       },
