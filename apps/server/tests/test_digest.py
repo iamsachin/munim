@@ -131,6 +131,38 @@ def test_a_digest_that_cannot_be_written_says_why_and_is_not_tried_again(
     assert owner_client.get("/api/digests").json()["daily"]["problem"] == problem
 
 
+def test_a_digest_that_waited_on_the_owner_is_written_once_they_have_put_it_right(
+    owner_client: Client,
+    library: dict[str, Item],  # noqa: F811
+    model: Any,  # noqa: F811
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    ready()
+    switch()
+    monkeypatch.setattr(digest, "HOUR", 0)
+    monkeypatch.setattr(digest, "WEEKLY_ON", 7)
+    model.said = json.dumps(WRITTEN)
+    # No model is chosen for Digest, then the limit is reached: neither calls a model, and
+    # each leaves the day's digest still to be written.
+    digest.write_due()
+    assert Digest.objects.get().problem == digest.NO_MODEL
+    FeatureModel.objects.create(feature="digest", provider="openai", model="gpt-example")
+    Preferences.objects.update(ai_limit=0)
+    digest.write_due()
+    assert Digest.objects.get().problem.startswith("AI is paused")
+    assert model.seen == []
+    # The limit raised, the same day's digest is written, from the same items as it would
+    # have been: the day that had none did not move where it begins.
+    Preferences.objects.update(ai_limit=None)
+    digest.write_due()
+    kept = Digest.objects.get()
+    assert (kept.problem, kept.lead) == ("", "Two things came in.")
+    assert "[1] Show HN: an offline archive" in model.seen[0][2]["input"]
+    # Written, it is not written again.
+    digest.write_due()
+    assert len(model.seen) == 1
+
+
 def test_digest_is_switched_on_with_the_browsers_time_zone(owner_client: Client) -> None:
     assert owner_client.get("/api/digests").json() == {"on": False, "daily": None, "weekly": None}
     address = "/api/digests/on"

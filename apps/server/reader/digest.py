@@ -43,6 +43,10 @@ INSTRUCTIONS = (
 NO_MODEL = "No model is chosen for Digest. Choose one under AI."
 NOTHING_NEW = "Nothing new came in, so there was nothing to write."
 UNREADABLE = "The model's digest could not be read, so there is none."
+# What the owner can put right, and costs nothing to find out: a day's digest that was not
+# written for one of these is tried again that day. Anything else is not, so that a model
+# which fails is not called every hour.
+PUT_RIGHT = (NO_MODEL, ask.PAUSED)
 
 
 class _Section(BaseModel):
@@ -71,7 +75,8 @@ def zone() -> ZoneInfo:
 def due(now: datetime) -> list[tuple[str, date]]:
     """The digests to write now: today's daily one once it is seven where the owner is, and on
     a Sunday the weekly one too. Each is written once, so a worker that was off at seven
-    writes it when it is back."""
+    writes it when it is back; one that waits on the owner (no model, the limit) is still
+    due."""
     if not Preferences.load().digest_on:
         return []
     local = now.astimezone(zone())
@@ -79,14 +84,16 @@ def due(now: datetime) -> list[tuple[str, date]]:
         return []
     kinds = [Digest.Kind.DAILY] + ([Digest.Kind.WEEKLY] if local.weekday() == WEEKLY_ON else [])
     today = local.date()
-    return [(k, today) for k in kinds if not Digest.objects.filter(kind=k, day=today).exists()]
+    done = Digest.objects.filter(day=today).exclude(problem__in=PUT_RIGHT)
+    return [(k, today) for k in kinds if not done.filter(kind=k).exists()]
 
 
 def chosen(kind: str, now: datetime) -> list[Item]:
     """The newest items since the last digest of this kind, or of the day or week past if that
     one is missing or old."""
     span = timedelta(days=DAYS[Digest.Kind(kind)])
-    last = Digest.objects.filter(kind=kind).first()
+    # The last one that was written: a day with none does not move where the next begins.
+    last = Digest.objects.filter(kind=kind).exclude(lead="").first()
     since = last.written_at if last and last.written_at > now - 2 * span else now - span
     # Reddit's content is never sent to an AI provider (CLAUDE.md, Sources).
     items = Item.objects.exclude(source=Source.REDDIT).select_related("feed")
@@ -153,11 +160,13 @@ def _written(items: list[Item]) -> tuple[str, list[dict[str, object]]]:
 
 
 def write_due() -> None:
-    """Writes each digest that is due, once. One that cannot be written is kept with the
-    reason, and is not tried again that day: the model is called once, with no retries."""
+    """Writes each digest that is due. One that cannot be written is kept with the reason. If
+    the reason is the owner's to put right it is tried again within the hour; otherwise not
+    again that day: the model is called once, with no retries."""
     now = timezone.now()
     for kind, day in due(now):
-        digest = Digest(kind=kind, day=day)
+        digest = Digest.objects.filter(kind=kind, day=day).first() or Digest(kind=kind, day=day)
+        digest.problem, digest.written_at = "", now
         items = chosen(kind, now)
         try:
             if not items:
