@@ -1,5 +1,6 @@
 """Sign-in, sessions and devices. Every passphrase check here goes through `_check`."""
 
+from collections.abc import Callable
 from datetime import datetime
 from typing import Literal
 
@@ -16,9 +17,9 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from ninja import Field, Router, Schema, Status
 from ninja.decorators import decorate_view
 
-from account import devices
+from account import codes, devices
 from account.auth import OWNER, Csrf, Open, SignedIn, is_locked, mark_active, owner
-from account.models import Device, Preferences
+from account.models import Code, Device, Preferences
 from account.throttle import TooManyAttempts, address, attempt
 from ai.models import ProviderKey
 from munim import data, vault
@@ -31,9 +32,31 @@ State = Literal["setup", "signed_out", "locked", "open"]
 
 class SessionOut(Schema):
     state: State
-    # Whether sign-in is switched off on this install, so that the app offers no lock or
-    # sign-out: neither would keep anyone out.
-    no_sign_in: bool = False
+    # How this install lets its owner in: by passphrase, or by a code that is sent to their
+    # email address or, on an install with no mail, written to the server's log.
+    sign_in: Literal["passphrase", "email", "log"]
+
+
+def _way() -> Literal["passphrase", "email", "log"]:
+    if settings.CODES_TO_LOG:
+        return "log"
+    return "email" if settings.CODE_SIGN_IN else "passphrase"
+
+
+class CodeIn(Schema):
+    code: str = Field(min_length=1, max_length=12)
+
+
+class ConfirmIn(Schema):
+    """What confirms that everything is to be deleted: the passphrase, or where sign-in is by
+    email the code just mailed for it."""
+
+    passphrase: str = Field("", max_length=1024)
+    code: str = Field("", max_length=12)
+
+
+BY_CODE = "This Munim signs in with a code."
+BY_PASSPHRASE = "This Munim signs in with a passphrase."  # noqa: S105  words for the owner, not a secret
 
 
 class PassphraseIn(Schema):
@@ -79,27 +102,67 @@ class LockSettings(Schema):
 
 def _state(request: HttpRequest) -> State:
     if not request.user.is_authenticated:
-        return "signed_out" if owner() else "setup"
+        # By email there is nothing to set up: the first code sent makes the owner.
+        return "signed_out" if owner() or settings.CODE_SIGN_IN else "setup"
     return "locked" if is_locked(request) else "open"
+
+
+def _guarded(
+    request: HttpRequest, response: HttpResponse, check: Callable[[], bool], wrong: int, said: str
+) -> Status[Error] | Status[Wait] | None:
+    """Runs a check of a secret under the rate limit. Returns the refusal, or None if right.
+
+    `wrong` is the status for a wrong secret: 401 when signing in, 403 from a session that is
+    already signed in, so the app can tell "wrong" from "you are no longer signed in".
+    """
+    try:
+        right = attempt(address(request), check)
+    except TooManyAttempts as wait:
+        response["Retry-After"] = str(wait.seconds)
+        return Status(429, Wait(detail="Too many attempts.", wait_seconds=wait.seconds))
+    return None if right else Status(wrong, Error(detail=said))
 
 
 def _check(
     request: HttpRequest, response: HttpResponse, passphrase: str, *, wrong: int = 401
 ) -> Status[Error] | Status[Wait] | None:
-    """Checks the owner's passphrase under the rate limit. Returns the refusal, or None if right.
-
-    `wrong` is the status for a wrong passphrase: 401 when signing in, 403 from a session that is
-    already signed in, so the app can tell "wrong passphrase" from "you are no longer signed in".
-    """
+    """Checks the owner's passphrase under the rate limit."""
     user = owner()
+    return _guarded(
+        request,
+        response,
+        lambda: user is not None and user.check_password(passphrase),
+        wrong,
+        "That passphrase is not right.",
+    )
+
+
+def _check_code(
+    request: HttpRequest, response: HttpResponse, purpose: str, code: str, *, wrong: int = 401
+) -> Status[Error] | Status[Wait] | None:
+    """Checks a mailed code under the same rate limit as the passphrase."""
+    return _guarded(
+        request,
+        response,
+        lambda: codes.right(purpose, code),
+        wrong,
+        "That code is not right, or is no longer good. Ask for a new one.",
+    )
+
+
+def _send_code(response: HttpResponse, purpose: str) -> Status[None] | Status[Error] | Status[Wait]:
+    if not settings.CODE_SIGN_IN:
+        return Status(409, Error(detail=BY_PASSPHRASE))
     try:
-        right = attempt(
-            address(request), lambda: user is not None and user.check_password(passphrase)
-        )
-    except TooManyAttempts as wait:
+        codes.send(purpose)
+    except codes.TooSoon as wait:
         response["Retry-After"] = str(wait.seconds)
-        return Status(429, Wait(detail="Too many attempts.", wait_seconds=wait.seconds))
-    return None if right else Status(wrong, Error(detail="That passphrase is not right."))
+        return Status(429, Wait(detail="A code was sent a moment ago.", wait_seconds=wait.seconds))
+    except codes.Unsent:
+        return Status(
+            502, Error(detail="The code could not be sent. Check this install's mail settings.")
+        )
+    return Status(204, None)
 
 
 def _weak(passphrase: str) -> Status[Error] | None:
@@ -120,19 +183,21 @@ def _open(request: HttpRequest, user: User) -> Status[SessionOut]:
     login(request, user)
     devices.remember(request)
     mark_active(request)
-    return Status(200, SessionOut(state="open", no_sign_in=settings.NO_SIGN_IN))
+    return Status(200, SessionOut(state="open", sign_in=_way()))
 
 
 @router.get("/session", response=SessionOut, summary="Where this browser stands")
 @decorate_view(ensure_csrf_cookie)
 def session(request: HttpRequest) -> SessionOut:
     """Also sets the CSRF cookie, so call it before anything else."""
-    return SessionOut(state=_state(request), no_sign_in=settings.NO_SIGN_IN)
+    return SessionOut(state=_state(request), sign_in=_way())
 
 
 @router.post("/setup", auth=Csrf(), response={200: SessionOut, 409: Error, 422: Error})
 def setup(request: HttpRequest, body: PassphraseIn) -> Status[SessionOut] | Status[Error]:
     """First run: sets the passphrase and signs in. Works once."""
+    if settings.CODE_SIGN_IN:
+        return Status(409, Error(detail=BY_CODE))
     if owner():
         return Status(409, Error(detail="Munim is already set up."))
     if weak := _weak(body.passphrase):
@@ -145,15 +210,52 @@ def setup(request: HttpRequest, body: PassphraseIn) -> Status[SessionOut] | Stat
     return _open(request, user)
 
 
-@router.post("/sign-in", auth=Csrf(), response={200: SessionOut, 401: Error, 429: Wait})
+@router.post("/sign-in", auth=Csrf(), response={200: SessionOut, 401: Error, 409: Error, 429: Wait})
 def sign_in(
     request: HttpRequest, response: HttpResponse, body: PassphraseIn
 ) -> Status[SessionOut] | Status[Error] | Status[Wait]:
+    # One way in at a time: where codes are mailed, the passphrase opens nothing.
+    if settings.CODE_SIGN_IN:
+        return Status(409, Error(detail=BY_CODE))
     if refusal := _check(request, response, body.passphrase):
         return refusal
     user = owner()
     assert user is not None  # noqa: S101  a right passphrase means there is an owner
     return _open(request, user)
+
+
+@router.post("/sign-in/code", auth=Csrf(), response={204: None, 409: Error, 429: Wait, 502: Error})
+def send_sign_in_code(
+    request: HttpRequest, response: HttpResponse
+) -> Status[None] | Status[Error] | Status[Wait]:
+    """Mails the owner a code to sign in with. Nobody says who they are: the code only ever
+    goes to the owner's address, which whoever runs the install has set."""
+    return _send_code(response, Code.Purpose.SIGN_IN)
+
+
+@router.post(
+    "/sign-in/code/confirm",
+    auth=Csrf(),
+    response={200: SessionOut, 401: Error, 409: Error, 429: Wait},
+)
+def sign_in_with_code(
+    request: HttpRequest, response: HttpResponse, body: CodeIn
+) -> Status[SessionOut] | Status[Error] | Status[Wait]:
+    if not settings.CODE_SIGN_IN:
+        return Status(409, Error(detail=BY_PASSPHRASE))
+    if refusal := _check_code(request, response, Code.Purpose.SIGN_IN, body.code):
+        return refusal
+    # The first right code on a new install makes the owner; they have no passphrase.
+    user = owner() or User.objects.create_superuser(OWNER, email=settings.OWNER_EMAIL)
+    return _open(request, user)
+
+
+@router.post("/confirm/code", auth=Open(), response={204: None, 409: Error, 429: Wait, 502: Error})
+def send_confirm_code(
+    request: HttpRequest, response: HttpResponse
+) -> Status[None] | Status[Error] | Status[Wait]:
+    """Mails the owner a code to confirm that everything is to be deleted."""
+    return _send_code(response, Code.Purpose.CONFIRM)
 
 
 @router.post("/sign-out", auth=SignedIn(), response={204: None})
@@ -177,7 +279,7 @@ def unlock(
         return refusal
     request.session["locked"] = False
     mark_active(request)
-    return Status(200, SessionOut(state="open", no_sign_in=settings.NO_SIGN_IN))
+    return Status(200, SessionOut(state="open", sign_in=_way()))
 
 
 @router.post("/passphrase", auth=Open(), response={204: None, 403: Error, 422: Error, 429: Wait})
@@ -271,10 +373,16 @@ def export(request: HttpRequest) -> FileResponse:
 
 @router.post("/delete-all", auth=Open(), response={204: None, 403: Error, 429: Wait})
 def delete_all(
-    request: HttpRequest, response: HttpResponse, body: PassphraseIn
+    request: HttpRequest, response: HttpResponse, body: ConfirmIn
 ) -> Status[None] | Status[Error] | Status[Wait]:
-    """Removes everything the owner put into Munim, after the passphrase. The account stays."""
-    if refusal := _check(request, response, body.passphrase, wrong=403):
+    """Removes everything the owner put into Munim, after the passphrase, or where sign-in is
+    by email after a code mailed for this. The account stays."""
+    refusal = (
+        _check_code(request, response, Code.Purpose.CONFIRM, body.code, wrong=403)
+        if settings.CODE_SIGN_IN
+        else _check(request, response, body.passphrase, wrong=403)
+    )
+    if refusal:
         return refusal
     data.delete_all()
     return Status(204, None)

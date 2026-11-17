@@ -93,7 +93,16 @@ export const api = {
   active: () => call<undefined>('POST', 'active'),
   changePassphrase: (current: string, next: string) =>
     call<undefined>('POST', 'passphrase', { current, new: next } satisfies Schemas['ChangeIn']),
-  deleteAll: (value: string) => call<undefined>('POST', 'delete-all', passphrase(value)),
+  /** Confirmed by the passphrase, or where sign-in is by email by a code mailed for it. */
+  deleteAll: (confirm: { passphrase: string } | { code: string }) =>
+    call<undefined>('POST', 'delete-all', confirm satisfies Partial<Schemas['ConfirmIn']>),
+  /** Where sign-in is by email: has a code mailed to the owner, to sign in or to confirm. */
+  sendSignInCode: () => call<undefined>('POST', 'sign-in/code'),
+  signInWithCode: (code: string) =>
+    call<Schemas['SessionOut']>('POST', 'sign-in/code/confirm', {
+      code,
+    } satisfies Schemas['CodeIn']),
+  sendConfirmCode: () => call<undefined>('POST', 'confirm/code'),
   devices: () => call<Device[]>('GET', 'devices'),
   revokeDevice: (id: number) => call<undefined>('DELETE', `devices/${String(id)}`),
   lockSettings: () => call<Schemas['LockSettings']>('GET', 'lock-settings'),

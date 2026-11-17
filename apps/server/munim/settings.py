@@ -2,7 +2,6 @@
 
 import os
 from pathlib import Path
-from urllib.parse import urlsplit
 
 from cryptography.fernet import Fernet
 from django.core.exceptions import ImproperlyConfigured
@@ -58,7 +57,6 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "account.auth.NoSignIn",
     "account.auth.AdminLock",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -135,40 +133,62 @@ if TRUSTED_PROXIES < 0:
 if TRUSTED_PROXIES:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
-_THIS_MACHINE = {"localhost", "127.0.0.1", "[::1]", "::1"}
+# --- sign-in by a code sent in an email
+
+MAIL_SETTINGS = (
+    "SMTP_HOST",
+    "SMTP_PORT",
+    "SMTP_USER",
+    "SMTP_PASSWORD",
+    "EMAIL_FROM",
+    "OWNER_EMAIL",
+)
 
 
-def why_not_local(hosts: list[str], origins: list[str], proxies: int, bind: str) -> str:
-    """Why an install is not one that answers on its own machine alone, or '' if it is: the
-    names it answers to, the origins it trusts, a proxy in front of it, or the address its
-    port is published on."""
-    if not set(hosts) <= _THIS_MACHINE:
-        return "MUNIM_ALLOWED_HOSTS names something other than this machine"
-    if any(
-        urlsplit(origin).hostname not in ("localhost", "127.0.0.1", "::1") for origin in origins
-    ):
-        return "MUNIM_TRUSTED_ORIGINS names an address other than this machine's"
-    if proxies:
-        return "MUNIM_TRUSTED_PROXIES says there is a proxy in front"
-    if bind not in _THIS_MACHINE:
-        return "MUNIM_BIND publishes the port beyond this machine"
+def mail_problem(given: dict[str, str], to_log: bool) -> str:
+    """Why the settings for sign-in codes cannot be used as they are, or '' if they can: the
+    six mail settings all set or none, a port that is a number, and not together with codes
+    written to the log."""
+    missing = [f"MUNIM_{name}" for name in MAIL_SETTINGS if not given.get(name)]
+    if len(missing) == len(MAIL_SETTINGS):
+        return ""
+    if to_log:
+        return "MUNIM_CODES_TO_LOG=1 and the mail settings are both set: choose where codes go"
+    if missing:
+        return f"Sign-in by email needs all six mail settings, and {', '.join(missing)} is not set"
+    if not given["SMTP_PORT"].isdigit():
+        return "MUNIM_SMTP_PORT is a number, such as 465"
     return ""
 
 
-# No sign-in at all: whoever reaches Munim is the owner. For an install on the owner's own
-# machine, where a passphrase guards nothing that the machine's own login does not. It removes
-# the only door, so the server starts with an error rather than run like this where anyone
-# else could reach it.
-NO_SIGN_IN = env("NO_SIGN_IN", "0") == "1"
-if NO_SIGN_IN and (
-    _why := why_not_local(
-        ALLOWED_HOSTS, CSRF_TRUSTED_ORIGINS, TRUSTED_PROXIES, env("BIND", "127.0.0.1")
-    )
-):
-    raise ImproperlyConfigured(
-        f"MUNIM_NO_SIGN_IN=1 switches sign-in off, which is allowed only on an install that "
-        f"answers on its own machine alone, and {_why}."
-    )
+# For an install with no mail: the code is written to the server's own log, where whoever runs
+# the install reads it (`docker compose logs app`). Nothing leaves the machine.
+CODES_TO_LOG = env("CODES_TO_LOG", "0") == "1"
+_MAIL = {name: env(name, "").strip() for name in MAIL_SETTINGS}
+if _why := mail_problem(_MAIL, CODES_TO_LOG):
+    raise ImproperlyConfigured(f"{_why}.")
+# With somewhere for a code to go (the owner's address, or the log), the owner signs in with a
+# code and the passphrase is not used. Otherwise the passphrase is the way in.
+CODE_SIGN_IN = CODES_TO_LOG or all(_MAIL.values())
+OWNER_EMAIL = _MAIL["OWNER_EMAIL"]
+DEFAULT_FROM_EMAIL = _MAIL["EMAIL_FROM"] or "munim@localhost"
+_SMTP_PORT = int(_MAIL["SMTP_PORT"] or 25)
+MAILERS = {
+    "default": {
+        "BACKEND": "django.core.mail.backends.smtp.EmailBackend",
+        "OPTIONS": {
+            "host": _MAIL["SMTP_HOST"] or "localhost",
+            "port": _SMTP_PORT,
+            "username": _MAIL["SMTP_USER"],
+            "password": _MAIL["SMTP_PASSWORD"],
+            # 465 and 2465 speak TLS from the first byte; the others start plain and upgrade.
+            "use_ssl": _SMTP_PORT in (465, 2465),
+            "use_tls": _SMTP_PORT not in (465, 2465),
+            # Sending happens inside the request that asks for a code, so it must not hang.
+            "timeout": 15,
+        },
+    }
+}
 
 # Feeds on private networks (a service on the same LAN, say) are refused unless this is set,
 # because a feed address can also be used to make the server reach things only it can reach.

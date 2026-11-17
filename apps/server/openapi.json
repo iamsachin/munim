@@ -95,6 +95,12 @@
               "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
             }
           },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          },
           "429": {
             "description": "Too Many Requests",
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Wait" } } }
@@ -108,6 +114,103 @@
           "required": true
         },
         "security": [{ "Csrf": [] }]
+      }
+    },
+    "/api/sign-in/code": {
+      "post": {
+        "operationId": "account_api_send_sign_in_code",
+        "summary": "Send Sign In Code",
+        "parameters": [],
+        "responses": {
+          "204": { "description": "No Content" },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Wait" } } }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          }
+        },
+        "description": "Mails the owner a code to sign in with. Nobody says who they are: the code only ever\ngoes to the owner's address, which whoever runs the install has set.",
+        "tags": ["account"],
+        "security": [{ "Csrf": [] }]
+      }
+    },
+    "/api/sign-in/code/confirm": {
+      "post": {
+        "operationId": "account_api_sign_in_with_code",
+        "summary": "Sign In With Code",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/SessionOut" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Wait" } } }
+          }
+        },
+        "tags": ["account"],
+        "requestBody": {
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/CodeIn" } }
+          },
+          "required": true
+        },
+        "security": [{ "Csrf": [] }]
+      }
+    },
+    "/api/confirm/code": {
+      "post": {
+        "operationId": "account_api_send_confirm_code",
+        "summary": "Send Confirm Code",
+        "parameters": [],
+        "responses": {
+          "204": { "description": "No Content" },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Wait" } } }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          }
+        },
+        "description": "Mails the owner a code to confirm that everything is to be deleted.",
+        "tags": ["account"],
+        "security": [{ "Open": [] }]
       }
     },
     "/api/sign-out": {
@@ -323,11 +426,11 @@
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Wait" } } }
           }
         },
-        "description": "Removes everything the owner put into Munim, after the passphrase. The account stays.",
+        "description": "Removes everything the owner put into Munim, after the passphrase, or where sign-in is\nby email after a code mailed for this. The account stays.",
         "tags": ["account"],
         "requestBody": {
           "content": {
-            "application/json": { "schema": { "$ref": "#/components/schemas/PassphraseIn" } }
+            "application/json": { "schema": { "$ref": "#/components/schemas/ConfirmIn" } }
           },
           "required": true
         },
@@ -1300,9 +1403,13 @@
             "title": "State",
             "type": "string"
           },
-          "no_sign_in": { "default": false, "title": "No Sign In", "type": "boolean" }
+          "sign_in": {
+            "enum": ["passphrase", "email", "log"],
+            "title": "Sign In",
+            "type": "string"
+          }
         },
-        "required": ["state"],
+        "required": ["state", "sign_in"],
         "title": "SessionOut",
         "type": "object"
       },
@@ -1327,6 +1434,14 @@
         },
         "required": ["detail", "wait_seconds"],
         "title": "Wait",
+        "type": "object"
+      },
+      "CodeIn": {
+        "properties": {
+          "code": { "maxLength": 12, "minLength": 1, "title": "Code", "type": "string" }
+        },
+        "required": ["code"],
+        "title": "CodeIn",
         "type": "object"
       },
       "ChangeIn": {
@@ -1373,6 +1488,20 @@
         },
         "required": ["master_key", "sealed", "sign_ins"],
         "title": "SecurityOut",
+        "type": "object"
+      },
+      "ConfirmIn": {
+        "description": "What confirms that everything is to be deleted: the passphrase, or where sign-in is by\nemail the code just mailed for it.",
+        "properties": {
+          "passphrase": {
+            "default": "",
+            "maxLength": 1024,
+            "title": "Passphrase",
+            "type": "string"
+          },
+          "code": { "default": "", "maxLength": 12, "title": "Code", "type": "string" }
+        },
+        "title": "ConfirmIn",
         "type": "object"
       },
       "FeedOut": {
@@ -2185,8 +2314,8 @@
     },
     "securitySchemes": {
       "Csrf": { "type": "apiKey", "in": "cookie", "name": "csrftoken" },
-      "SignedIn": { "type": "apiKey", "in": "cookie", "name": "sessionid" },
-      "Open": { "type": "apiKey", "in": "cookie", "name": "sessionid" }
+      "Open": { "type": "apiKey", "in": "cookie", "name": "sessionid" },
+      "SignedIn": { "type": "apiKey", "in": "cookie", "name": "sessionid" }
     }
   },
   "servers": []
