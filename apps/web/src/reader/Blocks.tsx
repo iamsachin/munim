@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { cx } from '../ui/cx';
+import type { ItemDetail } from '../api/client';
 import { within, type Range } from './found';
+import { isBare, nameOf } from './links';
 import { Marked } from './Marked';
 import { Player } from './Player';
 import { unitCount, type Block, type Marks, type Span } from './units';
@@ -22,6 +24,7 @@ export function Blocks({
   blocks,
   where,
   marks,
+  links,
   compact = false,
   className,
 }: {
@@ -31,6 +34,9 @@ export function Blocks({
   where: { item: number; reply: number | null };
   /** What to mark in each unit of the text: highlights, and what a search matched. */
   marks: readonly Marks[] | undefined;
+  /** What is known of the pages the item links to: each link is shown with its site's icon,
+   * and a bare address by the page's title. */
+  links?: readonly Linked[];
   /** For a reply: the size of the text around it, and less space between blocks. */
   compact?: boolean;
   className?: string;
@@ -39,6 +45,7 @@ export function Blocks({
   const read = compact ? '' : READ;
   // The number of each block's first unit. A highlight is stored by its unit's number.
   const first = useMemo(() => firstUnits(blocks), [blocks]);
+  const known = useMemo(() => new Map(links?.map((link) => [link.href, link])), [links]);
   /** The runs of one unit, each given the part of the unit's marks that falls in it. */
   const run = (unit: number, spans: readonly Span[]) =>
     startsOf(spans).map((at, i) => {
@@ -48,6 +55,7 @@ export function Blocks({
           <Run
             key={i}
             span={span}
+            link={span.href ? known.get(span.href) : undefined}
             marked={within(marks?.[unit]?.marked ?? [], at, span.text.length)}
             found={within(marks?.[unit]?.found ?? [], at, span.text.length)}
           />
@@ -144,12 +152,31 @@ export function Blocks({
   );
 }
 
+type Linked = ItemDetail['links'][number];
+
+/** The icon of a link's site, fetched through Munim's server. A site with none shows nothing. */
+function SiteIcon({ src, className }: { src: string; className: string }) {
+  return (
+    <img
+      src={src}
+      alt=""
+      loading="lazy"
+      className={className}
+      onError={(e) => {
+        e.currentTarget.hidden = true;
+      }}
+    />
+  );
+}
+
 function Run({
   span,
+  link,
   marked,
   found,
 }: {
   span: Span;
+  link: Linked | undefined;
   marked: readonly Range[];
   found: readonly Range[];
 }) {
@@ -167,9 +194,36 @@ function Run({
     </span>
   );
   if (!span.href) return marks.length ? styled : text;
+  if (isBare(span.text, span.href)) {
+    const name = link?.title || nameOf(span.href);
+    return (
+      // A bare address is a card one line tall: its site's icon and the page's title. The
+      // title is drawn by CSS and the address stays in the text, unseen, so that the paragraph
+      // has the same characters as before and a highlight in it stays where it was made.
+      <a
+        href={span.href}
+        target="_blank"
+        rel="noreferrer"
+        aria-label={name}
+        title={span.href}
+        data-title={name}
+        className="relative inline-flex h-lh max-w-full items-center gap-4 rounded-4 border border-line bg-card px-6 align-bottom text-ink no-underline after:min-w-0 after:truncate after:content-[attr(data-title)] hover:border-accent"
+      >
+        {link && <SiteIcon src={link.icon} className="size-14 shrink-0 rounded-2" />}
+        <span className="sr-only">{marks.length ? styled : text}</span>
+      </a>
+    );
+  }
   return (
     // Underlined as well as coloured, so a link does not depend on colour alone.
-    <a href={span.href} target="_blank" rel="noreferrer" className="underline underline-offset-2">
+    <a
+      href={span.href}
+      target="_blank"
+      rel="noreferrer"
+      title={link?.title || undefined}
+      className="underline underline-offset-2"
+    >
+      {link && <SiteIcon src={link.icon} className="mr-3 inline size-12 rounded-2 align-middle" />}
       {marks.length ? styled : text}
     </a>
   );

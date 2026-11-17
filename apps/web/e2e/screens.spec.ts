@@ -1160,6 +1160,38 @@ test('watches: a topic that cannot be judged says why; with none, the screen say
   await expect(page.getByText('No matches yet.')).toBeVisible();
 });
 
+test("links: a bare address is a one-line card with its page's title and icon; a worded link keeps its words", async ({
+  page,
+}) => {
+  await open(page, '/rss');
+  const card = page.getByRole('link', { name: 'Working notes: what a week view is for' });
+  await expect(card).toBeVisible();
+  await expect(card).toHaveAttribute('href', 'https://fieldnotes.example/calendar/working-notes');
+  await expect(card.locator('img')).toBeVisible();
+  // The card is no taller than the line it sits in.
+  const tall = await card.evaluate((a) => {
+    const line = parseFloat(getComputedStyle(a.parentElement ?? a).lineHeight);
+    return a.getBoundingClientRect().height - line;
+  });
+  expect(tall).toBeLessThanOrEqual(0.5);
+
+  // A link with words of its own keeps them, with its site's icon in front and the page's
+  // title on hover.
+  const worded = page.getByRole('link', { name: 'An earlier note' });
+  await expect(worded).toHaveText('An earlier note');
+  await expect(worded).toHaveAttribute('title', 'An earlier note on calendars');
+  await expect(worded.locator('img')).toBeVisible();
+
+  // The address is still in the text, unseen, so a highlight made after the card is marked
+  // where it was made, now and after a reload.
+  await selectText(page, 'kept up to date');
+  await page.getByRole('button', { name: 'Highlight', exact: true }).click();
+  await expect(page.getByRole('main').locator('mark')).toHaveText('kept up to date');
+  await page.reload();
+  await expect(page.getByRole('main').locator('mark')).toHaveText('kept up to date');
+  expect(await axeFailures(page)).toEqual([]);
+});
+
 test('rss: choosing a feed and an article', async ({ page }) => {
   await open(page, '/rss');
   // Feeds are listed by title, and the first one is open.

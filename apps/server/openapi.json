@@ -1595,7 +1595,13 @@
             "items": { "items": { "type": "string" }, "type": "array" },
             "title": "Found",
             "type": "array"
-          }
+          },
+          "links": {
+            "items": { "$ref": "#/components/schemas/LinkOut" },
+            "title": "Links",
+            "type": "array"
+          },
+          "links_pending": { "title": "Links Pending", "type": "boolean" }
         },
         "required": [
           "id",
@@ -1616,9 +1622,22 @@
           "blocks",
           "comments",
           "highlights",
-          "found"
+          "found",
+          "links",
+          "links_pending"
         ],
         "title": "ItemDetail",
+        "type": "object"
+      },
+      "LinkOut": {
+        "description": "A page the item links to, as a link to it is shown.",
+        "properties": {
+          "href": { "title": "Href", "type": "string" },
+          "title": { "title": "Title", "type": "string" },
+          "icon": { "title": "Icon", "type": "string" }
+        },
+        "required": ["href", "title", "icon"],
+        "title": "LinkOut",
         "type": "object"
       },
       "ListBlock": {
