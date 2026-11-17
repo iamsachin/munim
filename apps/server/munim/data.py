@@ -14,7 +14,7 @@ from django.utils.text import slugify
 
 from account.models import Preferences
 from ai.models import FeatureModel, ModelPrice, ProviderKey, Usage
-from reader.models import Ask, Channel, Connection, Digest, Feed, Highlight, Item, Watch
+from reader.models import Ask, Channel, Connection, Digest, Feed, Highlight, Item, Link, Watch
 
 ABOUT = """\
 Everything Munim held when this archive was made.
@@ -180,6 +180,8 @@ def delete_all() -> None:
         Ask.objects.all().delete()
         Digest.objects.all().delete()
         Watch.objects.all().delete()
+        # Not the owner's own, but it says what they read: the titles of pages they met.
+        Link.objects.all().delete()
         Item.objects.all().delete()
         Feed.objects.all().delete()
         Connection.objects.all().delete()

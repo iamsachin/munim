@@ -96,6 +96,7 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] Hacker News: the front page and each story's discussion, switched on and off in Connections
 - [x] YouTube: the owner's subscriptions through OAuth, set up and connected on Connections; videos play where they are; the YouTube page is cards by default (approved)
 - [x] X, for watches only: a keyword or person watch switched on for X is searched there once a day, for at most ten posts, with the owner's own token; its posts are kept from AI calls (waits for the owner's approval; not yet tried against the real X)
+- [x] Links in text: each with its site's icon; a bare address as a one-line card with the page's title, which the worker looks up when the item is opened (waits for the owner's approval; not yet seen against real pages)
 - [ ] Reddit (official OAuth, read-only, kept out of AI calls): waits for Reddit's approval of the request sent 2026-11-15; shown as "Not available yet" until then
 - [x] Connections says only what is true: Hacker News, YouTube and feeds from the server; Reddit "Not available yet" with the reason (X is since read for watches; Instagram is dropped)
 - [x] Saving an item (full text of feed articles)

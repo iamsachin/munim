@@ -5,7 +5,7 @@ from procrastinate.contrib.django import app
 from procrastinate.exceptions import UniqueViolation
 from procrastinate.jobs import Status
 
-from reader import ask, digest, feeds, hackernews, images, watches, x, youtube
+from reader import ask, digest, feeds, hackernews, images, links, watches, x, youtube
 from reader.models import Item
 
 POLL_EVERY = "*/15 * * * *"
@@ -42,6 +42,13 @@ def keep_pictures(item_id: int) -> None:
     item = Item.objects.filter(pk=item_id).first()
     if item is not None:
         images.keep(item)
+
+
+@app.task
+def read_links(item_id: int) -> None:
+    """When an item is opened: look at some of the pages it links to, for their titles. Run
+    again, it fetches only what is still unknown."""
+    links.read(item_id)
 
 
 @app.task

@@ -51,6 +51,21 @@ const text = (value: string, extra: object = {}) => ({
 });
 const paragraph = (value: string) => ({ type: 'paragraph', spans: [text(value)] });
 
+// A bare address in the sample article, and what the pages it links to are called.
+const NOTES = 'https://fieldnotes.example/calendar/working-notes';
+const EARLIER = 'https://fieldnotes.example/earlier';
+const LINK_TITLES: Record<string, string> = {
+  [EARLIER]: 'An earlier note on calendars',
+  [NOTES]: 'Working notes: what a week view is for',
+};
+/** The sample article's links as the server lists them: in the order met, each with its icon. */
+const richLinks = (id: number) =>
+  Object.entries(LINK_TITLES).map(([href, title], n) => ({
+    href,
+    title,
+    icon: `/api/items/${String(id)}/links/${String(n)}/icon`,
+  }));
+
 /** The one article that shows every kind of block, so the screenshots cover them all. */
 const RICH_TITLE = 'Designing a calendar that does less';
 const richBlocks = (id: number) => [
@@ -62,8 +77,10 @@ const richBlocks = (id: number) => [
       text(': what does the whole month look like. The question people ask is '),
       text('what is next', { marks: ['bold'] }),
       text(', and how long until it starts. '),
-      text('An earlier note', { href: 'https://fieldnotes.example/earlier' }),
-      text(' has the background.'),
+      text('An earlier note', { href: EARLIER }),
+      text(' has the background. The working notes are at '),
+      text(NOTES, { href: NOTES }),
+      text(', kept up to date.'),
     ],
   },
   { type: 'heading', level: 2, spans: [text('What it shows')] },
@@ -887,6 +904,11 @@ export async function fakeServer(page: Page, start: State = 'open') {
         sources,
       });
     }
+    const [, iconLink] = /^GET items\/\d+\/links\/(\d+)\/icon$/.exec(call) ?? [];
+    if (iconLink) {
+      const body = feedIcon(Number(iconLink));
+      return route.fulfill({ status: 200, contentType: 'image/svg+xml', body });
+    }
     const [, iconSource] = /^GET sources\/(HN|YT)\/icon$/.exec(call) ?? [];
     const [, iconFeed] = /^GET feeds\/(\d+)\/icon$/.exec(call) ?? [];
     if (iconSource || iconFeed) {
@@ -937,6 +959,8 @@ export async function fakeServer(page: Page, start: State = 'open') {
           blocks: [paragraph(said)],
         })),
         highlights: highlights.filter((highlight) => highlight.item_id === item.id),
+        links: item.title === RICH_TITLE ? richLinks(item.id) : [],
+        links_pending: false,
         // The real server knows other forms of a word; here each word stands for itself.
         found: (
           (new URL(request.url()).searchParams.get('q') ?? '')

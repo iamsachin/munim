@@ -1064,6 +1064,22 @@ export interface components {
       highlights: components['schemas']['HighlightPlace'][];
       /** Found */
       found: string[][];
+      /** Links */
+      links: components['schemas']['LinkOut'][];
+      /** Links Pending */
+      links_pending: boolean;
+    };
+    /**
+     * LinkOut
+     * @description A page the item links to, as a link to it is shown.
+     */
+    LinkOut: {
+      /** Href */
+      href: string;
+      /** Title */
+      title: string;
+      /** Icon */
+      icon: string;
     };
     /** ListBlock */
     ListBlock: {

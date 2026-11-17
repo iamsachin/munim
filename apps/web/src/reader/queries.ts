@@ -39,6 +39,9 @@ export const useItem = (id: number | undefined, q = '') =>
     enabled: id !== undefined,
     // While the search that opened it is still being typed, the same item stays on screen.
     placeholderData: (previous, was) => (was?.queryKey[1] === id ? previous : undefined),
+    // The worker looks up the titles of the pages it links to, a few at a time: while some are
+    // still to come, the item is asked for again.
+    refetchInterval: (query) => (query.state.data?.links_pending ? 4000 : false),
   });
 
 /** The numbers beside the sidebar's rows. */

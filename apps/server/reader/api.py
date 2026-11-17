@@ -16,7 +16,7 @@ from procrastinate.exceptions import AlreadyEnqueued
 
 from account.auth import Open
 from account.models import Preferences
-from reader import ask, feeds, icons, images, search, tasks, watches, x, youtube
+from reader import ask, feeds, icons, images, links, search, tasks, watches, x, youtube
 from reader.models import Ask, Connection, Digest, Feed, Highlight, Item, Match, Source, Watch
 
 router = Router(tags=["reader"], auth=Open())
@@ -178,6 +178,16 @@ class NoteIn(Schema):
     note: str = Field(max_length=2000)
 
 
+class LinkOut(Schema):
+    """A page the item links to, as a link to it is shown."""
+
+    href: str
+    # What the page is called, or empty if that is not known (yet, or at all).
+    title: str
+    # Where the browser asks Munim for the icon of the page's site.
+    icon: str
+
+
 class ItemDetail(ItemOut):
     """An item opened: its own page's address, its text as blocks, and its replies."""
 
@@ -189,6 +199,10 @@ class ItemDetail(ItemOut):
     # When it was opened from a search: for each word searched for, in order, the words in
     # this item's text that match it ("movement" may be "movements" here). Empty otherwise.
     found: list[list[str]]
+    # The pages its text and replies link to, each once. While `links_pending`, the worker is
+    # still looking some of them up, and asking again will have more titles.
+    links: list[LinkOut]
+    links_pending: bool
 
 
 class ItemPatch(Schema):
@@ -373,10 +387,31 @@ def get_item(request: HttpRequest, item_id: int, q: str = "") -> ItemDetail:
     """One item. With `q`, the search it was opened from, it also says which of its words
     matched, so they can be marked where they are."""
     item = get_object_or_404(Item.objects.select_related("feed"), pk=item_id)
+    hrefs = links.hrefs_of(item)
+    titles = links.titles_of(hrefs)
+    pending = bool(links.unread(hrefs))
+    if pending:
+        # The worker looks them up, a few at a time; one job for an item at a time. In a
+        # transaction of its own: if one is already queued the insert fails, and that must not
+        # spoil the request's.
+        try:
+            with transaction.atomic():
+                tasks.read_links.configure(queueing_lock=f"links-{item.pk}").defer(item_id=item.pk)
+        except AlreadyEnqueued:
+            pass
     # Validated on the way out: what is stored was written by our own converter, and this
     # checks that it still has the shape the app expects.
     return ItemDetail.model_validate(
         {
+            "links": [
+                {
+                    "href": href,
+                    "title": titles.get(href, ""),
+                    "icon": f"/api/items/{item.pk}/links/{n}/icon",
+                }
+                for n, href in enumerate(hrefs)
+            ],
+            "links_pending": pending,
             **_row(item),
             "url": item.url,
             "blocks": _shown(item),
@@ -460,6 +495,16 @@ def _icon(site: str) -> HttpResponse:
 @router.get("/sources/{source}/icon", include_in_schema=False)
 def source_icon(request: HttpRequest, source: Literal["HN", "YT"]) -> HttpResponse:
     return _icon(icons.SITES[source])
+
+
+@router.get("/items/{item_id}/links/{index}/icon", include_in_schema=False)
+def link_icon(request: HttpRequest, item_id: int, index: int) -> HttpResponse:
+    """The icon of the site one of the item's links is on. Only a link the item really has can
+    be asked for, so this cannot be made to fetch from anywhere."""
+    hrefs = links.hrefs_of(get_object_or_404(Item, pk=item_id))
+    if not 0 <= index < len(hrefs):
+        return HttpResponse(icons.NONE, status=404, content_type="text/plain")
+    return _icon(links.site_of(hrefs[index]))
 
 
 @router.get("/feeds/{feed_id}/icon", include_in_schema=False)

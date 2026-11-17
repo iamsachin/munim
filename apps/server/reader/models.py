@@ -299,3 +299,18 @@ class Match(models.Model):
 
     def __str__(self) -> str:
         return f"{self.watch}: {self.item}"
+
+
+class Link(models.Model):
+    """A page some item links to, and what it is called. Kept so that a link can be shown by
+    its title without the page being fetched again; nothing of the page itself is kept."""
+
+    # The address's hash: an address can be longer than an index allows.
+    key = models.CharField(max_length=64, unique=True)
+    url = models.TextField()
+    # Empty if the page could not be read or has no title.
+    title = models.CharField(max_length=200, blank=True)
+    read_at = models.DateTimeField()
+
+    def __str__(self) -> str:
+        return self.title or self.url

@@ -243,6 +243,7 @@ export function Rss() {
                 blocks={article.data.blocks}
                 where={{ item: article.data.id, reply: null }}
                 marks={marks}
+                links={article.data.links}
                 className="max-w-[62ch]"
               />
             )}

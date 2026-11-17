@@ -562,6 +562,7 @@ function Thread({
                 blocks={it.blocks}
                 where={{ item: it.id, reply: null }}
                 marks={marks[0]}
+                links={it.links}
                 className="pb-12"
               />
             )}
@@ -578,6 +579,7 @@ function Thread({
                   blocks={c.blocks}
                   where={{ item: it.id, reply: n }}
                   marks={marks[n + 1]}
+                  links={it.links}
                 />
               </div>
             ))}
