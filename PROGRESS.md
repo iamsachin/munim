@@ -6,13 +6,13 @@ Last updated: 2026-11-17
 
 ## Now
 
-Milestone 3 in progress. Merged: the Django scaffold (#6), the account API (#8), the web app signing in against the server (#9), RSS (#10), background polling (#11), the Stream on real items (#12), feed articles readable in the thread pane (#13), rich text as blocks with images fetched through the server (#14), Hacker News with its discussions (#15), sealed storage for secrets with the AI provider keys on the server (#16), the Docker Compose install (#17), full-text search in the Stream (#18), search matches marked in the open article (#19), highlights on the server (#20), removing a feed (#21), the Encryption card (#22), export and delete-all (#23), the trusted-proxies setting (#24), and YouTube through OAuth with click-to-play and a card view (#25).
+Milestones 0 to 4 are built and approved by the owner (3 and 4 on 2026-11-17). The owner's daily use runs on the Docker install since that day.
 
-Nothing in the browser runs on sample data any more. Watches are real: matched on the server, a topic by a model. Digest is real: switched on, the worker writes one each day and each Sunday. Ask is real: the worker puts a question to the model chosen for it, from the items in its scope, and the answer cites them. The AI screen is all the server's: keys, models, each feature's model, the prices the owner enters, usage and the monthly limit.
+Everything on screen comes from the server: RSS, Hacker News and YouTube; the Stream with search that also looks in replies; saving, with pictures kept; highlights, in items and in answers; Ask, with conversations and quoted citations; Digest, daily and weekly; watches by words and by topic; the AI screen with keys, models, prices, usage and the monthly limit.
 
-Reddit is not possible today: Reddit requires its approval before an app may read anything (2026-11-15). It joins X and Instagram as "Not available yet" on Connections, each with its reason, and is built only if Reddit approves the owner's request.
+Not possible today, and shown as such: Reddit (waits for Reddit's approval of the request sent 2026-11-15), X and Instagram, and replies to any source.
 
-Next: the owner's approval of milestones 3 and 4. Left unticked: Reddit (waits for Reddit) and replies (no source allows them).
+Next: what the owner chooses from "Later".
 
 ## 0. Preparation
 
@@ -103,19 +103,19 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] Search (Postgres full-text) in the Stream: the words typed are looked for together first, then anywhere, in titles and article text, in any form; quoted phrases, OR and exclusions as written. Replies are searched too (2026-11-17), and a match in one is marked there.
 - [x] Search matches shown in the open article: marked words, a tick for each down the edge, and a stepper (approved)
 - [x] Highlights on the server, stored with their position in the text: a highlight can cross bold, italic and links, is marked only where it was made, and is found again by its words if the text changes
-- [ ] **Approved by owner**
+- [x] **Approved by owner** (2026-11-17)
 
 ## 4. AI and write-back
 
 - [x] OpenAI and Anthropic providers, keys set in the UI
 - [x] Per-feature model selection: each provider's own model list, fetched with the key and again daily; the choice is kept on the server
-- [x] Usage tracking and display: each call's tokens and cost at the price the owner entered for its model; a monthly limit in dollars that pauses AI (the Prices table waits for the owner's approval)
+- [x] Usage tracking and display: each call's tokens and cost at the price the owner entered for its model; a monthly limit in dollars that pauses AI
 - [x] Summaries on demand, through Ask (no automatic summaries)
-- [x] Digest (daily at 7:00 and weekly on Sunday, on the owner's clock): written by the worker from what came in, naming its items; off until switched on; a day that cannot be written says why (the switch and its states wait for the owner's approval; not yet written by a real model)
-- [x] Ask with citations: over everything, saved, this week or the open item; answered by the worker; only the items given can be cited; Reddit content is never sent; the answer is shown as it is written; a follow-up carries its conversation on, from the same items; the Ask screen lists conversations, one for each post asked about, with the open one beside the list; a passage of an answer can be highlighted; a citation shows the words of the item it rests on and opens the item at them (the screen waits for the owner's approval; quoting has not been tried with a real model)
-- [x] Watches matching: a keyword by its words and a person by who published or replied, both free; a topic by the Watch model, hourly, on new items only (the kind picker, Remove and the dropped "In" column wait for the owner's approval; no topic has been judged by a real model yet)
+- [x] Digest (daily at 7:00 and weekly on Sunday, on the owner's clock): written by the worker from what came in, naming its items; off until switched on; a day that cannot be written says why; a day that waited on the owner is written once they have put it right
+- [x] Ask with citations: over everything, saved, this week or the open item; answered by the worker; only the items given can be cited; Reddit content is never sent; the answer is shown as it is written; a follow-up carries its conversation on, from the same items; the Ask screen lists conversations, one for each post asked about, with the open one beside the list; a passage of an answer can be highlighted; a citation shows the words of the item it rests on and opens the item at them
+- [x] Watches matching: a keyword by its words and a person by who published or replied, both free; a topic by the Watch model, hourly, on new items only; a topic also by its words together, and on its first look by the titles of the past week
 - [ ] Replies where the official API allows (none of the connected sources does; Reddit stays read-only)
-- [ ] **Approved by owner**
+- [x] **Approved by owner** (2026-11-17)
 
 ## Later
 
