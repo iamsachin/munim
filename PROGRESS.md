@@ -2,7 +2,7 @@
 
 Status of the build order in `.claude/CLAUDE.md`. Updated in the same commit as the work it describes. "Approved" means the owner has seen it running and said yes.
 
-Last updated: 2026-11-15
+Last updated: 2026-11-17
 
 ## Now
 
@@ -12,7 +12,7 @@ Nothing in the browser runs on sample data any more. Watches are real: matched o
 
 Reddit is not possible today: Reddit requires its approval before an app may read anything (2026-11-15). It joins X and Instagram as "Not available yet" on Connections, each with its reason, and is built only if Reddit approves the owner's request.
 
-Next: the owner's approval of milestones 3 and 4; what is left unticked in milestone 3 (saving comment threads and transcripts, the idle lock seen for real).
+Next: the owner's approval of milestones 3 and 4. Left unticked: Reddit (waits for Reddit), a saved item's pictures fetched at the moment of saving, and replies (no source allows them).
 
 ## 0. Preparation
 
@@ -84,7 +84,7 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] Delete-all confirms the passphrase through the same rate-limited check as sign-in
 - [x] Trusted reverse-proxy setting (`MUNIM_TRUSTED_PROXIES`), so the limit sees real client addresses behind a proxy
 - [x] Web app wired to the account API: setup, sign-in, lock screen with an idle timer, devices, lock settings, change passphrase
-- [ ] Idle lock: watch it happen for real once (15 minutes in a browser); so far proven by unit tests and by the server's tests
+- [x] Idle lock: seen for real on 2026-11-17 (five minutes in a visible browser on the test stack: nothing at 4m30s, the Locked cover and a refusing server at 5m30s), and by a browser test that drives the clock
 - [x] Encryption card on Security and settings, saying what this install does; and a line on the AI screen about how keys are kept (approved)
 - [x] Export (a zip of JSON and text files, with no secrets in it) and delete-all (feeds, items, highlights, connections and API keys; the account stays)
 - [x] Encrypted storage for secrets (`munim/vault.py`), first used by the AI provider keys, which the server checks with the provider and stores sealed
