@@ -39,7 +39,6 @@ class Feed(models.Model):
 class Source(models.TextChoices):
     REDDIT = "RD", "Reddit"
     X = "X", "X"
-    INSTAGRAM = "IG", "Instagram"
     HACKER_NEWS = "HN", "Hacker News"
     YOUTUBE = "YT", "YouTube"
     RSS = "RSS", "RSS"

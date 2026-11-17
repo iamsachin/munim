@@ -8,7 +8,7 @@ import { EmptyState, ErrorState, LoadingRows } from '../ui/States';
 import { EMPTY } from './copy';
 import { age, useDigests, useHighlights, useItems, useWatches } from './queries';
 
-const SOURCE_ORDER: Source[] = ['RD', 'X', 'IG', 'HN', 'YT', 'RSS'];
+const SOURCE_ORDER: Source[] = ['RD', 'X', 'HN', 'YT', 'RSS'];
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DATE = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
 

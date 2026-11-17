@@ -43,5 +43,4 @@ export function removalOf({ articles, kept }: { articles: number; kept: number }
  */
 export const UNAVAILABLE = {
   RD: 'Reddit must approve an app before it may read anything.',
-  IG: 'Instagram has no official way to read a personal feed.',
 } as const;

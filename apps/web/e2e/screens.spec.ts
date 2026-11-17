@@ -1328,7 +1328,6 @@ test('connections: sources Munim cannot read say why, and feeds show their real 
   await open(page, '/connections');
   for (const [name, reason] of [
     ['Reddit', 'Reddit must approve an app before it may read anything.'],
-    ['Instagram', 'Instagram has no official way to read a personal feed.'],
   ] as const) {
     const row = page.getByRole('row').filter({ hasText: reason });
     await expect(row).toContainText('Not available yet');

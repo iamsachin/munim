@@ -5,7 +5,7 @@ import { Brand } from './Brand';
 import { MOD } from './shortcuts';
 import type { ReactNode } from 'react';
 
-const SOURCE_ROWS: Source[] = ['RD', 'X', 'IG', 'HN', 'YT'];
+const SOURCE_ROWS: Source[] = ['RD', 'X', 'HN', 'YT'];
 
 function Group({ label, children }: { label: string; children: ReactNode }) {
   return (

@@ -22,10 +22,10 @@ test('a reading total switches to hours at 60 minutes and counts in plain words'
 
 test('an item is a video, an article, a post or a thread', () => {
   expect(kindOf({ source: 'YT', media: 'Video' })).toBe('Video');
-  expect(kindOf({ source: 'IG', media: 'Video' })).toBe('Video');
+  expect(kindOf({ source: 'X', media: 'Video' })).toBe('Video');
   expect(kindOf({ source: 'RSS', media: null })).toBe('Article');
   expect(kindOf({ source: 'X', media: null })).toBe('Post');
-  expect(kindOf({ source: 'IG', media: 'Image' })).toBe('Post');
+  expect(kindOf({ source: 'X', media: 'Image' })).toBe('Post');
   expect(kindOf({ source: 'RD', media: null })).toBe('Thread');
   expect(kindOf({ source: 'HN', media: null })).toBe('Thread');
 });

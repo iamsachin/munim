@@ -31,7 +31,7 @@ Defined once in the Tailwind `@theme` block. Components use only these.
 | mute | `oklch(0.71 0.008 255)` | secondary text, labels |
 | accent | `oklch(0.82 0.13 75)` default | owner-settable; Reddit source colour |
 | a2 | `oklch(0.78 0.09 240)` | RSS, Hacker News |
-| a3 | `oklch(0.76 0.1 20)` | Instagram, destructive, disconnected |
+| a3 | `oklch(0.76 0.1 20)` | destructive, disconnected |
 | a4 | `oklch(0.78 0.1 305)` | YouTube |
 | ok | `oklch(0.8 0.1 155)` | connected, healthy |
 | scrim | `oklch(0.1 0.008 255 / 0.82)` | media preview backdrop |

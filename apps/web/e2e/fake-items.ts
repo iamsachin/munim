@@ -2,7 +2,7 @@
 // real API gives them. Generated once from design/handoff/Atrium.dc.html.
 export interface FakeItem {
   id: number;
-  source: 'RD' | 'X' | 'IG' | 'HN' | 'YT' | 'RSS';
+  source: 'RD' | 'X' | 'HN' | 'YT' | 'RSS';
   title: string;
   origin: string;
   sub: string;
@@ -174,7 +174,7 @@ export const FAKE_ITEMS: FakeItem[] = [
   },
   {
     id: 6,
-    source: 'IG',
+    source: 'X',
     title: 'Glaze test 14. Same recipe, three firing schedules',
     origin: '@studio.kiln',
     sub: 'video 0:42',
@@ -316,7 +316,7 @@ export const FAKE_ITEMS: FakeItem[] = [
   },
   {
     id: 14,
-    source: 'IG',
+    source: 'X',
     title: 'New studio shelving finally up',
     origin: '@studio.kiln',
     sub: 'photo',
