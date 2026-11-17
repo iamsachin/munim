@@ -47,13 +47,18 @@ export function Palette({ onClose, onHelp }: { onClose: () => void; onHelp: () =
         setTheme({ theme: other });
       },
     },
-    {
-      label: 'Lock now',
-      run: () => {
-        void api.lock().catch(() => undefined);
-        session.set('locked');
-      },
-    },
+    // No lock where sign-in is switched off: it would open again for anyone.
+    ...(session.noSignIn
+      ? []
+      : [
+          {
+            label: 'Lock now',
+            run: () => {
+              void api.lock().catch(() => undefined);
+              session.set('locked');
+            },
+          },
+        ]),
     { label: 'Keyboard shortcuts', hint: '?', run: onHelp },
   ];
 

@@ -98,46 +98,64 @@ export function SignInCard() {
       <SectionLabel as="h2" className="pb-4">
         Sign-in and lock
       </SectionLabel>
-      <Row name="Lock when idle" note={minutes === undefined ? ' ' : lockNote(minutes)}>
-        <Toggle
-          on={minutes !== null && minutes !== undefined}
-          label="Lock when idle"
-          onChange={(on) => {
-            setLock(on ? 15 : null);
-          }}
-        />
-      </Row>
-      {minutes !== null && minutes !== undefined && (
-        <Row name="Lock after" note="Time without activity">
-          <div role="group" aria-label="Lock after" className="flex gap-6">
-            {(Object.keys(LOCK_AFTER) as (keyof typeof LOCK_AFTER)[]).map((label) => (
-              <Chip
-                key={label}
-                on={minutes === LOCK_AFTER[label]}
-                onClick={() => {
-                  setLock(LOCK_AFTER[label]);
-                }}
-              >
-                {label}
-              </Chip>
-            ))}
-          </div>
-        </Row>
+      {session.noSignIn ? (
+        // Said plainly: with sign-in switched off there is no lock to offer.
+        <p className="py-6 text-pretty text-mute">
+          Sign-in is switched off on this install (MUNIM_NO_SIGN_IN). Anyone who can use this
+          computer can open Munim, so there is no lock and no sign-out. The passphrase is still
+          asked for before everything is deleted.
+        </p>
+      ) : (
+        <>
+          <Row name="Lock when idle" note={minutes === undefined ? ' ' : lockNote(minutes)}>
+            <Toggle
+              on={minutes !== null && minutes !== undefined}
+              label="Lock when idle"
+              onChange={(on) => {
+                setLock(on ? 15 : null);
+              }}
+            />
+          </Row>
+          {minutes !== null && minutes !== undefined && (
+            <Row name="Lock after" note="Time without activity">
+              <div role="group" aria-label="Lock after" className="flex gap-6">
+                {(Object.keys(LOCK_AFTER) as (keyof typeof LOCK_AFTER)[]).map((label) => (
+                  <Chip
+                    key={label}
+                    on={minutes === LOCK_AFTER[label]}
+                    onClick={() => {
+                      setLock(LOCK_AFTER[label]);
+                    }}
+                  >
+                    {label}
+                  </Chip>
+                ))}
+              </div>
+            </Row>
+          )}
+          <Problem>{lockProblem}</Problem>
+          <Row name="Lock now" note="Asks for the passphrase straight away">
+            <Button
+              size="md"
+              onClick={() => {
+                // The screen locks either way; the server also locks unless it cannot be reached.
+                void api.lock().catch(() => undefined);
+                session.set('locked');
+              }}
+            >
+              Lock
+            </Button>
+          </Row>
+        </>
       )}
-      <Problem>{lockProblem}</Problem>
-      <Row name="Lock now" note="Asks for the passphrase straight away">
-        <Button
-          size="md"
-          onClick={() => {
-            // The screen locks either way; the server also locks unless it cannot be reached.
-            void api.lock().catch(() => undefined);
-            session.set('locked');
-          }}
-        >
-          Lock
-        </Button>
-      </Row>
-      <Row name="Passphrase" note="The one thing you sign in with">
+      <Row
+        name="Passphrase"
+        note={
+          session.noSignIn
+            ? 'Asked for before everything is deleted'
+            : 'The one thing you sign in with'
+        }
+      >
         <Button
           size="md"
           aria-expanded={changing}
@@ -259,7 +277,7 @@ export function DevicesCard() {
                 {lastSeen(d.last_seen, now)}
               </div>
             </div>
-            {d.current ? (
+            {d.current && session.noSignIn ? null : d.current ? (
               <Button
                 size="md"
                 onClick={() => {

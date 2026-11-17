@@ -4,6 +4,7 @@ import time
 from typing import Any
 
 from django.conf import settings
+from django.contrib.auth import login
 from django.contrib.auth.models import User
 from django.http import HttpRequest
 from django.utils import timezone
@@ -21,7 +22,10 @@ def owner() -> User | None:
 
 
 def is_locked(request: HttpRequest) -> bool:
-    """True if the session was locked by hand, or has been idle longer than the owner allows."""
+    """True if the session was locked by hand, or has been idle longer than the owner allows.
+    Never, where sign-in is switched off: a lock that opens for anyone locks nothing."""
+    if settings.NO_SIGN_IN:
+        return False
     session = request.session
     if session.get("locked"):
         return True
@@ -71,6 +75,28 @@ class Open(SessionAuth):
             raise HttpError(423, "Locked")
         touch(request)
         return user
+
+
+class NoSignIn:
+    """Middleware: where sign-in is switched off (MUNIM_NO_SIGN_IN, which the settings allow
+    only on an install that answers on its own machine alone), whoever asks is signed in as
+    the owner. Until there is an owner, first-run setup is still shown."""
+
+    def __init__(self, get_response: Any) -> None:
+        self.get_response = get_response
+
+    def __call__(self, request: HttpRequest) -> Any:
+        if settings.NO_SIGN_IN and not request.user.is_authenticated:
+            user = owner()
+            if user is not None:
+                # Imported here: the device list needs the app registry, which is not ready
+                # when middleware is first loaded.
+                from account import devices
+
+                login(request, user)
+                devices.remember(request)
+                mark_active(request)
+        return self.get_response(request)
 
 
 class AdminLock:

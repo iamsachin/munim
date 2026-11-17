@@ -8,6 +8,9 @@ interface Session {
   state: State;
   /** Idle lock time; null for never, undefined until it has been read. */
   lockMinutes: LockMinutes | undefined;
+  /** Whether sign-in is switched off on this install: then there is no lock and no sign-out,
+   * since neither would keep anyone out. */
+  noSignIn: boolean;
   set: (state: State) => void;
   setLockMinutes: (minutes: LockMinutes) => void;
   /** Asks the server again. */
@@ -24,10 +27,12 @@ const Ctx = createContext<Session | null>(null);
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [state, set] = useState<State>('loading');
   const [lockMinutes, setLockMinutes] = useState<LockMinutes | undefined>(undefined);
+  const [noSignIn, setNoSignIn] = useState(false);
 
   const ask = useCallback(() => {
     api.session().then(
       (session) => {
+        setNoSignIn(session.no_sign_in);
         set(session.state);
       },
       () => {
@@ -61,7 +66,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [state, refused]);
 
   return (
-    <Ctx value={{ state, lockMinutes, set, setLockMinutes, refresh, refused }}>{children}</Ctx>
+    <Ctx value={{ state, lockMinutes, noSignIn, set, setLockMinutes, refresh, refused }}>
+      {children}
+    </Ctx>
   );
 }
 

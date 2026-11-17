@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from cryptography.fernet import Fernet
 from django.core.exceptions import ImproperlyConfigured
@@ -57,6 +58,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "account.auth.NoSignIn",
     "account.auth.AdminLock",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -132,6 +134,41 @@ if TRUSTED_PROXIES < 0:
 # one Google sends the owner back to) are https too. Believed only when there is a proxy.
 if TRUSTED_PROXIES:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+_THIS_MACHINE = {"localhost", "127.0.0.1", "[::1]", "::1"}
+
+
+def why_not_local(hosts: list[str], origins: list[str], proxies: int, bind: str) -> str:
+    """Why an install is not one that answers on its own machine alone, or '' if it is: the
+    names it answers to, the origins it trusts, a proxy in front of it, or the address its
+    port is published on."""
+    if not set(hosts) <= _THIS_MACHINE:
+        return "MUNIM_ALLOWED_HOSTS names something other than this machine"
+    if any(
+        urlsplit(origin).hostname not in ("localhost", "127.0.0.1", "::1") for origin in origins
+    ):
+        return "MUNIM_TRUSTED_ORIGINS names an address other than this machine's"
+    if proxies:
+        return "MUNIM_TRUSTED_PROXIES says there is a proxy in front"
+    if bind not in _THIS_MACHINE:
+        return "MUNIM_BIND publishes the port beyond this machine"
+    return ""
+
+
+# No sign-in at all: whoever reaches Munim is the owner. For an install on the owner's own
+# machine, where a passphrase guards nothing that the machine's own login does not. It removes
+# the only door, so the server starts with an error rather than run like this where anyone
+# else could reach it.
+NO_SIGN_IN = env("NO_SIGN_IN", "0") == "1"
+if NO_SIGN_IN and (
+    _why := why_not_local(
+        ALLOWED_HOSTS, CSRF_TRUSTED_ORIGINS, TRUSTED_PROXIES, env("BIND", "127.0.0.1")
+    )
+):
+    raise ImproperlyConfigured(
+        f"MUNIM_NO_SIGN_IN=1 switches sign-in off, which is allowed only on an install that "
+        f"answers on its own machine alone, and {_why}."
+    )
 
 # Feeds on private networks (a service on the same LAN, say) are refused unless this is set,
 # because a feed address can also be used to make the server reach things only it can reach.

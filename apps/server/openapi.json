@@ -1299,7 +1299,8 @@
             "enum": ["setup", "signed_out", "locked", "open"],
             "title": "State",
             "type": "string"
-          }
+          },
+          "no_sign_in": { "default": false, "title": "No Sign In", "type": "boolean" }
         },
         "required": ["state"],
         "title": "SessionOut",

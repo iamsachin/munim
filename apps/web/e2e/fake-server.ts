@@ -520,7 +520,7 @@ export async function fakeServer(page: Page, start: State = 'open') {
     const tooShort = (value: unknown) => typeof value !== 'string' || value.length < 12;
 
     const call = `${request.method()} ${path}`;
-    if (call === 'GET session') return reply(200, { state });
+    if (call === 'GET session') return reply(200, { state, no_sign_in: false });
     if (call === 'POST setup') {
       if (state !== 'setup') return refuse(409, 'Munim is already set up.');
       if (tooShort(body.passphrase)) return refuse(422, 'Use at least 12 characters.');

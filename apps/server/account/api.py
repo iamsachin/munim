@@ -3,6 +3,7 @@
 from datetime import datetime
 from typing import Literal
 
+from django.conf import settings
 from django.contrib.auth import login, logout, update_session_auth_hash
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
@@ -30,6 +31,9 @@ State = Literal["setup", "signed_out", "locked", "open"]
 
 class SessionOut(Schema):
     state: State
+    # Whether sign-in is switched off on this install, so that the app offers no lock or
+    # sign-out: neither would keep anyone out.
+    no_sign_in: bool = False
 
 
 class PassphraseIn(Schema):
@@ -116,14 +120,14 @@ def _open(request: HttpRequest, user: User) -> Status[SessionOut]:
     login(request, user)
     devices.remember(request)
     mark_active(request)
-    return Status(200, SessionOut(state="open"))
+    return Status(200, SessionOut(state="open", no_sign_in=settings.NO_SIGN_IN))
 
 
 @router.get("/session", response=SessionOut, summary="Where this browser stands")
 @decorate_view(ensure_csrf_cookie)
 def session(request: HttpRequest) -> SessionOut:
     """Also sets the CSRF cookie, so call it before anything else."""
-    return SessionOut(state=_state(request))
+    return SessionOut(state=_state(request), no_sign_in=settings.NO_SIGN_IN)
 
 
 @router.post("/setup", auth=Csrf(), response={200: SessionOut, 409: Error, 422: Error})
@@ -173,7 +177,7 @@ def unlock(
         return refusal
     request.session["locked"] = False
     mark_active(request)
-    return Status(200, SessionOut(state="open"))
+    return Status(200, SessionOut(state="open", no_sign_in=settings.NO_SIGN_IN))
 
 
 @router.post("/passphrase", auth=Open(), response={204: None, 403: Error, 422: Error, 429: Wait})
