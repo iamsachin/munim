@@ -1,11 +1,12 @@
 # Munim
 
 A self-hosted personal hub. The first part is a reader: one stream for RSS, Hacker News and your
-YouTube subscriptions, with saving, read-later, highlights and search. The AI features (digests,
-Ask, watches) are being built; Calendar, Mail and Budget come later. One owner per install.
+YouTube subscriptions, with saving, read-later, highlights and search, and with digests, Ask and
+watches written by a model of your choosing. Calendar, Mail and Budget come later. One owner per
+install.
 
 Only official APIs are used: no scraping. Reddit would be read-only and waits for Reddit's
-approval of API access; X and Instagram have no official way in for a personal reader today.
+approval of API access; X is read for watches only, since it charges for every post an app reads.
 
 Munim is early. Expect changes between versions.
 

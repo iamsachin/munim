@@ -430,7 +430,7 @@
             "name": "source",
             "schema": {
               "anyOf": [
-                { "enum": ["RD", "X", "IG", "HN", "YT", "RSS"], "type": "string" },
+                { "enum": ["RD", "X", "HN", "YT", "RSS"], "type": "string" },
                 { "type": "null" }
               ],
               "title": "Source"
@@ -1401,11 +1401,7 @@
         "description": "An item as a row in a list.",
         "properties": {
           "id": { "title": "Id", "type": "integer" },
-          "source": {
-            "enum": ["RD", "X", "IG", "HN", "YT", "RSS"],
-            "title": "Source",
-            "type": "string"
-          },
+          "source": { "enum": ["RD", "X", "HN", "YT", "RSS"], "title": "Source", "type": "string" },
           "title": { "title": "Title", "type": "string" },
           "origin": { "title": "Origin", "type": "string" },
           "sub": { "title": "Sub", "type": "string" },
@@ -1535,11 +1531,7 @@
         "description": "An item opened: its own page's address, its text as blocks, and its replies.",
         "properties": {
           "id": { "title": "Id", "type": "integer" },
-          "source": {
-            "enum": ["RD", "X", "IG", "HN", "YT", "RSS"],
-            "title": "Source",
-            "type": "string"
-          },
+          "source": { "enum": ["RD", "X", "HN", "YT", "RSS"], "title": "Source", "type": "string" },
           "title": { "title": "Title", "type": "string" },
           "origin": { "title": "Origin", "type": "string" },
           "sub": { "title": "Sub", "type": "string" },
@@ -1722,7 +1714,7 @@
           "ask_id": { "anyOf": [{ "type": "integer" }, { "type": "null" }], "title": "Ask Id" },
           "source": {
             "anyOf": [
-              { "enum": ["RD", "X", "IG", "HN", "YT", "RSS"], "type": "string" },
+              { "enum": ["RD", "X", "HN", "YT", "RSS"], "type": "string" },
               { "type": "null" }
             ],
             "title": "Source"
@@ -1881,11 +1873,7 @@
         "description": "An item an answer cites, as it was when the answer was written.",
         "properties": {
           "item_id": { "anyOf": [{ "type": "integer" }, { "type": "null" }], "title": "Item Id" },
-          "source": {
-            "enum": ["RD", "X", "IG", "HN", "YT", "RSS"],
-            "title": "Source",
-            "type": "string"
-          },
+          "source": { "enum": ["RD", "X", "HN", "YT", "RSS"], "title": "Source", "type": "string" },
           "title": { "title": "Title", "type": "string" },
           "origin": { "title": "Origin", "type": "string" },
           "icon": { "anyOf": [{ "type": "string" }, { "type": "null" }], "title": "Icon" },
@@ -1992,11 +1980,7 @@
           "watch": { "title": "Watch", "type": "string" },
           "judged": { "title": "Judged", "type": "boolean" },
           "item_id": { "title": "Item Id", "type": "integer" },
-          "source": {
-            "enum": ["RD", "X", "IG", "HN", "YT", "RSS"],
-            "title": "Source",
-            "type": "string"
-          },
+          "source": { "enum": ["RD", "X", "HN", "YT", "RSS"], "title": "Source", "type": "string" },
           "title": { "title": "Title", "type": "string" },
           "icon": { "anyOf": [{ "type": "string" }, { "type": "null" }], "title": "Icon" },
           "published_at": { "format": "date-time", "title": "Published At", "type": "string" }

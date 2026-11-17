@@ -120,7 +120,7 @@ export type Kind = (typeof KINDS)[number];
 export function kindOf(item: Pick<Item, 'source' | 'media'>): Kind {
   if (item.media === 'Video') return 'Video';
   if (item.source === 'RSS') return 'Article';
-  if (item.source === 'X' || item.source === 'IG') return 'Post';
+  if (item.source === 'X') return 'Post';
   return 'Thread';
 }
 

@@ -27,7 +27,6 @@ const BG: Record<Tone, string> = {
 export const SOURCES = {
   RD: { name: 'Reddit', tone: 'accent' },
   X: { name: 'X', tone: 'ink' },
-  IG: { name: 'Instagram', tone: 'a3' },
   HN: { name: 'Hacker News', tone: 'a2' },
   YT: { name: 'YouTube', tone: 'a4' },
   RSS: { name: 'RSS', tone: 'a2' },

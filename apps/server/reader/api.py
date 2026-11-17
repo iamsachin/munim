@@ -43,7 +43,7 @@ class FeedOut(Schema):
     fetched_at: datetime | None
 
 
-SourceCode = Literal["RD", "X", "IG", "HN", "YT", "RSS"]
+SourceCode = Literal["RD", "X", "HN", "YT", "RSS"]
 
 
 class ItemOut(Schema):

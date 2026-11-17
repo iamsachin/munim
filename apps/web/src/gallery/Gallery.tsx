@@ -111,7 +111,7 @@ const STREAM: StreamRow[] = [
     unread: true,
   },
   {
-    src: 'IG',
+    src: 'X',
     title: 'New studio shelving finally up',
     sub: '@studio.kiln · photo',
     replies: 4,

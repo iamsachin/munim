@@ -873,7 +873,7 @@ export async function fakeServer(page: Page, start: State = 'open') {
     }
     if (call === 'GET counts') {
       const sources = Object.fromEntries(
-        ['RD', 'X', 'IG', 'HN', 'YT', 'RSS'].map((code) => [
+        ['RD', 'X', 'HN', 'YT', 'RSS'].map((code) => [
           code,
           items.filter((item) => item.source === code).length,
         ]),

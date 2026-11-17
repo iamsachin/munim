@@ -262,7 +262,7 @@ def test_saved_and_queued_lists_are_ordered_by_when_that_was_done(stream: Client
 
 
 def test_counts_cover_every_source_and_follow_changes(stream: Client) -> None:
-    empty = {"RD": 0, "X": 0, "IG": 0, "HN": 0, "YT": 0}
+    empty = {"RD": 0, "X": 0, "HN": 0, "YT": 0}
     assert stream.get("/api/counts").json() == {
         "stream": 3,
         "later": 0,
