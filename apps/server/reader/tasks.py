@@ -5,7 +5,8 @@ from procrastinate.contrib.django import app
 from procrastinate.exceptions import UniqueViolation
 from procrastinate.jobs import Status
 
-from reader import ask, digest, feeds, hackernews, watches, youtube
+from reader import ask, digest, feeds, hackernews, images, watches, youtube
+from reader.models import Item
 
 POLL_EVERY = "*/15 * * * *"
 
@@ -32,6 +33,15 @@ def poll_hacker_news(timestamp: int) -> None:
 def poll_youtube(timestamp: int) -> None:
     """Every hour, and when it is connected: fetch new videos from subscribed channels."""
     youtube.refresh()
+
+
+@app.task
+def keep_pictures(item_id: int) -> None:
+    """When the owner saves an item: fetch its pictures, so that what was saved is whole. Run
+    again, it fetches only what is still missing."""
+    item = Item.objects.filter(pk=item_id).first()
+    if item is not None:
+        images.keep(item)
 
 
 @app.task
