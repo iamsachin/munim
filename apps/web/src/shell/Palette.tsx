@@ -47,8 +47,7 @@ export function Palette({ onClose, onHelp }: { onClose: () => void; onHelp: () =
         setTheme({ theme: other });
       },
     },
-    // Only a passphrase locks: with sign-in off it would open again for anyone, and by email
-    // the way to close a device is to sign out.
+    // Only a passphrase locks: by code, the way to close a device is to sign out.
     ...(session.signIn !== 'passphrase'
       ? []
       : [

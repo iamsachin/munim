@@ -21,7 +21,7 @@ OWNER = "owner@example.com"
 @pytest.fixture
 def by_email(settings: Any, db: None) -> None:
     """An install whose mail is set up: its owner signs in with a mailed code."""
-    settings.EMAIL_SIGN_IN = True
+    settings.CODE_SIGN_IN = True
     settings.OWNER_EMAIL = OWNER
     settings.DEFAULT_FROM_EMAIL = "munim@example.com"
 
@@ -146,7 +146,7 @@ def test_by_email_the_passphrase_opens_nothing_and_by_passphrase_no_code_is_sent
     assert post(fresh, "sign-in/code/confirm", {"code": "123456"}).status_code == 409
     assert mail.outbox == []
     # By email: the same install's passphrase, though right, is not a way in.
-    settings.EMAIL_SIGN_IN = True
+    settings.CODE_SIGN_IN = True
     settings.OWNER_EMAIL = OWNER
     assert post(fresh, "sign-in", {"passphrase": PASSPHRASE}).status_code == 409
     assert post(fresh, "setup", {"passphrase": PASSPHRASE}).status_code == 409
@@ -174,5 +174,22 @@ def test_the_mail_settings_are_all_six_or_none() -> None:
     assert mail_problem(all_six, False) == ""
     assert "MUNIM_OWNER_EMAIL is not set" in mail_problem(all_six | {"OWNER_EMAIL": ""}, False)
     assert "MUNIM_SMTP_PORT is a number" in mail_problem(all_six | {"SMTP_PORT": "tls"}, False)
-    # Sign-in switched off and sign-in by email are two answers to one question.
-    assert "choose one way in" in mail_problem(all_six, True)
+    # A code goes to one place: the owner's address or the log, not both.
+    assert "choose where codes go" in mail_problem(all_six, True)
+    assert mail_problem(dict.fromkeys(MAIL_SETTINGS, ""), True) == ""
+
+
+def test_with_no_mail_the_code_is_written_to_the_servers_log_and_signs_in(
+    client: Client, db: None, settings: Any, caplog: pytest.LogCaptureFixture
+) -> None:
+    settings.CODE_SIGN_IN = settings.CODES_TO_LOG = True
+    assert client.get("/api/session").json() == {"state": "signed_out", "sign_in": "log"}
+    assert post(client, "sign-in/code", {}).status_code == 204
+    # Nothing is mailed: the code is in the log, where whoever runs the install reads it.
+    assert mail.outbox == []
+    (line,) = [record.getMessage() for record in caplog.records if record.name == "munim.codes"]
+    found = re.search(r"to sign in to Munim: (\d{6})\.", line)
+    assert found is not None
+    signed = post(client, "sign-in/code/confirm", {"code": found.group(1)})
+    assert (signed.status_code, signed.json()["sign_in"]) == (200, "log")
+    assert client.get("/api/counts").status_code == 200

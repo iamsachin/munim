@@ -98,18 +98,13 @@ export function SignInCard() {
       <SectionLabel as="h2" className="pb-4">
         Sign-in and lock
       </SectionLabel>
-      {session.noSignIn ? (
-        // Said plainly: with sign-in switched off there is no lock to offer.
+      {session.signIn !== 'passphrase' ? (
         <p className="py-6 text-pretty text-mute">
-          Sign-in is switched off on this install (MUNIM_NO_SIGN_IN). Anyone who can use this
-          computer can open Munim, so there is no lock and no sign-out. The passphrase is still
-          asked for before everything is deleted.
-        </p>
-      ) : session.signIn === 'email' ? (
-        <p className="py-6 text-pretty text-mute">
-          You sign in with a code sent to the owner&apos;s email address, which is set where this
-          install runs. There is no passphrase and no idle lock: a device stays signed in for 30
-          days, or until you sign it out below.
+          {session.signIn === 'email'
+            ? "You sign in with a code sent to the owner's email address, which is set where this install runs."
+            : 'You sign in with a code that Munim writes to its own log on the server, where whoever runs this install can read it.'}{' '}
+          There is no passphrase and no idle lock: a device stays signed in for 30 days, or until
+          you sign it out below.
         </p>
       ) : (
         <>
@@ -154,15 +149,8 @@ export function SignInCard() {
           </Row>
         </>
       )}
-      {session.signIn !== 'email' && (
-        <Row
-          name="Passphrase"
-          note={
-            session.noSignIn
-              ? 'Asked for before everything is deleted'
-              : 'The one thing you sign in with'
-          }
-        >
+      {session.signIn === 'passphrase' && (
+        <Row name="Passphrase" note="The one thing you sign in with">
           <Button
             size="md"
             aria-expanded={changing}
@@ -285,7 +273,7 @@ export function DevicesCard() {
                 {lastSeen(d.last_seen, now)}
               </div>
             </div>
-            {d.current && session.noSignIn ? null : d.current ? (
+            {d.current ? (
               <Button
                 size="md"
                 onClick={() => {
@@ -326,8 +314,8 @@ export function DataCard() {
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
-  // Where sign-in is by email there is no passphrase: a code mailed for this confirms it.
-  const byCode = session.signIn === 'email';
+  // Where sign-in is by a code there is no passphrase: a code made for this confirms it.
+  const byCode = session.signIn !== 'passphrase';
 
   const close = () => {
     setConfirming(false);
@@ -375,7 +363,7 @@ export function DataCard() {
       <p className="text-pretty text-mute">
         Export downloads everything Munim holds as an archive of JSON and text files, except the API
         keys you gave it. Deleting removes every feed, item, highlight, connection and API key,
-        after you confirm with {byCode ? 'a code sent to your email' : 'your passphrase'}. Your{' '}
+        after you confirm with {byCode ? 'a code made for it' : 'your passphrase'}. Your{' '}
         {byCode ? 'devices stay' : 'passphrase and devices stay'}.
       </p>
       <div className="flex gap-6">
@@ -397,7 +385,7 @@ export function DataCard() {
         >
           <p className="text-a3">
             {byCode
-              ? 'This cannot be undone. A code was sent to your email: enter it to confirm.'
+              ? `This cannot be undone. A code was ${session.signIn === 'email' ? 'sent to your email' : "written to the server's log"}: enter it to confirm.`
               : 'This cannot be undone. Enter your passphrase to confirm.'}
           </p>
           <div className="flex gap-6">

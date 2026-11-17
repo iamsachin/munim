@@ -1404,7 +1404,7 @@
             "type": "string"
           },
           "sign_in": {
-            "enum": ["passphrase", "email", "off"],
+            "enum": ["passphrase", "email", "log"],
             "title": "Sign In",
             "type": "string"
           }

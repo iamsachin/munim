@@ -1,4 +1,5 @@
-"""One-time codes mailed to the owner, where an install signs in by email.
+"""One-time codes for the owner, where an install signs in by code: mailed to their address,
+or on an install with no mail written to the server's log.
 
 A code signs the owner in, or confirms that everything is to be deleted. It is six digits,
 works once and for ten minutes, and is kept only as a keyed hash. Whether a code is right is
@@ -7,6 +8,7 @@ passphrase (`attempt()` in account/throttle.py).
 """
 
 import hmac
+import logging
 import secrets
 from datetime import timedelta
 from smtplib import SMTPException
@@ -18,6 +20,8 @@ from django.utils import timezone
 from django.utils.crypto import salted_hmac
 
 from account.models import Code
+
+log = logging.getLogger("munim.codes")
 
 VALID_FOR = timedelta(minutes=10)
 # How often a code may be asked for, and how many in an hour: whoever can reach the sign-in
@@ -75,6 +79,12 @@ def send(purpose: str) -> None:
         f"{code}\n\nThis is the code {what}. It works once, for ten minutes.\n"
         "If you did not ask for it, you can ignore this mail."
     )
+    if settings.CODES_TO_LOG:
+        # An install with no mail: the code goes to the server's own log, on purpose. It is the
+        # one secret that is ever logged, it works once, and only whoever runs the install
+        # can read it there.
+        log.warning("Munim code %s: %s. It works once, for ten minutes.", what, code)
+        return
     try:
         send_mail(subject, body, None, [settings.OWNER_EMAIL])
     except (SMTPException, OSError):

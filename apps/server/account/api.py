@@ -32,15 +32,15 @@ State = Literal["setup", "signed_out", "locked", "open"]
 
 class SessionOut(Schema):
     state: State
-    # How this install lets its owner in: by passphrase, by a code sent in an email, or not
-    # at all ("off": whoever reaches it is the owner, so the app offers no lock or sign-out).
-    sign_in: Literal["passphrase", "email", "off"]
+    # How this install lets its owner in: by passphrase, or by a code that is sent to their
+    # email address or, on an install with no mail, written to the server's log.
+    sign_in: Literal["passphrase", "email", "log"]
 
 
-def _way() -> Literal["passphrase", "email", "off"]:
-    if settings.NO_SIGN_IN:
-        return "off"
-    return "email" if settings.EMAIL_SIGN_IN else "passphrase"
+def _way() -> Literal["passphrase", "email", "log"]:
+    if settings.CODES_TO_LOG:
+        return "log"
+    return "email" if settings.CODE_SIGN_IN else "passphrase"
 
 
 class CodeIn(Schema):
@@ -55,7 +55,7 @@ class ConfirmIn(Schema):
     code: str = Field("", max_length=12)
 
 
-BY_EMAIL = "This Munim signs in with a code sent by email."
+BY_CODE = "This Munim signs in with a code."
 BY_PASSPHRASE = "This Munim signs in with a passphrase."  # noqa: S105  words for the owner, not a secret
 
 
@@ -103,7 +103,7 @@ class LockSettings(Schema):
 def _state(request: HttpRequest) -> State:
     if not request.user.is_authenticated:
         # By email there is nothing to set up: the first code sent makes the owner.
-        return "signed_out" if owner() or settings.EMAIL_SIGN_IN else "setup"
+        return "signed_out" if owner() or settings.CODE_SIGN_IN else "setup"
     return "locked" if is_locked(request) else "open"
 
 
@@ -151,7 +151,7 @@ def _check_code(
 
 
 def _send_code(response: HttpResponse, purpose: str) -> Status[None] | Status[Error] | Status[Wait]:
-    if not settings.EMAIL_SIGN_IN:
+    if not settings.CODE_SIGN_IN:
         return Status(409, Error(detail=BY_PASSPHRASE))
     try:
         codes.send(purpose)
@@ -196,8 +196,8 @@ def session(request: HttpRequest) -> SessionOut:
 @router.post("/setup", auth=Csrf(), response={200: SessionOut, 409: Error, 422: Error})
 def setup(request: HttpRequest, body: PassphraseIn) -> Status[SessionOut] | Status[Error]:
     """First run: sets the passphrase and signs in. Works once."""
-    if settings.EMAIL_SIGN_IN:
-        return Status(409, Error(detail=BY_EMAIL))
+    if settings.CODE_SIGN_IN:
+        return Status(409, Error(detail=BY_CODE))
     if owner():
         return Status(409, Error(detail="Munim is already set up."))
     if weak := _weak(body.passphrase):
@@ -215,8 +215,8 @@ def sign_in(
     request: HttpRequest, response: HttpResponse, body: PassphraseIn
 ) -> Status[SessionOut] | Status[Error] | Status[Wait]:
     # One way in at a time: where codes are mailed, the passphrase opens nothing.
-    if settings.EMAIL_SIGN_IN:
-        return Status(409, Error(detail=BY_EMAIL))
+    if settings.CODE_SIGN_IN:
+        return Status(409, Error(detail=BY_CODE))
     if refusal := _check(request, response, body.passphrase):
         return refusal
     user = owner()
@@ -241,7 +241,7 @@ def send_sign_in_code(
 def sign_in_with_code(
     request: HttpRequest, response: HttpResponse, body: CodeIn
 ) -> Status[SessionOut] | Status[Error] | Status[Wait]:
-    if not settings.EMAIL_SIGN_IN:
+    if not settings.CODE_SIGN_IN:
         return Status(409, Error(detail=BY_PASSPHRASE))
     if refusal := _check_code(request, response, Code.Purpose.SIGN_IN, body.code):
         return refusal
@@ -379,7 +379,7 @@ def delete_all(
     by email after a code mailed for this. The account stays."""
     refusal = (
         _check_code(request, response, Code.Purpose.CONFIRM, body.code, wrong=403)
-        if settings.EMAIL_SIGN_IN
+        if settings.CODE_SIGN_IN
         else _check(request, response, body.passphrase, wrong=403)
     )
     if refusal:
