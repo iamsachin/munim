@@ -1616,6 +1616,28 @@ test('sign-in: after three wrong passphrases the server makes even the right one
   await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible();
 });
 
+test('idle lock: with nothing touched for the chosen time the screen locks itself', async ({
+  page,
+}) => {
+  await page.clock.install();
+  await open(page, '/settings', 'Dark', 'Comfortable', 'open', false);
+  await page
+    .getByRole('group', { name: 'Lock after' })
+    .getByRole('button', { name: '5 min', exact: true })
+    .click();
+  await expect(page.getByRole('button', { name: '5 min', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  // Not yet, a little before the time is up.
+  await page.clock.fastForward('04:30');
+  await expect(page.getByRole('heading', { name: 'Security and settings' })).toBeVisible();
+  // And then it is: the app is covered and cannot be reached, by pointer, keyboard or reader.
+  await page.clock.fastForward('01:00');
+  await expect(page.getByRole('heading', { name: 'Locked' })).toBeVisible();
+  await expect(page.locator('[inert]').getByText('Sign-in and lock')).toHaveCount(1);
+});
+
 test('if the server cannot be reached the app says so, and Try again asks it again', async ({
   page,
 }) => {
