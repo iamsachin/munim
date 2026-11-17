@@ -1687,6 +1687,34 @@ test('sign-in: after three wrong passphrases the server makes even the right one
   await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible();
 });
 
+test('with sign-in switched off there is no lock or sign-out, and the settings say so', async ({
+  page,
+}) => {
+  await fakeServer(page);
+  await page.route('**/api/session', (route) =>
+    route.fulfill({ json: { state: 'open', no_sign_in: true } }),
+  );
+  await page.goto('/settings');
+  await expect(
+    page.getByText('Sign-in is switched off on this install (MUNIM_NO_SIGN_IN).', { exact: false }),
+  ).toBeVisible();
+  // Nothing that would only pretend to keep someone out.
+  await expect(page.getByRole('button', { name: 'Lock', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('switch', { name: 'Lock when idle' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Sign out' })).toHaveCount(0);
+  // The passphrase can still be changed, and other devices are still listed.
+  await expect(page.getByRole('button', { name: 'Change' })).toBeVisible();
+  await expect(page.getByText('Safari on iPhone')).toBeVisible();
+  await expect(page.getByRole('link', { name: /^Stream/ })).toHaveText(/22$/);
+  await expect(page).toHaveScreenshot('settings-no-sign-in-dark.png');
+  expect(await axeFailures(page)).toEqual([]);
+
+  // Nor is locking among the commands.
+  await page.keyboard.press('ControlOrMeta+k');
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await expect(page.getByText('Lock now')).toHaveCount(0);
+});
+
 test('idle lock: with nothing touched for the chosen time the screen locks itself', async ({
   page,
 }) => {

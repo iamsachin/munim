@@ -22,6 +22,9 @@ services:
       MUNIM_TRUSTED_PROXIES: ${MUNIM_TRUSTED_PROXIES:-0}
       # 1 only if it is reached over plain http from another machine. Use https instead.
       MUNIM_INSECURE_COOKIES: ${MUNIM_INSECURE_COOKIES:-0}
+      MUNIM_NO_SIGN_IN: ${MUNIM_NO_SIGN_IN:-0}
+      # Told to the app too, so that it can refuse to run without sign-in on a published port.
+      MUNIM_BIND: ${MUNIM_BIND:-127.0.0.1}
       # Left empty, both are made on first start and kept in the data volume.
       MUNIM_SECRET_KEY: ${MUNIM_SECRET_KEY:-}
       MUNIM_MASTER_KEY: ${MUNIM_MASTER_KEY:-}

@@ -812,6 +812,11 @@ export interface components {
        * @enum {string}
        */
       state: 'setup' | 'signed_out' | 'locked' | 'open';
+      /**
+       * No Sign In
+       * @default false
+       */
+      no_sign_in: boolean;
     };
     /** Error */
     Error: {
