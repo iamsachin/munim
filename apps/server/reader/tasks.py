@@ -5,7 +5,7 @@ from procrastinate.contrib.django import app
 from procrastinate.exceptions import UniqueViolation
 from procrastinate.jobs import Status
 
-from reader import ask, digest, feeds, hackernews, images, watches, youtube
+from reader import ask, digest, feeds, hackernews, images, watches, x, youtube
 from reader.models import Item
 
 POLL_EVERY = "*/15 * * * *"
@@ -65,8 +65,10 @@ def write_digests(timestamp: int) -> None:
 @app.task(queueing_lock="match_watches", lock="match_watches")
 def match_watches(timestamp: int) -> None:
     """Every hour, and when a topic is added or switched on: each watch that is on looks at
-    the items that have arrived since it last looked. Run again, it finds nothing new."""
+    the items that have arrived since it last looked, and the ones switched on for X are
+    looked for there, once a day each. Run again, it finds nothing new and asks X nothing."""
     watches.check_all()
+    x.look_all()
 
 
 @app.periodic(cron="*/5 * * * *")

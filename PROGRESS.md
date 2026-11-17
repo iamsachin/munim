@@ -10,7 +10,7 @@ Milestones 0 to 4 are built and approved by the owner (3 and 4 on 2026-11-17). T
 
 Everything on screen comes from the server: RSS, Hacker News and YouTube; the Stream with search that also looks in replies; saving, with pictures kept; highlights, in items and in answers; Ask, with conversations and quoted citations; Digest, daily and weekly; watches by words and by topic; the AI screen with keys, models, prices, usage and the monthly limit.
 
-Not possible today, and shown as such: Reddit (waits for Reddit's approval of the request sent 2026-11-15), X and Instagram, and replies to any source.
+Not possible today, and shown as such: Reddit (waits for Reddit's approval of the request sent 2026-11-15), Instagram, and replies to any source. X is read for watches only.
 
 Next: what the owner chooses from "Later".
 
@@ -95,6 +95,7 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] Rich text: every source's text becomes blocks on the server (headings, lists, quotes, code, links, bold and italic), with images fetched through the server and kept in the data folder
 - [x] Hacker News: the front page and each story's discussion, switched on and off in Connections
 - [x] YouTube: the owner's subscriptions through OAuth, set up and connected on Connections; videos play where they are; the YouTube page is cards by default (approved)
+- [x] X, for watches only: a keyword or person watch switched on for X is searched there once a day, for at most ten posts, with the owner's own token; its posts are kept from AI calls (waits for the owner's approval; not yet tried against the real X)
 - [ ] Reddit (official OAuth, read-only, kept out of AI calls): waits for Reddit's approval of the request sent 2026-11-15; shown as "Not available yet" until then
 - [x] Connections says only what is true: Hacker News, YouTube and feeds from the server; Reddit, X and Instagram "Not available yet" with the reason
 - [x] Saving an item (full text of feed articles)
@@ -119,7 +120,7 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 
 ## Later
 
-Passkeys and two-step sign-in; phone layout; X and Instagram; Calendar, Mail and Budget modules.
+Passkeys and two-step sign-in; phone layout; Instagram, and more of X than watches; Calendar, Mail and Budget modules.
 
 ## Open decisions
 

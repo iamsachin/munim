@@ -3,7 +3,15 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import { api, reason, sessionOver, sourceIcon, type YouTube } from '../api/client';
 import { UNAVAILABLE } from '../reader/copy';
-import { age, useFeeds, useHackerNews, useSetHackerNews } from '../reader/queries';
+import {
+  age,
+  useFeeds,
+  useForgetX,
+  useHackerNews,
+  useSetHackerNews,
+  useSetXToken,
+  useX,
+} from '../reader/queries';
 import { SectionLabel, SourceTag, SOURCES, StatusDot } from '../ui/atoms';
 import { Button, buttonClass } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -26,6 +34,9 @@ export function Connections() {
   const queries = useQueryClient();
   const youtube = useQuery({ queryKey: ['youtube'], queryFn: api.youtube });
   const [settingUp, setSettingUp] = useState(false);
+  const x = useX();
+  const forgetX = useForgetX();
+  const [settingUpX, setSettingUpX] = useState(false);
   const disconnect = useMutation({
     mutationFn: api.disconnectYouTube,
     onSuccess: (state) => {
@@ -217,6 +228,61 @@ export function Connections() {
           </Cell>
         </TableRow>
 
+        {/* X is read only for watches, with a token from the owner's own developer app. */}
+        <TableRow pad={6} hover={false} className={`${COLS} items-center`}>
+          <Cell>
+            <SourceTag src="X" />
+          </Cell>
+          <Cell className="font-semibold">X</Cell>
+          <Cell className="truncate font-mono text-sm text-mute">
+            {x.data?.connected ? `Token ending ${x.data.tail}` : 'Not set up'}
+          </Cell>
+          <Cell className="text-note text-mute">Watches only</Cell>
+          <Cell className="font-mono text-meta text-mute">
+            {x.data?.connected ? ago(x.data.synced_at) : ''}
+          </Cell>
+          <Cell className="flex items-center gap-6 text-note" title={x.data?.problem || undefined}>
+            <StatusDot tone={x.data?.connected && !x.data.problem && !x.isError ? 'ok' : 'a3'} />
+            {x.isError
+              ? 'Could not load'
+              : forgetX.isError
+                ? 'Could not change'
+                : x.isPending
+                  ? 'Checking'
+                  : !x.data.connected
+                    ? 'Disconnected'
+                    : x.data.problem
+                      ? 'Not syncing'
+                      : 'Connected'}
+          </Cell>
+          <Cell className="justify-self-end">
+            {x.data?.connected ? (
+              <Button
+                size="md"
+                aria-label="Disconnect X"
+                disabled={forgetX.isPending}
+                onClick={() => {
+                  forgetX.mutate(undefined);
+                }}
+              >
+                Disconnect
+              </Button>
+            ) : (
+              <Button
+                size="md"
+                aria-label="Set up X"
+                aria-expanded={settingUpX}
+                disabled={!x.data}
+                onClick={() => {
+                  setSettingUpX(true);
+                }}
+              >
+                Set up
+              </Button>
+            )}
+          </Cell>
+        </TableRow>
+
         {/* Sources Munim cannot read, each with the reason. Muted, not faded: fading the
             handoff's rows to 55% made them unreadable. */}
         {(Object.keys(UNAVAILABLE) as (keyof typeof UNAVAILABLE)[]).map((src) => (
@@ -270,7 +336,88 @@ export function Connections() {
           }}
         />
       )}
+      {/* Shown while setting up, and whenever X has something to say. */}
+      {x.data && ((settingUpX && !x.data.connected) || x.data.problem) && (
+        <XSetup
+          problem={x.data.problem}
+          entering={!x.data.connected}
+          onClose={() => {
+            setSettingUpX(false);
+          }}
+        />
+      )}
     </main>
+  );
+}
+
+/** Where the owner pastes the token of their X developer app, with what it will be used for. */
+function XSetup({
+  problem,
+  entering,
+  onClose,
+}: {
+  problem: string;
+  entering: boolean;
+  onClose: () => void;
+}) {
+  const [token, setToken] = useState('');
+  const save = useSetXToken();
+
+  return (
+    <section aria-label="X setup" className="flex max-w-760 flex-col gap-8 px-16 py-14">
+      <SectionLabel as="h2">X</SectionLabel>
+      {problem && (
+        <p role="status" className="text-a3">
+          {problem}
+        </p>
+      )}
+      {entering && (
+        <>
+          <p className="text-pretty text-mute">
+            Munim reads X only for watches. A keyword or a person you switch on for X, on the
+            Watches screen, is searched there once a day, and at most 10 posts come back. X charges
+            your developer account for each post it returns. Create an app in X&apos;s developer
+            console, buy credits there, and paste the app&apos;s Bearer Token here. Posts from X are
+            not sent to an AI model.
+          </p>
+          <form
+            className="flex gap-6"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!token.trim() || save.isPending) return;
+              save.mutate(token.trim(), {
+                onSuccess: () => {
+                  setToken('');
+                  onClose();
+                },
+              });
+            }}
+          >
+            <Input
+              size="md"
+              type="password"
+              autoComplete="off"
+              className="flex-1"
+              aria-label="X Bearer Token"
+              placeholder="Bearer Token"
+              value={token}
+              onChange={(e) => {
+                setToken(e.target.value);
+              }}
+            />
+            <Button type="submit" size="stretch" disabled={save.isPending}>
+              Save
+            </Button>
+            <Button size="stretch" onClick={onClose}>
+              Cancel
+            </Button>
+          </form>
+          <div role="alert" className="text-note text-a3 empty:hidden">
+            {save.isError && !sessionOver(save.error) ? reason(save.error) : null}
+          </div>
+        </>
+      )}
+    </section>
   );
 }
 

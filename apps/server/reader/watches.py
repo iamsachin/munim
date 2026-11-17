@@ -14,7 +14,7 @@ from ai import providers, spend
 from ai.models import Feature, Provider, usable
 from munim import vault
 from reader import ask, search
-from reader.models import Item, Match, Source, Watch
+from reader.models import KEPT_FROM_AI, Item, Match, Watch
 
 # A new watch looks this far back; "this week" on the screen is the same.
 WEEK = timedelta(days=7)
@@ -123,7 +123,7 @@ def check(watch: Watch) -> None:
         # is never sent to an AI provider (CLAUDE.md, Sources).
         first = not watch.checked_to
         given = list(
-            unseen.exclude(source=Source.REDDIT)
+            unseen.exclude(source__in=KEPT_FROM_AI)
             .select_related("feed")
             .order_by("-pk")[: MOST_TITLES if first else MOST_JUDGED]
         )

@@ -158,6 +158,7 @@ def export() -> IO[bytes]:
                     "name": w.name,
                     "kind": w.get_kind_display(),
                     "on": w.on,
+                    "on_x": w.on_x,
                     "matches": [match.item.title for match in w.matches.select_related("item")],
                 }
                 for w in Watch.objects.iterator()

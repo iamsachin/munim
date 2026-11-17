@@ -16,7 +16,7 @@ from ai import providers, spend
 from ai.models import Feature, Provider, usable
 from munim import vault
 from reader import blocks, icons
-from reader.models import SEARCH_LANGUAGE, Ask, Item, Source
+from reader.models import KEPT_FROM_AI, SEARCH_LANGUAGE, Ask, Item
 
 # How much is sent: a few items, each cut short, or one open item nearly whole.
 MOST_ITEMS = 8
@@ -74,8 +74,8 @@ def refusal(ask: Ask) -> str:
 def chosen(ask: Ask) -> list[Item]:
     """The items an answer may draw on: the open one, or the few in scope that best match the
     question's words, or failing any match the newest."""
-    # Reddit's content is never sent to an AI provider (CLAUDE.md, Sources).
-    items: QuerySet[Item] = Item.objects.exclude(source=Source.REDDIT).select_related("feed")
+    # Reddit's content, and X's, is never sent to an AI provider (CLAUDE.md, Sources).
+    items: QuerySet[Item] = Item.objects.exclude(source__in=KEPT_FROM_AI).select_related("feed")
     if ask.scope == Ask.Scope.ITEM:
         return list(items.filter(asks=ask))
     earlier = ask.follows

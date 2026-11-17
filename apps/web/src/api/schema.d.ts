@@ -563,6 +563,32 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/sources/x': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** X State */
+    get: operations['reader_api_x_state'];
+    /**
+     * Set X Token
+     * @description Stores the token of the owner's X developer app, sealed. X is not asked anything here:
+     *     it charges for what it returns, so the token is first used when a watch is looked for.
+     */
+    put: operations['reader_api_set_x_token'];
+    post?: never;
+    /**
+     * Forget X Token
+     * @description Forgets the token. Posts already fetched stay; nothing more is asked of X.
+     */
+    delete: operations['reader_api_forget_x_token'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/watches': {
     parameters: {
       query?: never;
@@ -606,7 +632,8 @@ export interface paths {
     head?: never;
     /**
      * Switch Watch
-     * @description Switches a watch on or off. Off, it looks at nothing and its matches are not shown.
+     * @description Switches a watch on or off, or on or off for X. Off, it looks at nothing and its
+     *     matches are not shown.
      */
     patch: operations['reader_api_switch_watch'];
     trace?: never;
@@ -1344,6 +1371,25 @@ export interface components {
       time_zone: string;
     };
     /**
+     * XOut
+     * @description Whether Munim has a token for X, and how its last search went. Never the token.
+     */
+    XOut: {
+      /** Connected */
+      connected: boolean;
+      /** Tail */
+      tail: string;
+      /** Synced At */
+      synced_at: string | null;
+      /** Problem */
+      problem: string;
+    };
+    /** XToken */
+    XToken: {
+      /** Token */
+      token: string;
+    };
+    /**
      * MatchOut
      * @description An item that matched a watch.
      */
@@ -1382,6 +1428,8 @@ export interface components {
       kind: 'keyword' | 'person' | 'topic';
       /** On */
       on: boolean;
+      /** On X */
+      on_x: boolean;
       /** Week */
       week: number;
       /** Last */
@@ -1406,10 +1454,15 @@ export interface components {
        */
       kind: 'keyword' | 'person' | 'topic';
     };
-    /** WatchSwitch */
+    /**
+     * WatchSwitch
+     * @description What to change. Anything left out stays as it is.
+     */
     WatchSwitch: {
       /** On */
-      on: boolean;
+      on?: boolean | null;
+      /** On X */
+      on_x?: boolean | null;
     };
     /** Counts */
     Counts: {
@@ -2460,6 +2513,70 @@ export interface operations {
       };
     };
   };
+  reader_api_x_state: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['XOut'];
+        };
+      };
+    };
+  };
+  reader_api_set_x_token: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['XToken'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['XOut'];
+        };
+      };
+    };
+  };
+  reader_api_forget_x_token: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['XOut'];
+        };
+      };
+    };
+  };
   reader_api_list_watches: {
     parameters: {
       query?: never;
@@ -2557,6 +2674,15 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['WatchesOut'];
+        };
+      };
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Error'];
         };
       };
     };
