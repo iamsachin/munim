@@ -63,11 +63,16 @@ test('a highlight in a reply is marked in that reply, or wherever its words went
   expect(moved[1]?.[0]?.marked).toEqual([[0, 12]]);
 });
 
-test('search matches are found across bold text, in the text of the item only', () => {
+test('search matches are found across bold text, in the item and in its replies', () => {
   const found = [['sync'], ['is'], ['fast']];
-  const marks = marksFor([ARTICLE, [paragraph('sync is fast')]], [], found);
+  const marks = marksFor([ARTICLE, [paragraph('Agreed.')], [paragraph('sync is fast')]], [], found);
   expect(marks[0]?.[0]?.found).toEqual([[12, 24]]);
   expect(marks[1]?.[0]?.found).toEqual([]);
+  expect(marks[2]?.[0]?.found).toEqual([[0, 12]]);
+  // Words only a reply has are marked there.
+  const reply = marksFor([ARTICLE, [paragraph('Keep a ledger.')]], [], [['ledger']]);
+  expect(reply[0]?.every((unit) => unit.found.length === 0)).toBe(true);
+  expect(reply[1]?.[0]?.found).toEqual([[7, 13]]);
 });
 
 test('words an item was opened at are marked as a match, where they are said to be or wherever they went', () => {

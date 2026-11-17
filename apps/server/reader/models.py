@@ -1,7 +1,11 @@
+from typing import Any
+
 from django.contrib.postgres.indexes import GinIndex
 from django.contrib.postgres.search import SearchVector, SearchVectorField
 from django.db import models
 from django.db.models.functions import Left
+
+from reader import blocks
 
 # The dictionary search words are reduced with: "protocols" also finds "protocol".
 # shortcut: English only, choose per feed if feeds in other languages need their own stemming.
@@ -101,15 +105,20 @@ class Item(models.Model):
     replies = models.PositiveIntegerField(default=0)
     # The discussion, flattened in reading order: who, at, depth, blocks.
     comments = models.JSONField(default=list, blank=True)
+    # The words of the discussion, as plain text, so that search finds what was said in
+    # reply. Kept in step with `comments` whenever the item is saved.
+    said = models.TextField(blank=True)
     # What the owner has done with it. Null means not read, not saved, not queued.
     read_at = models.DateTimeField(null=True, blank=True)
     saved_at = models.DateTimeField(null=True, blank=True)
     later_at = models.DateTimeField(null=True, blank=True)
-    # The words of the title and the text, kept by Postgres itself whenever either changes. A
-    # word in the title counts for more than one in the text.
+    # The words of the title, the text and the replies, kept by Postgres itself whenever any
+    # of them changes. A word in the title counts for more than one in the text, and that for
+    # more than one in a reply.
     search = models.GeneratedField(
         expression=SearchVector("title", weight="A", config=SEARCH_LANGUAGE)
-        + SearchVector(Left("body", SEARCHED_CHARACTERS), weight="B", config=SEARCH_LANGUAGE),
+        + SearchVector(Left("body", SEARCHED_CHARACTERS), weight="B", config=SEARCH_LANGUAGE)
+        + SearchVector(Left("said", SEARCHED_CHARACTERS), weight="C", config=SEARCH_LANGUAGE),
         output_field=SearchVectorField(),
         db_persist=True,
     )
@@ -128,6 +137,11 @@ class Item(models.Model):
 
     def __str__(self) -> str:
         return self.title
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        # Nothing has to remember this: whatever writes the replies, their words follow.
+        self.said = "\n".join(blocks.text_of(reply["blocks"]) for reply in self.comments)
+        super().save(*args, **kwargs)
 
 
 class Highlight(models.Model):

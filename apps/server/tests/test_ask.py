@@ -204,8 +204,7 @@ def test_a_question_is_answered_by_the_worker_from_matching_items_with_citations
     # Nothing is sent to a model inside the request: the worker does it.
     assert model.seen == []
 
-    # The items whose title or text has any of the question's words; not the rest. (A reply's
-    # words are not searched, so the story is found by its title.)
+    # The items whose title, text or replies have any of the question's words; not the rest.
     given = ask.chosen(Ask.objects.get(pk=waiting["id"]))
     assert {item.title for item in given} == {
         "The case for boring sync protocols",
