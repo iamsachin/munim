@@ -121,6 +121,8 @@ def test_a_topic_is_judged_by_the_model_in_the_worker_on_new_items_only(
     sent = body["input"]
     assert sent.startswith("Topic: offline software\n\nItems:\n\n[1] Show HN: an offline archive")
     assert "[2] The case for boring sync protocols" in sent
+    # A new topic is judged on titles alone: not where an item is from, nor how it opens.
+    assert "Wire Notes" not in sent and "Clever ones lose data" not in sent
     # Not the month-old item, and never Reddit's.
     assert "Gardening" not in sent and "Reddit" not in sent
     told = owner_client.get("/api/watches").json()
@@ -133,6 +135,20 @@ def test_a_topic_is_judged_by_the_model_in_the_worker_on_new_items_only(
     calls = len(model.seen)
     watches.check_all()
     assert len(model.seen) == calls
+    # What arrives later is judged with where it is from and how it opens, and alone.
+    Item.objects.create(
+        feed=library["sync"].feed,
+        guid="new",
+        title="Reading without a network",
+        body="An archive that works on a train.",
+        published_at=timezone.now(),
+    )
+    model.said = '{"items": [1]}'
+    watches.check_all()
+    sent = model.seen[-1][2]["input"]
+    assert "[1] Reading without a network\nFrom Wire Notes\nAn archive that works" in sent
+    assert "[2]" not in sent
+    assert owner_client.get("/api/watches").json()["watches"][0]["week"] == 2
 
 
 def test_a_topic_is_also_matched_by_its_words_with_or_without_a_model(
@@ -140,14 +156,14 @@ def test_a_topic_is_also_matched_by_its_words_with_or_without_a_model(
     library: dict[str, Item],  # noqa: F811
     model: Any,  # noqa: F811
 ) -> None:
-    # The words need not be together, as a keyword's must: "boring" and "data" are both in
-    # the article, apart. No model is chosen, so the words are all there is to go by.
+    # No model is chosen, so the words are all there is to go by. Together they match;
+    # apart they do not, or any long text would match any topic.
+    add(owner_client, "boring sync", "topic")
     add(owner_client, "boring data", "topic")
-    assert add(owner_client, "boring data again", "keyword").json()["matches"] == []
     watches.check_all()
     told = owner_client.get("/api/watches").json()
-    assert [(m["title"], m["judged"]) for m in told["matches"]] == [
-        ("The case for boring sync protocols", False)
+    assert [(m["watch"], m["title"], m["judged"]) for m in told["matches"]] == [
+        ("boring sync", "The case for boring sync protocols", False)
     ]
     assert told["watches"][0]["problem"] == watches.NO_MODEL
     assert model.seen == []
@@ -157,7 +173,8 @@ def test_a_topic_is_also_matched_by_its_words_with_or_without_a_model(
     model.said = '{"items": [1, 2]}'
     watches.check_all()
     told = owner_client.get("/api/watches").json()
-    assert sorted((m["title"], m["judged"]) for m in told["matches"]) == [
+    mine = [m for m in told["matches"] if m["watch"] == "boring sync"]
+    assert sorted((m["title"], m["judged"]) for m in mine) == [
         ("Show HN: an offline archive", True),
         ("The case for boring sync protocols", False),
     ]

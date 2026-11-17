@@ -20,6 +20,8 @@ from reader.models import Item, Match, Source, Watch
 WEEK = timedelta(days=7)
 # How much a topic is judged on at once: the newest unseen items, each cut short.
 MOST_JUDGED = 60
+# And on a topic's first look, by their titles alone.
+MOST_TITLES = 400
 ITEM_CHARACTERS = 400
 
 INSTRUCTIONS = (
@@ -62,22 +64,23 @@ def _by_words(watch: Watch, items: QuerySet[Item]) -> list[Item]:
         name = watch.name.removeprefix("@")
         by = Q(origin__iexact=name) | Q(feed__title__iexact=name)
         return list(items.filter(by | Q(comments__contains=[{"who": name}])))
-    # As the Stream's search finds them: the words together, in any form.
-    together, anywhere = search.matching(watch.name)
-    # A topic is looser: its words anywhere in the title or the text will do.
-    wanted = together | anywhere if watch.kind == Watch.Kind.TOPIC and anywhere else together
-    return list(items.filter(wanted))
+    # As the Stream's search finds them: the words together, in any form. Apart, they are
+    # found in any long text, whatever it is about.
+    return list(items.filter(search.matching(watch.name)[0]))
 
 
-def prompt(watch: Watch, items: list[Item]) -> str:
+def prompt(watch: Watch, items: list[Item], openings: bool) -> str:
+    """The topic and the numbered items: each by its title alone, or with where it is from
+    and how it opens."""
     parts = [
-        f"[{number}] {item.title}\nFrom {ask.told(item)['origin']}\n{item.body[:ITEM_CHARACTERS]}"
+        f"[{number}] {item.title}"
+        + (f"\nFrom {ask.told(item)['origin']}\n{item.body[:ITEM_CHARACTERS]}" if openings else "")
         for number, item in enumerate(items, start=1)
     ]
-    return f"Topic: {watch.name}\n\nItems:\n\n" + "\n\n".join(parts)
+    return f"Topic: {watch.name}\n\nItems:\n\n" + ("\n\n" if openings else "\n").join(parts)
 
 
-def _by_model(watch: Watch, items: list[Item]) -> list[Item]:
+def _by_model(watch: Watch, items: list[Item], openings: bool) -> list[Item]:
     if spend.paused():
         raise Unjudged(ask.PAUSED)
     ready = usable(Feature.WATCH)
@@ -89,7 +92,7 @@ def _by_model(watch: Watch, items: list[Item]) -> list[Item]:
         vault.unseal(key.sealed),
         model.model,
         INSTRUCTIONS,
-        prompt(watch, items),
+        prompt(watch, items, openings),
         lambda piece: None,
     )
     spend.record(Feature.WATCH, model.provider, model.model, got.tokens_in, got.tokens_out)
@@ -115,15 +118,17 @@ def check(watch: Watch) -> None:
     found = [Match(watch=watch, item=item) for item in _by_words(watch, unseen)]
     Match.objects.bulk_create(found, ignore_conflicts=True)
     if watch.kind == Watch.Kind.TOPIC:
-        # Reddit's content is never sent to an AI provider (CLAUDE.md, Sources). Only the
-        # newest are judged: a backlog is not worth its tokens.
+        # A new topic is judged on the titles of the past week, which is many items for few
+        # tokens; after that on the newest items, each with how it opens. Reddit's content
+        # is never sent to an AI provider (CLAUDE.md, Sources).
+        first = not watch.checked_to
         given = list(
             unseen.exclude(source=Source.REDDIT)
             .select_related("feed")
-            .order_by("-pk")[:MOST_JUDGED]
+            .order_by("-pk")[: MOST_TITLES if first else MOST_JUDGED]
         )
         try:
-            judged = _by_model(watch, given) if given else []
+            judged = _by_model(watch, given, openings=not first) if given else []
         except (Unjudged, providers.Failed) as problem:
             Watch.objects.filter(pk=watch.pk).update(problem=str(problem))
             return
