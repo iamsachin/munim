@@ -81,6 +81,64 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/sign-in/code': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Send Sign In Code
+     * @description Mails the owner a code to sign in with. Nobody says who they are: the code only ever
+     *     goes to the owner's address, which whoever runs the install has set.
+     */
+    post: operations['account_api_send_sign_in_code'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/sign-in/code/confirm': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Sign In With Code */
+    post: operations['account_api_sign_in_with_code'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/confirm/code': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Send Confirm Code
+     * @description Mails the owner a code to confirm that everything is to be deleted.
+     */
+    post: operations['account_api_send_confirm_code'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/sign-out': {
     parameters: {
       query?: never;
@@ -256,7 +314,8 @@ export interface paths {
     put?: never;
     /**
      * Delete All
-     * @description Removes everything the owner put into Munim, after the passphrase. The account stays.
+     * @description Removes everything the owner put into Munim, after the passphrase, or where sign-in is
+     *     by email after a code mailed for this. The account stays.
      */
     post: operations['account_api_delete_all'];
     delete?: never;
@@ -813,10 +872,10 @@ export interface components {
        */
       state: 'setup' | 'signed_out' | 'locked' | 'open';
       /**
-       * No Sign In
-       * @default false
+       * Sign In
+       * @enum {string}
        */
-      no_sign_in: boolean;
+      sign_in: 'passphrase' | 'email' | 'off';
     };
     /** Error */
     Error: {
@@ -834,6 +893,11 @@ export interface components {
       detail: string;
       /** Wait Seconds */
       wait_seconds: number;
+    };
+    /** CodeIn */
+    CodeIn: {
+      /** Code */
+      code: string;
     };
     /** ChangeIn */
     ChangeIn: {
@@ -875,6 +939,23 @@ export interface components {
       sealed: number;
       /** Sign Ins */
       sign_ins: number;
+    };
+    /**
+     * ConfirmIn
+     * @description What confirms that everything is to be deleted: the passphrase, or where sign-in is by
+     *     email the code just mailed for it.
+     */
+    ConfirmIn: {
+      /**
+       * Passphrase
+       * @default
+       */
+      passphrase: string;
+      /**
+       * Code
+       * @default
+       */
+      code: string;
     };
     /** FeedOut */
     FeedOut: {
@@ -1736,6 +1817,15 @@ export interface operations {
           'application/json': components['schemas']['Error'];
         };
       };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
       /** @description Too Many Requests */
       429: {
         headers: {
@@ -1743,6 +1833,147 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['Wait'];
+        };
+      };
+    };
+  };
+  account_api_send_sign_in_code: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+      /** @description Too Many Requests */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Wait'];
+        };
+      };
+      /** @description Bad Gateway */
+      502: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+    };
+  };
+  account_api_sign_in_with_code: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CodeIn'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SessionOut'];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+      /** @description Too Many Requests */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Wait'];
+        };
+      };
+    };
+  };
+  account_api_send_confirm_code: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+      /** @description Too Many Requests */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Wait'];
+        };
+      };
+      /** @description Bad Gateway */
+      502: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -2005,7 +2236,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        'application/json': components['schemas']['PassphraseIn'];
+        'application/json': components['schemas']['ConfirmIn'];
       };
     };
     responses: {

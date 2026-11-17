@@ -5,14 +5,18 @@ import { focusOnMount, Input } from '../ui/Input';
 import { waitMessage } from './auth';
 
 /**
- * One passphrase field and a button: sign-in and unlock. `check` sends the passphrase to the
- * server, which decides whether it is right and whether there have been too many attempts.
+ * One secret field and a button: sign-in and unlock, by passphrase or, with `code`, by a code
+ * the server mailed. `check` sends what was typed to the server, which decides whether it is
+ * right and whether there have been too many attempts.
  */
 export function PassphraseForm({
   submit,
   check,
   onSuccess,
+  code = false,
 }: {
+  /** The field takes a mailed code, which is shown as typed, not a passphrase. */
+  code?: boolean;
   submit: string;
   check: (passphrase: string) => Promise<unknown>;
   onSuccess: () => void;
@@ -70,12 +74,13 @@ export function PassphraseForm({
       <Input
         ref={focusOnMount}
         size="lg"
-        type="password"
-        autoComplete="current-password"
-        aria-label="Passphrase"
+        type={code ? 'text' : 'password'}
+        inputMode={code ? 'numeric' : undefined}
+        autoComplete={code ? 'one-time-code' : 'current-password'}
+        aria-label={code ? 'Code' : 'Passphrase'}
         aria-invalid={message !== null}
         aria-describedby="passphrase-message"
-        placeholder="Passphrase"
+        placeholder={code ? 'Code' : 'Passphrase'}
         disabled={waiting}
         value={value}
         onChange={(e) => {

@@ -4,12 +4,16 @@ import { api, Refused, type LockMinutes, type SessionState } from '../api/client
 /** Where this browser stands with the server, plus the two things the server cannot tell us. */
 export type State = SessionState | 'loading' | 'unreachable';
 
+export type SignInBy = 'passphrase' | 'email' | 'off';
+
 interface Session {
   state: State;
   /** Idle lock time; null for never, undefined until it has been read. */
   lockMinutes: LockMinutes | undefined;
-  /** Whether sign-in is switched off on this install: then there is no lock and no sign-out,
-   * since neither would keep anyone out. */
+  /** How this install lets its owner in: by passphrase, by a code sent in an email, or not at
+   * all ("off"). Only a passphrase can lock; with sign-in off there is no sign-out either. */
+  signIn: SignInBy;
+  /** Sign-in is switched off: neither a lock nor a sign-out would keep anyone out. */
   noSignIn: boolean;
   set: (state: State) => void;
   setLockMinutes: (minutes: LockMinutes) => void;
@@ -27,12 +31,13 @@ const Ctx = createContext<Session | null>(null);
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [state, set] = useState<State>('loading');
   const [lockMinutes, setLockMinutes] = useState<LockMinutes | undefined>(undefined);
-  const [noSignIn, setNoSignIn] = useState(false);
+  const [signIn, setSignIn] = useState<SignInBy>('passphrase');
+  const noSignIn = signIn === 'off';
 
   const ask = useCallback(() => {
     api.session().then(
       (session) => {
-        setNoSignIn(session.no_sign_in);
+        setSignIn(session.sign_in);
         set(session.state);
       },
       () => {
@@ -66,7 +71,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [state, refused]);
 
   return (
-    <Ctx value={{ state, lockMinutes, noSignIn, set, setLockMinutes, refresh, refused }}>
+    <Ctx value={{ state, lockMinutes, signIn, noSignIn, set, setLockMinutes, refresh, refused }}>
       {children}
     </Ctx>
   );

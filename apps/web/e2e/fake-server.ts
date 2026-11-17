@@ -9,6 +9,8 @@ import { FAKE_ITEMS } from './fake-items';
  * real server behaves this way is proven by its own tests and by real-server.spec.ts.
  */
 
+/** The code the stand-in server takes as the one it mailed. */
+export const GOOD_CODE = '482913';
 export const GOOD = 'four unrelated words';
 
 export type State = 'setup' | 'signed_out' | 'locked' | 'open';
@@ -520,7 +522,16 @@ export async function fakeServer(page: Page, start: State = 'open') {
     const tooShort = (value: unknown) => typeof value !== 'string' || value.length < 12;
 
     const call = `${request.method()} ${path}`;
-    if (call === 'GET session') return reply(200, { state, no_sign_in: false });
+    if (call === 'GET session') return reply(200, { state, sign_in: 'passphrase' });
+    // Where sign-in is by email: a code is "mailed", and the one below is the right one.
+    if (call === 'POST sign-in/code' || call === 'POST confirm/code') return reply(204);
+    if (call === 'POST sign-in/code/confirm') {
+      if (body.code !== GOOD_CODE) {
+        return refuse(401, 'That code is not right, or is no longer good. Ask for a new one.');
+      }
+      state = 'open';
+      return reply(200, { state, sign_in: 'email' });
+    }
     if (call === 'POST setup') {
       if (state !== 'setup') return refuse(409, 'Munim is already set up.');
       if (tooShort(body.passphrase)) return refuse(422, 'Use at least 12 characters.');
@@ -970,7 +981,10 @@ export async function fakeServer(page: Page, start: State = 'open') {
       });
     }
     if (call === 'POST delete-all') {
-      if (await refused(body.passphrase, 403)) return;
+      // By email it is confirmed with the code mailed for it; otherwise with the passphrase.
+      if (body.code !== undefined) {
+        if (body.code !== GOOD_CODE) return refuse(403, 'That code is not right.');
+      } else if (await refused(body.passphrase, 403)) return;
       items.splice(0, items.length);
       feeds.splice(0, feeds.length);
       highlights = [];

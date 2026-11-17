@@ -98,6 +98,7 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] X, for watches only: a keyword or person watch switched on for X is searched there once a day, for at most ten posts, with the owner's own token; its posts are kept from AI calls (waits for the owner's approval; not yet tried against the real X)
 - [x] Links in text: each with its site's icon; a bare address as a one-line card with the page's title, which the worker looks up when the item is opened (waits for the owner's approval; not yet seen against real pages)
 - [x] Sign-in can be switched off for an install on the owner's own machine (`MUNIM_NO_SIGN_IN=1`); the server refuses to start with it anywhere else (waits for the owner's approval)
+- [x] Sign-in by a code sent in an email, for an install with mail set up: sent only to the owner's address, under the same limit as the passphrase; no idle lock; deleting everything confirmed by a code (waits for the owner's approval; not yet sent through a real mail server)
 - [ ] Reddit (official OAuth, read-only, kept out of AI calls): waits for Reddit's approval of the request sent 2026-11-15; shown as "Not available yet" until then
 - [x] Connections says only what is true: Hacker News, YouTube and feeds from the server; Reddit "Not available yet" with the reason (X is since read for watches; Instagram is dropped)
 - [x] Saving an item (full text of feed articles)

@@ -23,8 +23,11 @@ def owner() -> User | None:
 
 def is_locked(request: HttpRequest) -> bool:
     """True if the session was locked by hand, or has been idle longer than the owner allows.
-    Never, where sign-in is switched off: a lock that opens for anyone locks nothing."""
-    if settings.NO_SIGN_IN:
+    Never, where sign-in is switched off: a lock that opens for anyone locks nothing. Nor
+    where sign-in is by email (owner's decision, 2026-11-17): waiting for a mail every few
+    minutes would be worse than any passphrase, so a device stays signed in until it is
+    signed out or its thirty days are up."""
+    if settings.NO_SIGN_IN or settings.EMAIL_SIGN_IN:
         return False
     session = request.session
     if session.get("locked"):
