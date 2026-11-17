@@ -141,6 +141,35 @@ def test_an_item_opened_from_a_search_says_which_of_its_words_matched(stream: Cl
     assert stream.get(f"/api/items/{item.pk}").json()["found"] == []
 
 
+def test_search_finds_what_was_said_in_reply_and_follows_the_replies(stream: Client) -> None:
+    def reply(text: str) -> dict[str, object]:
+        blocks = [{"type": "paragraph", "spans": [{"text": text}]}]
+        return {"who": "pfk", "at": timezone.now().isoformat(), "depth": 0, "blocks": blocks}
+
+    story = Item.objects.create(
+        source="HN",
+        guid="hn-1",
+        title="Show HN: an offline archive",
+        comments=[reply("Keep a ledger of every export.")],
+        published_at=timezone.now(),
+    )
+
+    def found(q: str) -> list[str]:
+        return [item["title"] for item in stream.get(f"/api/items?q={q}").json()]
+
+    # A word only a reply has finds the story, in any form; the story's own words still do.
+    assert found("ledgers") == ["Show HN: an offline archive"]
+    assert found("archive") == ["Show HN: an offline archive"]
+    # Opened from that search, the item says which of its words matched, replies included.
+    opened = stream.get(f"/api/items/{story.pk}?q=ledgers+exports").json()
+    assert opened["found"] == [["ledger"], ["export"]]
+    # When the discussion changes, so does what is found: nothing has to remember to.
+    story.comments = [reply("Tomatoes want sun.")]
+    story.save()
+    assert found("ledger") == []
+    assert found("tomato") == ["Show HN: an offline archive"]
+
+
 def test_search_takes_phrases_alternatives_and_exclusions(stream: Client) -> None:
     assert titles(stream, '?q="second paragraph"') == ["Sync"]
     assert titles(stream, '?q="second first"') == []

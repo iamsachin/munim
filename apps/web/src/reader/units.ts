@@ -38,8 +38,8 @@ export const unitsOf = (blocks: readonly Block[]): (readonly Span[])[] =>
  *
  * A highlight is marked where it was made if those characters are still its words. If the text
  * has changed since (a feed corrected an article, a discussion grew and the replies moved), it
- * is found again by its words, wherever they now are. Only the item's own text is searched, so
- * only it has search matches. Words the item was opened at (`cited`) are marked as a match is,
+ * is found again by its words, wherever they now are. What a search matched is marked in every
+ * part, the replies too. Words the item was opened at (`cited`) are marked as a match is,
  * wherever they are.
  */
 export function marksFor(
@@ -70,8 +70,11 @@ export function marksFor(
     }
   }
 
-  findMatches(texts[0] ?? [], found).forEach((ranges, u) => {
-    const unit = marks[0]?.[u];
+  // The search looks in the replies as well as the item's own text, so matches are looked for
+  // in every part: all the units as one list, then each range given back to its own unit.
+  const all = marks.flat();
+  findMatches(texts.flat(), found).forEach((ranges, n) => {
+    const unit = all[n];
     if (unit) unit.found = ranges;
   });
 

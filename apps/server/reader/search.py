@@ -60,7 +60,7 @@ def found_words(item: Item, typed: str) -> list[list[str]]:
     ]
     if not terms:
         return []
-    text = f"{item.title}\n{item.body[:SEARCHED_CHARACTERS]}"
+    text = f"{item.title}\n{item.body[:SEARCHED_CHARACTERS]}\n{item.said[:SEARCHED_CHARACTERS]}"
     with connection.cursor() as cursor:
         cursor.execute("SELECT DISTINCT lower(token) FROM ts_parse('default', %s)", [text])
         words = {row[0] for row in cursor.fetchall() if _WORD.fullmatch(row[0])}

@@ -100,7 +100,7 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] Saving an item (full text of feed articles)
 - [x] Saving keeps an item's full text and its comment thread as last fetched: no source ever deletes an item, and removing a feed leaves what was saved. Transcripts are dropped: no official API has them (owner's decision, 2026-11-15).
 - [x] Saving an item fetches its pictures in the worker, shown or not, so they stay if the publisher takes them down
-- [x] Search (Postgres full-text) in the Stream: the words typed are looked for together first, then anywhere, in titles and article text, in any form; quoted phrases, OR and exclusions as written. Replies are not searched yet.
+- [x] Search (Postgres full-text) in the Stream: the words typed are looked for together first, then anywhere, in titles and article text, in any form; quoted phrases, OR and exclusions as written. Replies are searched too (2026-11-17), and a match in one is marked there.
 - [x] Search matches shown in the open article: marked words, a tick for each down the edge, and a stepper (approved)
 - [x] Highlights on the server, stored with their position in the text: a highlight can cross bold, italic and links, is marked only where it was made, and is found again by its words if the text changes
 - [ ] **Approved by owner**
