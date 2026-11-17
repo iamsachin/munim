@@ -210,7 +210,11 @@ function Run({
         className="relative inline-flex h-lh max-w-full items-center gap-4 rounded-4 border border-line bg-card px-6 align-bottom text-ink no-underline after:min-w-0 after:truncate after:content-[attr(data-title)] hover:border-accent"
       >
         {link && <SiteIcon src={link.icon} className="size-14 shrink-0 rounded-2" />}
-        <span className="sr-only">{marks.length ? styled : text}</span>
+        {/* What a search matched in the address is not marked: it could not be seen, and
+            would be counted as a match the reader can never find. */}
+        <span className="sr-only">
+          <Marked text={span.text} marked={marked} found={[]} />
+        </span>
       </a>
     );
   }
