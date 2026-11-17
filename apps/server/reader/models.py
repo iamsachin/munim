@@ -266,6 +266,8 @@ class Match(models.Model):
 
     watch = models.ForeignKey(Watch, on_delete=models.CASCADE, related_name="matches")
     item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name="matches")
+    # Whether a model judged it a match, and not the watch's words: then it is AI's say-so.
+    judged = models.BooleanField(default=False)
 
     class Meta:
         constraints = [

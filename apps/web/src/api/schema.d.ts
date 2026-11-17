@@ -1345,16 +1345,13 @@ export interface components {
     };
     /**
      * MatchOut
-     * @description An item that matched a watch. A topic's match is a model's judgement.
+     * @description An item that matched a watch.
      */
     MatchOut: {
       /** Watch */
       watch: string;
-      /**
-       * Kind
-       * @enum {string}
-       */
-      kind: 'keyword' | 'person' | 'topic';
+      /** Judged */
+      judged: boolean;
       /** Item Id */
       item_id: number;
       /**

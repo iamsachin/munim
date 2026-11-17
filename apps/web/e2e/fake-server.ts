@@ -242,7 +242,7 @@ export async function fakeServer(page: Page, start: State = 'open') {
             ? [
                 {
                   watch: watch.name,
-                  kind: watch.kind,
+                  judged: watch.kind === 'topic',
                   item_id: item.id,
                   source: item.source,
                   title: item.title,
