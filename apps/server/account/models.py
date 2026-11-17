@@ -50,3 +50,25 @@ class Preferences(models.Model):
     @classmethod
     def load(cls) -> "Preferences":
         return cls.objects.get_or_create(pk=1)[0]
+
+
+class Code(models.Model):
+    """The one-time code last mailed to the owner for a purpose, where sign-in is by email (see
+    account/codes.py). There is one row for each purpose."""
+
+    class Purpose(models.TextChoices):
+        SIGN_IN = "sign_in", "Sign in"
+        CONFIRM = "confirm", "Confirm deleting everything"
+
+    purpose = models.CharField(max_length=7, choices=Purpose.choices, primary_key=True)
+    # A keyed hash of the code, never the code. Empty once it is used, burnt or never left.
+    hashed = models.CharField(max_length=64, blank=True)
+    made_at = models.DateTimeField()
+    # Wrong guesses at this code.
+    wrong = models.PositiveSmallIntegerField(default=0)
+    # How many codes were sent since `hour_from`, to cap them by the hour.
+    sent = models.PositiveSmallIntegerField(default=0)
+    hour_from = models.DateTimeField()
+
+    def __str__(self) -> str:
+        return self.get_purpose_display()

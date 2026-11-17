@@ -46,7 +46,7 @@ def test_a_fresh_install_asks_for_setup_then_setup_signs_in(client: Client) -> N
     assert state(client) == "setup"
     response = post(client, "setup", {"passphrase": PASSPHRASE})
     assert response.status_code == 200
-    assert response.json() == {"state": "open", "no_sign_in": False}
+    assert response.json() == {"state": "open", "sign_in": "passphrase"}
     assert state(client) == "open"
     assert state(Client()) == "signed_out"
 
@@ -226,7 +226,7 @@ def test_a_locked_session_is_refused_until_unlocked(owner_client: Client) -> Non
     assert state(owner_client) == "locked"
     assert post(owner_client, "unlock", {"passphrase": PASSPHRASE}).json() == {
         "state": "open",
-        "no_sign_in": False,
+        "sign_in": "passphrase",
     }
     assert owner_client.get("/api/devices").status_code == 200
 
@@ -415,12 +415,12 @@ def test_with_sign_in_switched_off_whoever_asks_is_the_owner_once_there_is_one(
 ) -> None:
     settings.NO_SIGN_IN = True
     # Until Munim is set up there is nobody to be: first-run setup is still shown.
-    assert client.get("/api/session").json() == {"state": "setup", "no_sign_in": True}
+    assert client.get("/api/session").json() == {"state": "setup", "sign_in": "off"}
     assert post(client, "setup", {"passphrase": PASSPHRASE}).status_code == 200
 
     # A browser that has never signed in is let straight in, and is on the device list once.
     other = Client()
-    assert other.get("/api/session").json() == {"state": "open", "no_sign_in": True}
+    assert other.get("/api/session").json() == {"state": "open", "sign_in": "off"}
     assert other.get("/api/counts").status_code == 200
     assert len(other.get("/api/devices").json()) == 2
     # Lock and sign-out keep nobody out, so neither closes anything.
@@ -433,4 +433,4 @@ def test_with_sign_in_switched_off_whoever_asks_is_the_owner_once_there_is_one(
 
     # Switched on again, that browser's session carries on; a new one must sign in.
     settings.NO_SIGN_IN = False
-    assert Client().get("/api/session").json() == {"state": "signed_out", "no_sign_in": False}
+    assert Client().get("/api/session").json() == {"state": "signed_out", "sign_in": "passphrase"}

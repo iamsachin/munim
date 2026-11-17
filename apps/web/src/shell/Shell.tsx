@@ -77,10 +77,10 @@ export function Shell() {
 
   // The idle lock. The server judges idleness by its own clock; this keeps the screen in step
   // with it, and tells the server about activity that makes no API calls of its own.
-  const { lockMinutes, noSignIn, set: setSession, refused } = session;
+  const { lockMinutes, signIn, set: setSession, refused } = session;
   useEffect(() => {
-    // Where sign-in is switched off there is nothing to lock.
-    if (session.state !== 'open' || lockMinutes === undefined || noSignIn) return;
+    // Only a passphrase locks: with sign-in off, or by a mailed code, there is no idle lock.
+    if (session.state !== 'open' || lockMinutes === undefined || signIn !== 'passphrase') return;
     let lastActivity = Date.now();
     let lastReport = Date.now();
     const touched = () => {
@@ -103,7 +103,7 @@ export function Shell() {
       clearInterval(timer);
       for (const e of events) document.removeEventListener(e, touched);
     };
-  }, [session.state, lockMinutes, noSignIn, setSession, refused]);
+  }, [session.state, lockMinutes, signIn, setSession, refused]);
 
   const close = () => {
     setOverlay(null);

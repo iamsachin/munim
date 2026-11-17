@@ -28,23 +28,49 @@ the web app, the API and the background jobs, next to a Postgres container.
 Out of the box Munim answers only on the machine it runs on. To change that, put the values you
 need in a file named `.env` beside `compose.yaml`, then run `docker compose up -d` again.
 
-| Value                                  | What it does                                                                                                                                                                                                                                                                          |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `MUNIM_BIND`                           | The address the port is published on. `0.0.0.0` for every network interface. Default `127.0.0.1`.                                                                                                                                                                                     |
-| `MUNIM_PORT`                           | The port. Default `8000`.                                                                                                                                                                                                                                                             |
-| `MUNIM_ALLOWED_HOSTS`                  | The names people type to reach it, comma separated, for example `munim.example.com`.                                                                                                                                                                                                  |
-| `MUNIM_TRUSTED_ORIGINS`                | Its full public address when it is behind a reverse proxy, for example `https://munim.example.com`.                                                                                                                                                                                   |
-| `MUNIM_TRUSTED_PROXIES`                | How many reverse proxies are in front of Munim: `1` for one. It lets the limit on passphrase guesses count each visitor separately. Leave it at `0` with no proxy.                                                                                                                    |
-| `MUNIM_INSECURE_COOKIES`               | `1` lets you sign in over plain http from another machine. Anyone on that network can then read your session. Put it behind https instead.                                                                                                                                            |
-| `MUNIM_NO_SIGN_IN`                     | `1` switches sign-in off: whoever can reach Munim is the owner, with no lock. Only for an install on your own machine. Munim refuses to start with it unless `MUNIM_BIND`, `MUNIM_ALLOWED_HOSTS`, `MUNIM_TRUSTED_ORIGINS` and `MUNIM_TRUSTED_PROXIES` are all left at their defaults. |
-| `MUNIM_DB_PASSWORD`                    | The database's password. Set it before the first start; the database is not reachable from outside either way.                                                                                                                                                                        |
-| `MUNIM_SECRET_KEY`, `MUNIM_MASTER_KEY` | Leave unset: both are made on first start and kept in the data volume.                                                                                                                                                                                                                |
+| Value                                                                                                                   | What it does                                                                                                                                                                                                                                                                          |
+| ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MUNIM_BIND`                                                                                                            | The address the port is published on. `0.0.0.0` for every network interface. Default `127.0.0.1`.                                                                                                                                                                                     |
+| `MUNIM_PORT`                                                                                                            | The port. Default `8000`.                                                                                                                                                                                                                                                             |
+| `MUNIM_ALLOWED_HOSTS`                                                                                                   | The names people type to reach it, comma separated, for example `munim.example.com`.                                                                                                                                                                                                  |
+| `MUNIM_TRUSTED_ORIGINS`                                                                                                 | Its full public address when it is behind a reverse proxy, for example `https://munim.example.com`.                                                                                                                                                                                   |
+| `MUNIM_TRUSTED_PROXIES`                                                                                                 | How many reverse proxies are in front of Munim: `1` for one. It lets the limit on passphrase guesses count each visitor separately. Leave it at `0` with no proxy.                                                                                                                    |
+| `MUNIM_INSECURE_COOKIES`                                                                                                | `1` lets you sign in over plain http from another machine. Anyone on that network can then read your session. Put it behind https instead.                                                                                                                                            |
+| `MUNIM_NO_SIGN_IN`                                                                                                      | `1` switches sign-in off: whoever can reach Munim is the owner, with no lock. Only for an install on your own machine. Munim refuses to start with it unless `MUNIM_BIND`, `MUNIM_ALLOWED_HOSTS`, `MUNIM_TRUSTED_ORIGINS` and `MUNIM_TRUSTED_PROXIES` are all left at their defaults. |
+| `MUNIM_SMTP_HOST`, `MUNIM_SMTP_PORT`, `MUNIM_SMTP_USER`, `MUNIM_SMTP_PASSWORD`, `MUNIM_EMAIL_FROM`, `MUNIM_OWNER_EMAIL` | Set all six to sign in with a code sent by email in place of the passphrase. See "Signing in by email".                                                                                                                                                                               |
+| `MUNIM_DB_PASSWORD`                                                                                                     | The database's password. Set it before the first start; the database is not reachable from outside either way.                                                                                                                                                                        |
+| `MUNIM_SECRET_KEY`, `MUNIM_MASTER_KEY`                                                                                  | Leave unset: both are made on first start and kept in the data volume.                                                                                                                                                                                                                |
 
 Behind a reverse proxy, set `MUNIM_TRUSTED_PROXIES` to the number of proxies in front. Without it,
 every visitor looks to Munim like the proxy itself, so the wait after wrong passphrases is shared
 by everyone rather than counted per visitor. The proxy must add to the `X-Forwarded-For` header,
 as nginx, Caddy and Traefik do by default. Never set it without a proxy: the header would then be
 whatever a visitor chose to send.
+
+## Signing in by email
+
+Munim can send its owner a six-digit code by email in place of asking for a passphrase. It needs
+a mail server that takes mail over SMTP: your mail provider's, or a sending service such as
+Resend, Postmark or Amazon SES. Set all six in `.env`:
+
+```sh
+MUNIM_SMTP_HOST=smtp.example.com
+MUNIM_SMTP_PORT=465
+MUNIM_SMTP_USER=munim
+MUNIM_SMTP_PASSWORD=the-mail-password-or-api-key
+MUNIM_EMAIL_FROM=munim@example.com
+MUNIM_OWNER_EMAIL=you@example.com
+```
+
+Ports 465 and 2465 are taken to speak TLS from the start; any other port starts plain and
+upgrades. The code goes only to `MUNIM_OWNER_EMAIL`: nobody types an address on the sign-in
+screen. A code works once, for ten minutes. With sign-in by email there is no passphrase and no
+idle lock; a device stays signed in for 30 days or until it is signed out, and deleting
+everything is confirmed with a code as well.
+
+If mail stops working you are not locked out: remove the six settings, give the owner a
+passphrase with `docker compose exec app python manage.py changepassword owner`, and start
+again with `docker compose up -d`.
 
 ## Connecting YouTube
 
