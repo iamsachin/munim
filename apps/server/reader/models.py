@@ -37,17 +37,16 @@ class Feed(models.Model):
 
 
 class Source(models.TextChoices):
-    REDDIT = "RD", "Reddit"
     X = "X", "X"
     HACKER_NEWS = "HN", "Hacker News"
     YOUTUBE = "YT", "YouTube"
     RSS = "RSS", "RSS"
 
 
-# Sources whose content is never sent to an AI provider: Reddit by the terms of the owner's
-# request to it, X until its developer terms have been read to allow it (they forbid training
-# a model on its content, and say nothing found so far of answering from it).
-KEPT_FROM_AI = (Source.REDDIT, Source.X)
+# Sources whose content is never sent to an AI provider: X, until its developer terms have
+# been read to allow it (they forbid training a model on its content, and say nothing found
+# so far of answering from it).
+KEPT_FROM_AI = (Source.X,)
 
 
 class Connection(models.Model):

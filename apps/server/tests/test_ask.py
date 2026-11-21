@@ -137,7 +137,7 @@ def ready(provider: str = "openai", name: str = "gpt-example") -> None:
 
 @pytest.fixture
 def library(owner_client: Client) -> dict[str, Item]:
-    """A feed with two articles, a Hacker News story with a reply, and a Reddit post."""
+    """A feed with two articles, a Hacker News story with a reply, and a post from X."""
     feed = Feed.objects.create(url="https://wire.example/feed", title="Wire Notes")
     now = timezone.now()
     return {
@@ -174,11 +174,11 @@ def library(owner_client: Client) -> dict[str, Item]:
             ],
             published_at=now - timedelta(hours=3),
         ),
-        "reddit": Item.objects.create(
-            source="RD",
+        "x": Item.objects.create(
+            source="X",
             guid="rd",
-            title="Sync protocols on Reddit",
-            body="A Reddit post about sync protocols.",
+            title="Sync protocols, a post from elsewhere",
+            body="A post from elsewhere about sync protocols.",
             origin="r/selfhosted",
             published_at=now,
         ),
@@ -226,8 +226,8 @@ def test_a_question_is_answered_by_the_worker_from_matching_items_with_citations
     assert "From Wire Notes, " in sent
     assert "marrow_fern: Sync is the hard part." in sent
     assert "Gardening" not in sent
-    # Reddit's content is never sent to a model.
-    assert "Reddit" not in sent
+    # X's content is never sent to a model.
+    assert "elsewhere" not in sent
 
     (told,) = owner_client.get("/api/asks").json()
     assert told["status"] == "answered"
@@ -347,10 +347,10 @@ def test_what_cannot_be_asked_is_said_at_once_and_costs_nothing(
     assert put(owner_client, "Summarize this", "item").json()["problem"] == ask.NO_ITEM
     assert put(owner_client, "Summarize this", "item", 99999).json()["problem"] == ask.NO_ITEM
 
-    # A Reddit item is never sent, so there is nothing to answer from.
-    reddit = put(owner_client, "Summarize this thread", "item", library["reddit"].pk).json()
-    assert reddit["status"] == "pending"
-    answer_ask(ask_id=reddit["id"])
+    # An item from X is never sent, so there is nothing to answer from.
+    kept = put(owner_client, "Summarize this thread", "item", library["x"].pk).json()
+    assert kept["status"] == "pending"
+    answer_ask(ask_id=kept["id"])
     assert owner_client.get("/api/asks").json()[-1]["problem"] == ask.NOTHING
 
     # The month's limit is reached.

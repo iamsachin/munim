@@ -115,13 +115,13 @@ def test_a_site_with_no_icon_munim_can_show_is_not_asked_again_that_day(
 def test_hacker_news_and_youtube_have_their_own_sites_icons(
     owner_client: Client, feed: Feed, web: Any
 ) -> None:
-    for source in ("HN", "YT", "RD"):
+    for source in ("HN", "YT", "X"):
         Item.objects.create(
             source=source, guid=source, title=source, published_at="2026-11-14T06:00:00Z"
         )
     icons = {row["source"]: row["icon"] for row in owner_client.get("/api/items").json()}
-    # Reddit is not one this install can read, so it has no site to ask.
-    assert icons == {"HN": "/api/sources/HN/icon", "YT": "/api/sources/YT/icon", "RD": None}
+    # X has no site this install asks for an icon: its posts show X's own mark.
+    assert icons == {"HN": "/api/sources/HN/icon", "YT": "/api/sources/YT/icon", "X": None}
 
     world = site(
         {

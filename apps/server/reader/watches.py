@@ -119,7 +119,7 @@ def check(watch: Watch) -> None:
     Match.objects.bulk_create(found, ignore_conflicts=True)
     if watch.kind == Watch.Kind.TOPIC:
         # A new topic is judged on the titles of the past week, which is many items for few
-        # tokens; after that on the newest items, each with how it opens. Reddit's content
+        # tokens; after that on the newest items, each with how it opens. X's content
         # is never sent to an AI provider (CLAUDE.md, Sources).
         first = not watch.checked_to
         given = list(

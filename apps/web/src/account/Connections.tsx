@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { api, reason, sessionOver, sourceIcon, type YouTube } from '../api/client';
-import { UNAVAILABLE } from '../reader/copy';
 import {
   age,
   useFeeds,
@@ -12,7 +11,7 @@ import {
   useSetXToken,
   useX,
 } from '../reader/queries';
-import { SectionLabel, SourceTag, SOURCES, StatusDot } from '../ui/atoms';
+import { SectionLabel, SourceTag, StatusDot } from '../ui/atoms';
 import { Button, buttonClass } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Cell, Table, TableHeader, TableRow, Th } from '../ui/Table';
@@ -283,30 +282,6 @@ export function Connections() {
           </Cell>
         </TableRow>
 
-        {/* Sources Munim cannot read, each with the reason. Muted, not faded: fading the
-            handoff's rows to 55% made them unreadable. */}
-        {(Object.keys(UNAVAILABLE) as (keyof typeof UNAVAILABLE)[]).map((src) => (
-          <TableRow key={src} pad={6} hover={false} className={`${COLS} items-center`}>
-            <Cell>
-              <SourceTag src={src} />
-            </Cell>
-            <Cell className="font-semibold text-mute">{SOURCES[src].name}</Cell>
-            <Cell className="col-span-3 text-note text-mute">{UNAVAILABLE[src]}</Cell>
-            <Cell className="flex items-center gap-6 text-note text-mute">
-              <StatusDot tone="line" />
-              Not available yet
-            </Cell>
-            <Cell className="justify-self-end">
-              <Button
-                size="md"
-                disabled
-                aria-label={`Later: ${SOURCES[src].name} is not available yet`}
-              >
-                Later
-              </Button>
-            </Cell>
-          </TableRow>
-        ))}
         {PLANNED.map(([code, name]) => (
           <TableRow key={code} pad={6} hover={false} className={`${COLS} items-center`}>
             <Cell className="font-mono text-code font-medium text-mute">{code}</Cell>

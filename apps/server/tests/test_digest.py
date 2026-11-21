@@ -67,10 +67,10 @@ def test_a_digest_is_written_from_what_came_in_and_names_only_what_it_was_given(
     assert address == "api.openai.com/v1/responses"
     assert body["instructions"] == digest.INSTRUCTIONS
     sent = body["input"]
-    # The week's items, newest first; not the month-old one, and never Reddit's.
+    # The week's items, newest first; not the month-old one, and never X's.
     assert sent.index("[1] Show HN: an offline archive") < sent.index("[2] The case for boring")
     assert "From Wire Notes (RSS), " in sent
-    assert "Gardening" not in sent and "Reddit" not in sent
+    assert "Gardening" not in sent and "elsewhere" not in sent
 
     told = owner_client.get("/api/digests").json()
     assert (told["on"], told["daily"]) == (True, None)
