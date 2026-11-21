@@ -990,7 +990,7 @@ export interface components {
        * Source
        * @enum {string}
        */
-      source: 'RD' | 'X' | 'HN' | 'YT' | 'RSS';
+      source: 'X' | 'HN' | 'YT' | 'RSS';
       /** Title */
       title: string;
       /** Origin */
@@ -1104,7 +1104,7 @@ export interface components {
        * Source
        * @enum {string}
        */
-      source: 'RD' | 'X' | 'HN' | 'YT' | 'RSS';
+      source: 'X' | 'HN' | 'YT' | 'RSS';
       /** Title */
       title: string;
       /** Origin */
@@ -1273,7 +1273,7 @@ export interface components {
       /** Ask Id */
       ask_id: number | null;
       /** Source */
-      source: ('RD' | 'X' | 'HN' | 'YT' | 'RSS') | null;
+      source: ('X' | 'HN' | 'YT' | 'RSS') | null;
       /** Title */
       title: string;
       /** Origin */
@@ -1388,7 +1388,7 @@ export interface components {
        * Source
        * @enum {string}
        */
-      source: 'RD' | 'X' | 'HN' | 'YT' | 'RSS';
+      source: 'X' | 'HN' | 'YT' | 'RSS';
       /** Title */
       title: string;
       /** Origin */
@@ -1506,7 +1506,7 @@ export interface components {
        * Source
        * @enum {string}
        */
-      source: 'RD' | 'X' | 'HN' | 'YT' | 'RSS';
+      source: 'X' | 'HN' | 'YT' | 'RSS';
       /** Title */
       title: string;
       /** Icon */
@@ -2353,7 +2353,7 @@ export interface operations {
     parameters: {
       query?: {
         show?: 'all' | 'unread' | 'saved' | 'later';
-        source?: ('RD' | 'X' | 'HN' | 'YT' | 'RSS') | null;
+        source?: ('X' | 'HN' | 'YT' | 'RSS') | null;
         feed?: number | null;
         q?: string;
       };
