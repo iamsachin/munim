@@ -5,8 +5,7 @@ YouTube subscriptions, with saving, read-later, highlights and search, and with 
 watches written by a model of your choosing. Calendar, Mail and Budget come later. One owner per
 install.
 
-Only official APIs are used: no scraping. Reddit would be read-only and waits for Reddit's
-approval of API access; X is read for watches only, since it charges for every post an app reads.
+Only official APIs are used: no scraping. X is read for watches only, since it charges for every post an app reads.
 
 Munim is early. Expect changes between versions.
 

@@ -5,7 +5,7 @@ import { fakeServer, GOOD, NOW, type State, GOOD_CODE } from './fake-server';
 const SCREENS = [
   ['today', '/today'],
   ['stream', '/stream'],
-  ['stream-reddit', '/stream/rd'],
+  ['stream-hacker-news', '/stream/hn'],
   ['later', '/later'],
   ['saved', '/saved'],
   ['highlights', '/highlights'],
@@ -114,10 +114,13 @@ test('a source stream opens a thread from that source, not the last one selected
 }) => {
   await open(page, '/stream');
   const thread = page.getByRole('complementary', { name: 'Thread' });
-  await expect(thread.getByRole('heading')).toHaveText(/^What finally got you/); // Reddit
-  await page.getByRole('link', { name: /^Hacker News/ }).click();
-  await expect(thread.getByRole('heading')).toHaveText(/^Show HN/);
-  await expect(rows(page).filter({ hasText: 'Show HN' })).toHaveAttribute('aria-current', 'true');
+  await expect(thread.getByRole('heading')).toHaveText(/^What finally got you/);
+  await page.getByRole('link', { name: /^X\b/ }).click();
+  await expect(thread.getByRole('heading')).toHaveText(/^Shipped offline sync/);
+  await expect(rows(page).filter({ hasText: 'Shipped offline sync' })).toHaveAttribute(
+    'aria-current',
+    'true',
+  );
   // Going back to the whole stream restores the owner's own selection.
   await page.getByRole('link', { name: /^Stream/ }).click();
   await expect(thread.getByRole('heading')).toHaveText(/^What finally got you/);
@@ -216,8 +219,8 @@ test("stream: a row shows its site's own icon, or the source's mark where there 
   await expect(
     row('A year of running my own feed reader').locator('img[src^="/api/feeds/"]'),
   ).toBeVisible();
-  // This feed's site has no icon, and Reddit has no site Munim can ask: each shows its mark.
-  for (const title of ['The case for boring sync protocols', 'Is anyone still using RSS']) {
+  // This feed's site has no icon, and X has no site Munim asks: each shows its mark.
+  for (const title of ['The case for boring sync protocols', 'Shipped offline sync']) {
     await expect(row(title).locator('img')).toHaveCount(0);
     await expect(row(title).locator('svg')).toBeVisible();
   }
@@ -235,11 +238,6 @@ test('stream: an empty stream, a failed one, and a failed item each say so', asy
     page.getByText('Nothing here yet. Connect a source and its items appear here.'),
   ).toBeVisible();
   await expect(page).toHaveScreenshot('stream-empty-dark.png');
-  // A source Munim cannot read says why, instead of asking for a connection that cannot be made.
-  await page.getByRole('link', { name: /^Reddit/ }).click();
-  await expect(
-    page.getByText('Not available yet. Reddit must approve an app before it may read anything.'),
-  ).toBeVisible();
   await page.getByRole('link', { name: /^Stream/ }).click();
 
   await page.unroute('**/api/items?*');
@@ -282,7 +280,7 @@ test('stream: a feed article is read in the thread pane, and can be highlighted 
 test('replies: no source can be replied to yet, and each says why', async ({ page }) => {
   await open(page, '/stream');
   const thread = page.getByRole('complementary', { name: 'Thread' });
-  await expect(thread.getByText('Replying on Reddit is not available yet.')).toBeVisible();
+  await expect(thread.getByText('Hacker News has no official way to reply')).toBeVisible();
   await expect(thread.getByRole('link', { name: 'Open original' })).toHaveAttribute(
     'href',
     /^https:\/\/example\.com\/items\/\d+$/,
@@ -533,9 +531,9 @@ test('youtube: a card opens its video large and playing; the list is one press a
   await expect(cards).toHaveCount(3);
 
   // Other sources have no such switch: their pages are lists.
-  await page.goto('/stream/rd');
+  await page.goto('/stream/hn');
   await expect(page.getByRole('group', { name: 'View' })).toHaveCount(0);
-  await expect(rows(page)).toHaveCount(5);
+  await expect(rows(page)).toHaveCount(8);
 });
 
 test('ask bar: a question opens Ask, waits for its answer and shows it with what it cites; blank does nothing', async ({
@@ -1354,19 +1352,12 @@ test('rss: with no feeds, and when the server fails, the screen says so', async 
   await expect(page.getByRole('button', { name: /^Wire Notes/ })).toBeVisible();
 });
 
-test('connections: sources Munim cannot read say why, and feeds show their real state', async ({
+test('connections: only sources Munim reads are listed, and feeds show their real state', async ({
   page,
 }) => {
   await open(page, '/connections');
-  for (const [name, reason] of [
-    ['Reddit', 'Reddit must approve an app before it may read anything.'],
-  ] as const) {
-    const row = page.getByRole('row').filter({ hasText: reason });
-    await expect(row).toContainText('Not available yet');
-    await expect(
-      page.getByRole('button', { name: `Later: ${name} is not available yet` }),
-    ).toBeDisabled();
-  }
+  // Every source listed is one Munim really reads: none is shown as not available.
+  await expect(page.getByRole('row').filter({ hasText: 'Reddit' })).toHaveCount(0);
   const rss = page.getByRole('row').filter({ hasText: 'RSS' });
   await expect(rss).toContainText('5 feeds');
   await expect(rss).toContainText('31 min ago');

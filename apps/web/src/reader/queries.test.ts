@@ -26,13 +26,13 @@ test('an item is a video, an article, a post or a thread', () => {
   expect(kindOf({ source: 'RSS', media: null })).toBe('Article');
   expect(kindOf({ source: 'X', media: null })).toBe('Post');
   expect(kindOf({ source: 'X', media: 'Image' })).toBe('Post');
-  expect(kindOf({ source: 'RD', media: null })).toBe('Thread');
+  expect(kindOf({ source: 'HN', media: null })).toBe('Thread');
   expect(kindOf({ source: 'HN', media: null })).toBe('Thread');
 });
 
 test('what is held of a saved item is said plainly', () => {
   expect(heldOf({ source: 'RSS', media: null, replies: 0 })).toBe('Full text');
-  expect(heldOf({ source: 'RD', media: null, replies: 214 })).toBe('214 comments');
+  expect(heldOf({ source: 'HN', media: null, replies: 214 })).toBe('214 comments');
   expect(heldOf({ source: 'HN', media: null, replies: 1 })).toBe('1 comment');
   expect(heldOf({ source: 'X', media: null, replies: 0 })).toBe('Text');
 });

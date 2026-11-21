@@ -29,7 +29,7 @@ Defined once in the Tailwind `@theme` block. Components use only these.
 | line | `oklch(0.285 0.008 255)` | borders; row rules use it at 55% |
 | ink | `oklch(0.93 0.008 255)` | text; X source colour |
 | mute | `oklch(0.71 0.008 255)` | secondary text, labels |
-| accent | `oklch(0.82 0.13 75)` default | owner-settable; Reddit source colour |
+| accent | `oklch(0.82 0.13 75)` default | owner-settable |
 | a2 | `oklch(0.78 0.09 240)` | RSS, Hacker News |
 | a3 | `oklch(0.76 0.1 20)` | destructive, disconnected |
 | a4 | `oklch(0.78 0.1 305)` | YouTube |
@@ -105,7 +105,7 @@ Single-key shortcuts are registered with `useKeys` from `shell/keys.ts`, which i
 - The reply box appears only for sources in which Munim can write (`NO_REPLY` in `reader/marks.ts` lists the ones it cannot, with the line shown instead). RSS items have no replies at all.
 - Highlights are made by selecting text in a comment or an article body (`SelectionHighlight`, `highlightable()`), are marked in place by matching the quote's text, and get their notes on the Highlights screen. Text already inside a highlight offers nothing.
 - The Stream, Saved, Read later and Today read real items from the server. An item is marked read only when the owner opens it deliberately (a click, `j` or `k`); the row shown by default stays unread, or the Unread filter would read its way down the list.
-- No source can be replied to yet, so the reply box is gone and every item says why; it returns with Reddit write-back. The thread pane for a feed article shows the article's text in the RSS screen's reading size (owner's decision, 2026-11-14), has no replies, and does not say "No replies yet."
+- No source can be replied to yet, so the reply box is gone and every item says why; it returns if a source ever allows writing back. The thread pane for a feed article shows the article's text in the RSS screen's reading size (owner's decision, 2026-11-14), has no replies, and does not say "No replies yet."
 - The handoff's "2.1 GB" on Saved and the fixed date on Today were sample values; Saved shows no size and Today shows the real date.
 - Counts are computed from the data (the sidebar's RSS count is 7, not the handoff's hard-coded 9).
 

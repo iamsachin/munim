@@ -2,7 +2,7 @@
 
 Status of the build order in `.claude/CLAUDE.md`. Updated in the same commit as the work it describes. "Approved" means the owner has seen it running and said yes.
 
-Last updated: 2026-11-17
+Last updated: 2026-11-21
 
 ## Now
 
@@ -10,7 +10,7 @@ Milestones 0 to 4 are built and approved by the owner (3 and 4 on 2026-11-17). T
 
 Everything on screen comes from the server: RSS, Hacker News and YouTube; the Stream with search that also looks in replies; saving, with pictures kept; highlights, in items and in answers; Ask, with conversations and quoted citations; Digest, daily and weekly; watches by words and by topic; the AI screen with keys, models, prices, usage and the monthly limit.
 
-Not possible today, and shown as such: Reddit (waits for Reddit's approval of the request sent 2026-11-15), and replies to any source. X is read for watches only. Instagram is dropped (2026-11-17): it has no official way to read a personal feed.
+Not possible today: replies to any source. X is read for watches only. Reddit and Instagram are dropped: Reddit stopped accepting requests for API access (its answer, 2026-11-20), and Instagram has no official way to read a personal feed.
 
 Next: what the owner chooses from "Later".
 
@@ -98,8 +98,8 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] X, for watches only: a keyword or person watch switched on for X is searched there once a day, for at most ten posts, with the owner's own token; its posts are kept from AI calls (waits for the owner's approval; not yet tried against the real X)
 - [x] Links in text: each with its site's icon; a bare address as a one-line card with the page's title, which the worker looks up when the item is opened (waits for the owner's approval; not yet seen against real pages)
 - [x] Sign-in by a code: sent in an email on an install with mail set up, or written to the server's log on one without; sent only to the owner's address, under the same limit as the passphrase; no idle lock; deleting everything confirmed by a code (waits for the owner's approval; not yet sent through a real mail server)
-- [ ] Reddit (official OAuth, read-only, kept out of AI calls): waits for Reddit's approval of the request sent 2026-11-15; shown as "Not available yet" until then
-- [x] Connections says only what is true: Hacker News, YouTube and feeds from the server; Reddit "Not available yet" with the reason (X is since read for watches; Instagram is dropped)
+- [x] Reddit: asked for and refused. Reddit stopped accepting requests for API access (2026-11-20), so it is removed as a source
+- [x] Connections says only what is true: Hacker News, YouTube and feeds from the server; nothing is listed that Munim cannot read (X is read for watches; Reddit and Instagram are dropped)
 - [x] Saving an item (full text of feed articles)
 - [x] Saving keeps an item's full text and its comment thread as last fetched: no source ever deletes an item, and removing a feed leaves what was saved. Transcripts are dropped: no official API has them (owner's decision, 2026-11-15).
 - [x] Saving an item fetches its pictures in the worker, shown or not, so they stay if the publisher takes them down
@@ -115,9 +115,9 @@ Not built yet because only one screen uses each: ask bar, suggestion chip, chat 
 - [x] Usage tracking and display: each call's tokens and cost at the price the owner entered for its model; a monthly limit in dollars that pauses AI
 - [x] Summaries on demand, through Ask (no automatic summaries)
 - [x] Digest (daily at 7:00 and weekly on Sunday, on the owner's clock): written by the worker from what came in, naming its items; off until switched on; a day that cannot be written says why; a day that waited on the owner is written once they have put it right
-- [x] Ask with citations: over everything, saved, this week or the open item; answered by the worker; only the items given can be cited; Reddit content is never sent; the answer is shown as it is written; a follow-up carries its conversation on, from the same items; the Ask screen lists conversations, one for each post asked about, with the open one beside the list; a passage of an answer can be highlighted; a citation shows the words of the item it rests on and opens the item at them
+- [x] Ask with citations: over everything, saved, this week or the open item; answered by the worker; only the items given can be cited; X's posts are never sent; the answer is shown as it is written; a follow-up carries its conversation on, from the same items; the Ask screen lists conversations, one for each post asked about, with the open one beside the list; a passage of an answer can be highlighted; a citation shows the words of the item it rests on and opens the item at them
 - [x] Watches matching: a keyword by its words and a person by who published or replied, both free; a topic by the Watch model, hourly, on new items only; a topic also by its words together, and on its first look by the titles of the past week
-- [ ] Replies where the official API allows (none of the connected sources does; Reddit stays read-only)
+- [ ] Replies where the official API allows (none of the connected sources does)
 - [x] **Approved by owner** (2026-11-17)
 
 ## Later

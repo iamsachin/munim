@@ -374,9 +374,9 @@ export async function fakeServer(page: Page, start: State = 'open') {
     sample(
       'Chunking by reply tree beats chunking by length.',
       '',
-      'RD',
+      'HN',
       'Summarizing 400-comment threads: what actually works',
-      'r/LocalLLaMA',
+      '152 points',
       26,
     ),
     sample(
@@ -901,7 +901,7 @@ export async function fakeServer(page: Page, start: State = 'open') {
     }
     if (call === 'GET counts') {
       const sources = Object.fromEntries(
-        ['RD', 'X', 'HN', 'YT', 'RSS'].map((code) => [
+        ['X', 'HN', 'YT', 'RSS'].map((code) => [
           code,
           items.filter((item) => item.source === code).length,
         ]),

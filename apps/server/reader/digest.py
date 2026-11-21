@@ -95,7 +95,7 @@ def chosen(kind: str, now: datetime) -> list[Item]:
     # The last one that was written: a day with none does not move where the next begins.
     last = Digest.objects.filter(kind=kind).exclude(lead="").first()
     since = last.written_at if last and last.written_at > now - 2 * span else now - span
-    # Reddit's content is never sent to an AI provider (CLAUDE.md, Sources).
+    # X's content is never sent to an AI provider (CLAUDE.md, Sources).
     items = Item.objects.exclude(source__in=KEPT_FROM_AI).select_related("feed")
     return list(
         items.filter(published_at__gte=since).order_by("-published_at")[
