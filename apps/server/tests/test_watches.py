@@ -31,7 +31,10 @@ def test_a_keyword_is_matched_by_its_words_from_the_past_week_on(
     # Added, it looks back at once: the week's items with those words, not the month-old one.
     assert (watch["week"], watch["problem"]) == (2, "")
     assert watch["last"] == told["matches"][0]["published_at"]
-    assert titles(told) == ["Sync protocols on Reddit", "The case for boring sync protocols"]
+    assert titles(told) == [
+        "Sync protocols, a post from elsewhere",
+        "The case for boring sync protocols",
+    ]
     assert told["matches"][1] == {
         "watch": "sync protocols",
         "judged": False,
@@ -123,8 +126,8 @@ def test_a_topic_is_judged_by_the_model_in_the_worker_on_new_items_only(
     assert "[2] The case for boring sync protocols" in sent
     # A new topic is judged on titles alone: not where an item is from, nor how it opens.
     assert "Wire Notes" not in sent and "Clever ones lose data" not in sent
-    # Not the month-old item, and never Reddit's.
-    assert "Gardening" not in sent and "Reddit" not in sent
+    # Not the month-old item, and never X's.
+    assert "Gardening" not in sent and "elsewhere" not in sent
     told = owner_client.get("/api/watches").json()
     assert (told["watches"][0]["week"], told["watches"][0]["problem"]) == (1, "")
     assert [(m["title"], m["judged"]) for m in told["matches"]] == [

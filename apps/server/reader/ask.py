@@ -74,7 +74,7 @@ def refusal(ask: Ask) -> str:
 def chosen(ask: Ask) -> list[Item]:
     """The items an answer may draw on: the open one, or the few in scope that best match the
     question's words, or failing any match the newest."""
-    # Reddit's content, and X's, is never sent to an AI provider (CLAUDE.md, Sources).
+    # X's content is never sent to an AI provider (CLAUDE.md, Sources).
     items: QuerySet[Item] = Item.objects.exclude(source__in=KEPT_FROM_AI).select_related("feed")
     if ask.scope == Ask.Scope.ITEM:
         return list(items.filter(asks=ask))

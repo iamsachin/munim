@@ -78,9 +78,9 @@ interface StreamRow {
 // From ITEMS in the handoff.
 const STREAM: StreamRow[] = [
   {
-    src: 'RD',
+    src: 'HN',
     title: 'What finally got you to move your feeds off five different apps?',
-    sub: 'r/selfhosted · I kept losing threads I meant to come back to',
+    sub: '241 points · I kept losing threads I meant to come back to',
     replies: 214,
     age: '3h',
     unread: true,
@@ -302,7 +302,7 @@ export function Gallery() {
             <Button variant="accent">Ask</Button>
           </div>
           <div className="flex gap-6">
-            <Input size="lg" className="flex-1" aria-label="Reply" placeholder="Reply on Reddit" />
+            <Input size="lg" className="flex-1" aria-label="Reply" placeholder="Reply" />
             <Button variant="primary">Reply</Button>
           </div>
         </Section>
@@ -357,9 +357,9 @@ export function Gallery() {
           </div>
           <CitationRow
             index={1}
-            src="RD"
+            src="HN"
             title="What finally got you to move your feeds off five different apps?"
-            from="r/selfhosted"
+            from="241 points"
           />
           <CitationRow
             index={2}
@@ -400,7 +400,7 @@ export function Gallery() {
           <NavRow name="Today" to="/today" />
           <NavRow name="Stream" count={18} to="/stream" />
           <NavRow name="Design system" to="/gallery" />
-          <NavRow name="Reddit" count={4} dot="accent" to="/stream/rd" />
+          <NavRow name="Hacker News" count={4} dot="a2" to="/stream/hn" />
           <NavRow name="YouTube" count={3} dot="a4" to="/stream/yt" />
           <NavRow name="Calendar" />
         </nav>

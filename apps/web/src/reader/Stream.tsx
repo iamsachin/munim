@@ -21,7 +21,7 @@ import { EmptyState, ErrorState, LoadingRows } from '../ui/States';
 import { Cell, RowButton, Table, TableBody, TableHeader, TableRow, Th } from '../ui/Table';
 import { AskCard } from './AskCard';
 import { Blocks } from './Blocks';
-import { EMPTY, UNAVAILABLE } from './copy';
+import { EMPTY } from './copy';
 import { NO_REPLY } from './marks';
 import { marksFor, type Cited } from './units';
 import { MediaPreview } from './MediaPreview';
@@ -53,13 +53,8 @@ export function Stream() {
   // between that and the list is kept in this browser.
   const [view, setView] = useState<View>(storedView);
   const cards = source === 'YT' && view === 'Cards';
-  // An empty list says why: a filter hides everything, the source cannot be read, or nothing is in.
-  const nothing =
-    filter !== 'All' || query.trim()
-      ? EMPTY.filter
-      : source && source in UNAVAILABLE
-        ? `Not available yet. ${UNAVAILABLE[source as keyof typeof UNAVAILABLE]}`
-        : EMPTY.stream;
+  // An empty list says why: a filter hides everything, or nothing is in.
+  const nothing = filter !== 'All' || query.trim() ? EMPTY.filter : EMPTY.stream;
   // Ages are worked out against one moment, so they do not change while the screen is open.
   const [now] = useState(() => Date.now());
 

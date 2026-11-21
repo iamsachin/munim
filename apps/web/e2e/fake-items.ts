@@ -2,7 +2,7 @@
 // real API gives them. Generated once from design/handoff/Atrium.dc.html.
 export interface FakeItem {
   id: number;
-  source: 'RD' | 'X' | 'HN' | 'YT' | 'RSS';
+  source: 'X' | 'HN' | 'YT' | 'RSS';
   title: string;
   origin: string;
   sub: string;
@@ -21,9 +21,9 @@ export interface FakeItem {
 export const FAKE_ITEMS: FakeItem[] = [
   {
     id: 1,
-    source: 'RD',
+    source: 'HN',
     title: 'What finally got you to move your feeds off five different apps?',
-    origin: 'r/selfhosted',
+    origin: '241 points',
     sub: 'I kept losing threads I meant to come back to',
     replies: 214,
     hoursAgo: 3,
@@ -193,9 +193,9 @@ export const FAKE_ITEMS: FakeItem[] = [
   },
   {
     id: 7,
-    source: 'RD',
+    source: 'HN',
     title: 'Backups: what is your restore test schedule?',
-    origin: 'r/homelab',
+    origin: '87 points',
     sub: '',
     replies: 96,
     hoursAgo: 8,
@@ -280,9 +280,9 @@ export const FAKE_ITEMS: FakeItem[] = [
   },
   {
     id: 12,
-    source: 'RD',
+    source: 'HN',
     title: 'Is anyone still using RSS for release notes?',
-    origin: 'r/rss',
+    origin: '64 points',
     sub: '',
     replies: 58,
     hoursAgo: 11,
@@ -403,9 +403,9 @@ export const FAKE_ITEMS: FakeItem[] = [
   },
   {
     id: 19,
-    source: 'RD',
+    source: 'HN',
     title: 'Summarizing 400-comment threads: what actually works',
-    origin: 'r/LocalLLaMA',
+    origin: '152 points',
     sub: '',
     replies: 187,
     hoursAgo: 22,
